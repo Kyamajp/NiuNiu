@@ -627,8 +627,9 @@ function NiuNiu(){
   }
 
   var sm=pc>4;
-  var cw=pc>=6?48:pc>=5?54:CW;
-  var ch=pc>=6?72:pc>=5?81:CH;
+  // Card sizes: maximize within 2-col layout (each col ~170px on mobile)
+  var cw=pc>=5?52:pc>=4?56:CW;
+  var ch=pc>=5?78:pc>=4?84:CH;
 
   // ─── Setup screen ──────────────────────────────────────────
   if(phase==="setup"){
@@ -761,7 +762,7 @@ function NiuNiu(){
       return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},e(CardBack,{w:cw,h:ch}));}):[];
 
     var pKids=[];
-    var compactMode=pc>=6;
+    var compactMode=pc>=4;
     pKids.push(e("div",{key:"ph",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:compactMode?4:7}},
       e("div",{style:{display:"flex",alignItems:"center",gap:3}},
         e("span",{style:{fontSize:compactMode?14:17}},PEMOJI[i]),
@@ -795,14 +796,14 @@ function NiuNiu(){
       boxAnim="alertQuake 0.5s ease-in-out infinite";
     }
 
-    return e("div",{key:i,style:{padding:pc>=6?7:11,borderRadius:pc>=6?8:11,transition:"all .3s ease",
+    return e("div",{key:i,style:{padding:pc>=4?7:11,borderRadius:pc>=4?8:11,transition:"all .3s ease",
       border:isW?"2px solid #e6b422":"1.5px solid "+(rc.size>0?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)"),
       background:boxBg,
       animation:boxAnim}},pKids);
   });
 
-  var gridMin=pc>=6?"200px":pc>=5?"230px":"265px";
-  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax("+gridMin+",1fr))",gap:pc>=6?6:9}},playerBoxes));
+  var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
+  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
 
   if(phase==="result"){
     gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease"}},
