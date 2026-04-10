@@ -21,6 +21,16 @@ body{background:linear-gradient(160deg,#060610 0%,#0e0e24 40%,#141434 70%,#0a0a1
 @keyframes bullGlow{0%,100%{filter:drop-shadow(0 0 4px rgba(249,168,37,.3))}50%{filter:drop-shadow(0 0 12px rgba(249,168,37,.7))}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes squeezePulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes alertRed{0%,100%{box-shadow:0 0 8px rgba(255,0,0,0.3),inset 0 0 12px rgba(255,0,0,0.15)}50%{box-shadow:0 0 25px rgba(255,0,0,0.6),0 0 50px rgba(200,0,0,0.3),inset 0 0 20px rgba(255,0,0,0.25)}}
+@keyframes alertRainbow{0%{box-shadow:0 0 20px rgba(255,0,0,0.5),0 0 40px rgba(255,0,0,0.2)}14%{box-shadow:0 0 20px rgba(255,127,0,0.5),0 0 40px rgba(255,127,0,0.2)}28%{box-shadow:0 0 20px rgba(255,255,0,0.5),0 0 40px rgba(255,255,0,0.2)}42%{box-shadow:0 0 20px rgba(0,255,0,0.5),0 0 40px rgba(0,255,0,0.2)}57%{box-shadow:0 0 20px rgba(0,127,255,0.5),0 0 40px rgba(0,127,255,0.2)}71%{box-shadow:0 0 20px rgba(75,0,130,0.5),0 0 40px rgba(75,0,130,0.2)}85%{box-shadow:0 0 20px rgba(148,0,211,0.5),0 0 40px rgba(148,0,211,0.2)}100%{box-shadow:0 0 20px rgba(255,0,0,0.5),0 0 40px rgba(255,0,0,0.2)}}
+@keyframes alertBorderRed{0%,100%{border-color:rgba(255,0,0,0.4)}50%{border-color:rgba(255,0,0,0.8)}}
+@keyframes alertBorderRainbow{0%{border-color:#f00}14%{border-color:#f70}28%{border-color:#ff0}42%{border-color:#0f0}57%{border-color:#07f}71%{border-color:#4b0082}85%{border-color:#9400d3}100%{border-color:#f00}}
+@keyframes alertGlitch{0%{transform:translate(0,0)}10%{transform:translate(-2px,1px)}20%{transform:translate(2px,-1px)}30%{transform:translate(0,2px)}40%{transform:translate(1px,-2px)}50%{transform:translate(-1px,0)}60%{transform:translate(2px,1px)}70%{transform:translate(-2px,-1px)}80%{transform:translate(0,0)}85%{transform:translate(1px,2px)}90%{transform:translate(-1px,-1px)}100%{transform:translate(0,0)}}
+@keyframes alertGlitchShadow{0%,80%{box-shadow:none;filter:none}82%{box-shadow:2px 0 0 rgba(255,0,0,0.4),-2px 0 0 rgba(0,255,255,0.4);filter:brightness(1.3)}84%{box-shadow:none;filter:none}90%{box-shadow:-1px 0 0 rgba(255,0,255,0.3),1px 0 0 rgba(0,255,0,0.3);filter:brightness(0.8)}92%{box-shadow:none;filter:none}}
+@keyframes alertFlash{0%{background:rgba(14,14,28,0.92)}8%{background:rgba(255,255,255,0.95)}20%{background:rgba(14,14,28,0.92)}28%{background:rgba(255,255,240,0.6)}40%{background:rgba(14,14,28,0.92)}}
+@keyframes alertBlackout{0%{background:rgba(14,14,28,0.92)}5%{background:rgba(0,0,0,1)}30%{background:rgba(0,0,0,1)}50%{background:rgba(14,14,28,0.92)}}
+@keyframes alertQuake{0%{transform:translate(0,0)}5%{transform:translate(-3px,2px)}10%{transform:translate(3px,-2px)}15%{transform:translate(-2px,-3px)}20%{transform:translate(2px,3px)}25%{transform:translate(-3px,1px)}30%{transform:translate(3px,-1px)}35%{transform:translate(0,0)}100%{transform:translate(0,0)}}
+@keyframes alertQuakeCard{0%{transform:translate(0,0) rotate(0)}8%{transform:translate(-4px,2px) rotate(-2deg)}16%{transform:translate(4px,-3px) rotate(2deg)}24%{transform:translate(-3px,-2px) rotate(-1deg)}32%{transform:translate(3px,3px) rotate(1deg)}40%{transform:translate(-2px,1px) rotate(-1deg)}50%{transform:translate(0,0) rotate(0)}}
 #install-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:linear-gradient(135deg,#1a1a2e,#16213e);border-top:1px solid rgba(230,180,34,0.2);padding:12px 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px;animation:fadeUp .4s ease;backdrop-filter:blur(10px)}
 #install-banner.show{display:flex}
 #install-banner button{padding:7px 18px;border-radius:8px;font-weight:700;font-family:inherit;cursor:pointer;font-size:12px;border:none}
@@ -114,6 +124,87 @@ var SFX={
   },
   buttonClick:function(){
     playTone(1000,0.05,"square",0.06);
+  },
+  alertRed:function(){
+    // Ominous rising dissonance
+    playTone(120,0.6,"sawtooth",0.18);
+    playTone(127,0.6,"sawtooth",0.15);
+    playTone(180,0.4,"square",0.1,0.15);
+    playNoise(0.3,0.15,0.1);
+    playTone(240,0.5,"sawtooth",0.12,0.3);
+    playTone(300,0.3,"square",0.08,0.4);
+  },
+  alertRainbow:function(){
+    // Deep ominous base layer
+    playTone(80,1.2,"sawtooth",0.16);
+    playTone(85,1.2,"sawtooth",0.12);
+    playNoise(0.3,0.1,0.05);
+    // Sparkly high-pitched ascending arpeggios
+    var sparkle=[2093,2349,2637,2793,3136,3520,3951,4186];
+    sparkle.forEach(function(f,i){
+      playTone(f,0.12,"sine",0.08,i*0.07);
+      playTone(f*1.005,0.1,"sine",0.05,i*0.07+0.02); // slight detune for shimmer
+    });
+    // Second wave of sparkle (descending)
+    setTimeout(function(){
+      var sp2=[3951,3520,3136,2793,2637,2349,2093,2637,3136,3951];
+      sp2.forEach(function(f,i){
+        playTone(f,0.1,"sine",0.06,i*0.06);
+        playTone(f*0.998,0.08,"sine",0.04,i*0.06+0.01);
+      });
+    },500);
+    // Chime hits
+    playTone(4186,0.3,"sine",0.07,0.15);
+    playTone(5274,0.25,"sine",0.05,0.3);
+    playTone(6272,0.2,"sine",0.04,0.5);
+  },
+  alertGlitch:function(){
+    playNoise(0.03,0.12,0);
+    playNoise(0.02,0.08,0.15);
+    playTone(440,0.04,"square",0.06,0.1);
+    playNoise(0.03,0.1,0.4);
+    playTone(880,0.02,"square",0.04,0.45);
+    playNoise(0.02,0.06,0.7);
+    playTone(220,0.05,"sawtooth",0.05,0.75);
+    playTone(55,0.8,"sine",0.06,0.2);
+    playTone(57,0.8,"sine",0.04,0.2);
+  },
+  alertFlash:function(){
+    // Sharp electric zap + bright chime
+    playNoise(0.08,0.25,0);
+    playTone(3000,0.06,"square",0.15,0);
+    playTone(4000,0.04,"square",0.1,0.03);
+    playTone(2000,0.1,"sine",0.08,0.08);
+    playTone(5000,0.15,"sine",0.06,0.12);
+    playTone(6000,0.1,"sine",0.04,0.2);
+  },
+  alertBlackout:function(){
+    // Deep void boom + eerie silence then return
+    playTone(30,0.8,"sawtooth",0.25,0);
+    playTone(35,0.8,"sawtooth",0.2,0);
+    playNoise(0.15,0.2,0);
+    playTone(60,0.5,"sine",0.1,0.3);
+    // Return sound
+    playTone(200,0.15,"sine",0.08,0.7);
+    playTone(400,0.1,"sine",0.06,0.8);
+  },
+  alertQuake:function(){
+    // Heavy rumble vibration
+    playTone(40,1.0,"sawtooth",0.2,0);
+    playTone(45,1.0,"sawtooth",0.15,0);
+    playNoise(0.6,0.15,0);
+    playTone(60,0.4,"square",0.1,0.2);
+    playTone(80,0.3,"sawtooth",0.08,0.4);
+    playNoise(0.3,0.1,0.5);
+  },
+  alertCow:function(){
+    // Mystical reveal chime + moo-like low tone
+    playTone(130,0.6,"sawtooth",0.12,0);
+    playTone(138,0.6,"sawtooth",0.1,0);
+    playTone(523,0.2,"sine",0.1,0.2);
+    playTone(659,0.2,"sine",0.1,0.35);
+    playTone(784,0.3,"sine",0.12,0.5);
+    playTone(110,0.4,"triangle",0.08,0.3);
   }
 };
 
@@ -367,13 +458,86 @@ function NiuNiu(){
   var s8=useState(0),roundNum=s8[0],setRoundNum=s8[1];
   var s9=useState(null),winner=s9[0],setWinner=s9[1];
   var s10=useState(true),soundOn=s10[0],setSoundOn=s10[1];
+  // Game mode: "simple" (no alerts), "sakibare" (先バレ), "premium" (プレミア)
+  var s13=useState("sakibare"),gameMode=s13[0],setGameMode=s13[1];
+  // Alert system
+  var s11=useState({}),alerts=s11[0],setAlerts=s11[1];
+  var s12=useState(null),forceAlert=s12[0],setForceAlert=s12[1];
 
   useEffect(function(){initConfetti();},[]);
+
+  // Determine alerts for all players when hands are dealt
+  // Called once after dealing, uses the full 5-card hand to check niuniu
+  function computeAlerts(allHands){
+    var newAlerts={};
+    allHands.forEach(function(hand,pi){
+      var ev=evaluateHand(hand);
+      var isNiuNiu=ev.bullValue>=10;
+      if(forceAlert){
+        newAlerts[pi]={type:forceAlert,timing:Math.random()<0.5?"three":"four"};
+        return;
+      }
+      var roll=Math.random();
+      var premiumTypes=["rainbow","cow","flash","blackout","quake"];
+      if(gameMode==="simple"){
+        // シンプル: 赤なし、違和感7%(70%信頼度)、プレミア各0.2%=1%(100%信頼度)
+        if(isNiuNiu){
+          if(roll<0.01){
+            var pt=premiumTypes[Math.floor(Math.random()*premiumTypes.length)];
+            newAlerts[pi]={type:pt,timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.08){
+            newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};
+          }
+        }else{
+          if(roll<0.003){
+            newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};
+          }
+        }
+      }else{
+        // 先バレ: 赤50%(40%信頼度)、違和感7%(70%信頼度)、プレミア各0.2%=1%(100%信頼度)
+        if(isNiuNiu){
+          if(roll<0.002){
+            newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.004){
+            newAlerts[pi]={type:"cow",timing:"four"};
+          }else if(roll<0.006){
+            newAlerts[pi]={type:"flash",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.008){
+            newAlerts[pi]={type:"blackout",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.01){
+            newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.08){
+            newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.58){
+            newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};
+          }
+        }else{
+          if(roll<0.003){
+            newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};
+          }else if(roll<0.078){
+            newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};
+          }
+        }
+      }
+    });
+    return newAlerts;
+  }
+
+  function playAlertSFX(type){
+    if(type==="rainbow")SFX.alertRainbow();
+    else if(type==="glitch")SFX.alertGlitch();
+    else if(type==="flash")SFX.alertFlash();
+    else if(type==="blackout")SFX.alertBlackout();
+    else if(type==="quake")SFX.alertQuake();
+    else if(type==="cow")SFX.alertCow();
+    else SFX.alertRed();
+  }
 
   function dealRound(sc){
     var deck=createDeck();var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
     setHands(h);var rc=[];for(var i2=0;i2<pc;i2++)rc.push(new Set());setRevealedCards(rc);
     setResults([]);setWinner(null);setPhase("dealing");if(sc)setScores(sc);
+    setAlerts(computeAlerts(h));
     setRoundNum(function(r){return r+1;});
     if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
@@ -387,14 +551,18 @@ function NiuNiu(){
 
   function openThree(pi){
     if(soundOn)SFX.deal();
+    // Trigger alert if timing is "three"
+    var alert=alerts[pi];
+    if(alert&&alert.timing==="three"&&soundOn){
+      setTimeout(function(){playAlertSFX(alert.type);},400);
+    }
     setRevealedCards(function(prev){
       var ns2=prev.map(function(s){return new Set(s);});
       ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);
-      // Check for bull in first 3 cards
       var c=hands[pi];
       if(c){
         var sum=rankPoints(c[0].rank)+rankPoints(c[1].rank)+rankPoints(c[2].rank);
-        if(sum%10===0&&soundOn)setTimeout(function(){SFX.bullFound();},300);
+        if(sum%10===0&&soundOn&&!(alert&&alert.timing==="three"))setTimeout(function(){SFX.bullFound();},300);
       }
       return ns2;
     });
@@ -405,6 +573,12 @@ function NiuNiu(){
       var ns2=prev.map(function(s){return new Set(s);});
       ns2[pi].add(ci);
 
+      // Trigger "four" timing alert when going from 3->4 cards
+      var alert=alerts[pi];
+      if(ns2[pi].size===4&&alert&&alert.timing==="four"&&soundOn){
+        setTimeout(function(){playAlertSFX(alert.type);},200);
+      }
+
       // Check if this player just completed 5 cards
       if(ns2[pi].size===5&&soundOn){
         var ev2=evaluateHand(hands[pi]);
@@ -413,8 +587,8 @@ function NiuNiu(){
         },200);
       }
 
-      // Check partial bull when 4 cards visible
-      if(ns2[pi].size===4&&soundOn){
+      // Check partial bull when 4 cards visible (only play sound if no alert active)
+      if(ns2[pi].size===4&&soundOn&&!(alert&&alert.timing==="four")){
         var c=hands[pi],vi=Array.from(ns2[pi]);
         for(var a=0;a<vi.length;a++)for(var b=a+1;b<vi.length;b++)for(var d=b+1;d<vi.length;d++){
           if((rankPoints(c[vi[a]].rank)+rankPoints(c[vi[b]].rank)+rankPoints(c[vi[d]].rank))%10===0){
@@ -478,6 +652,22 @@ function NiuNiu(){
                 style:{flex:1,padding:"5px 7px",borderRadius:6,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",color:"#ccc",fontSize:11,fontFamily:"inherit",outline:"none"}}));}))),
         e("button",{onClick:startGame,style:{padding:"11px 36px",fontSize:15,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
           background:"linear-gradient(135deg,#e6b422,#d4a017)",color:"#1a1a2e",letterSpacing:2,marginTop:10,boxShadow:"0 3px 12px rgba(230,180,34,0.22)"}},"ゲーム開始"),
+        e("div",{style:{margin:"20px 0 12px"}},
+          e("label",{style:{color:"#777",fontSize:10}},"ゲームモード"),
+          e("div",{style:{display:"flex",gap:7,justifyContent:"center",marginTop:7}},
+            [
+              {id:"simple",icon:"🃏",name:"シンプル"},
+              {id:"sakibare",icon:"🔮",name:"先バレ"}
+            ].map(function(m){
+              var sel=gameMode===m.id;
+              return e("button",{key:m.id,onClick:function(){setGameMode(m.id);if(soundOn)SFX.buttonClick();},style:{
+                display:"flex",alignItems:"center",gap:5,padding:"8px 16px",borderRadius:8,cursor:"pointer",
+                background:sel?"rgba(230,180,34,0.12)":"rgba(255,255,255,0.04)",
+                border:sel?"2px solid #e6b422":"2px solid rgba(255,255,255,0.07)",
+                color:sel?"#e6b422":"#aaa",fontSize:13,fontWeight:sel?700:400,fontFamily:"inherit",
+                transition:"all 0.2s"}},
+                e("span",{style:{fontSize:16}},m.icon),m.name);
+            }))),
         e("div",{style:{marginTop:18,padding:11,borderRadius:9,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",textAlign:"left"}},
           e("h3",{style:{margin:"0 0 5px",color:"#e6b422",fontSize:12}},"📖 遊び方"),
           e("p",{style:{margin:0,fontSize:11,lineHeight:1.7,color:"#888"}},"5枚配られたカードのうち3枚をオープン。残り2枚はドラッグで絞ります。絞り中はマーク（♠♥♦♣）のみ見え、数字は確定後に表示されます。3枚の合計が10の倍数＝牛。残り2枚の下一桁が役の強さです。"))));
@@ -487,13 +677,25 @@ function NiuNiu(){
   var gameChildren=[];
 
   // Header with sound toggle
+  var modeLabel=gameMode==="simple"?"🃏":"🔮";
   gameChildren.push(e("div",{key:"hdr",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,padding:"4px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
-    e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+    e("div",{style:{display:"flex",alignItems:"center",gap:6}},
       e("span",{style:{fontSize:22,fontWeight:800,color:"#e6b422",fontFamily:"serif"}},"牛牛"),
-      e("span",{style:{color:"#666",fontSize:11}},"Round "+roundNum)),
-    e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+      e("span",{style:{color:"#666",fontSize:11}},"R"+roundNum),
+      e("span",{style:{fontSize:11}},modeLabel)),
+    e("div",{style:{display:"flex",alignItems:"center",gap:5}},
       e("button",{onClick:function(){setSoundOn(!soundOn);},style:{padding:"2px 8px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:soundOn?"#e6b422":"#444",fontSize:14,cursor:"pointer"}},soundOn?"🔊":"🔇"),
-      e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);},
+      gameMode!=="simple"?(function(){
+        var types=[null,"red","glitch","rainbow","cow","flash","blackout","quake"];
+        var labels={"red":"🔴","glitch":"👻","rainbow":"🌈","cow":"🐮","flash":"⚡","blackout":"💀","quake":"🔥"};
+        var curIdx=types.indexOf(forceAlert);
+        return e("button",{onClick:function(){var next=types[(curIdx+1)%types.length];setForceAlert(next);},
+          style:{padding:"2px 8px",borderRadius:5,border:"1px solid "+(forceAlert?"rgba(230,180,34,0.5)":"rgba(255,255,255,0.08)"),
+            background:forceAlert?"rgba(230,180,34,0.1)":"transparent",
+            color:forceAlert?"#e6b422":"#444",fontSize:9,cursor:"pointer",fontFamily:"inherit"}},
+          forceAlert?(labels[forceAlert]||forceAlert)+"ON":"TEST");
+      })():null,
+      e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);setForceAlert(null);},
         style:{padding:"3px 10px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},"リセット"))));
 
   // Scores
@@ -507,11 +709,61 @@ function NiuNiu(){
   // Player cards
   var playerBoxes=Array.from({length:pc}).map(function(_,i){
     var rc=revealedCards[i]||new Set(),res=results[i],isW=winner===i,vs=visSet(i),pi=partialInfo(i),full=rc.size===5;
+    // Determine if alert is active for this player's unrevealed cards
+    var alert=alerts[i];
+    var alertActive=false,alertType=null;
+    if(alert&&!full){
+      if(alert.timing==="three"&&rc.size>=3)alertActive=true;
+      if(alert.timing==="four"&&rc.size>=4)alertActive=true;
+      if(alertActive)alertType=alert.type;
+    }
+
     var cardEls=hands[i]?hands[i].map(function(card,ci){
       var vis=vs.has(ci),canSq=phase==="reveal"&&!vis&&rc.size>=3&&(ci===3||ci===4);
       var partialGlow=!full&&pi&&pi.bullSet&&pi.bullSet.has(ci);
       var finalGlow=full&&res&&res.hasBull&&res.threeIdx&&res.threeIdx.indexOf(ci)>=0;
-      if(canSq)return e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,onRevealed:function(){revealCard(i,ci);}});
+      if(canSq){
+        // Wrap squeeze card with alert glow if active
+        var sqCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,onRevealed:function(){revealCard(i,ci);}});
+        if(alertActive){
+          var alertAnim,alertBorder,extraStyle={};
+          if(alertType==="rainbow"){
+            alertAnim="alertRainbow 1.2s linear infinite,alertBorderRainbow 1.2s linear infinite";
+            alertBorder="2px solid #f00";
+          }else if(alertType==="glitch"){
+            alertAnim="alertGlitch 0.3s steps(1) infinite,alertGlitchShadow 2s steps(1) infinite";
+            alertBorder="1px solid rgba(255,255,255,0.15)";
+          }else if(alertType==="quake"){
+            alertAnim="alertQuakeCard 0.4s ease-in-out infinite";
+            alertBorder="2px solid rgba(255,100,0,0.5)";
+            extraStyle={boxShadow:"0 0 15px rgba(255,100,0,0.3)"};
+          }else if(alertType==="flash"||alertType==="blackout"){
+            // flash/blackout affect the player box, card just gets a subtle glow
+            alertAnim="bullGlow 1s ease-in-out infinite";
+            alertBorder="2px solid rgba(255,255,255,0.3)";
+          }else if(alertType==="cow"){
+            // Cow mark: card shows 🐮 instead of 絞
+            alertAnim="bullGlow 1.2s ease-in-out infinite";
+            alertBorder="2px solid #e6b422";
+          }else{
+            alertAnim="alertRed 1.5s ease-in-out infinite,alertBorderRed 1.5s ease-in-out infinite";
+            alertBorder="2px solid rgba(255,0,0,0.5)";
+          }
+          // For cow type, replace the squeeze card hint with 🐮
+          if(alertType==="cow"){
+            return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({
+              borderRadius:(sm?60:CW)*0.09+4,animation:alertAnim,border:alertBorder,padding:1,position:"relative"
+            },extraStyle)},
+              sqCard,
+              e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",
+                pointerEvents:"none",zIndex:10,fontSize:sm?24:32,animation:"squeezePulse 1s ease-in-out infinite"}},"🐮"));
+          }
+          return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({
+            borderRadius:(sm?60:CW)*0.09+4,animation:alertAnim,border:alertBorder,padding:1
+          },extraStyle)},sqCard);
+        }
+        return sqCard;
+      }
       if(vis)return e("div",{key:ci,style:{animation:partialGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out infinite":"cardDeal .35s ease "+(ci*0.05)+"s both",borderRadius:cw*0.09+2}},
         e(CardFace,{card:card,w:cw,h:ch,showRank:true,highlight:finalGlow||partialGlow}));
       return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},e(CardBack,{w:cw,h:ch}));}):[];
@@ -539,10 +791,21 @@ function NiuNiu(){
     }
     pKids.push(e("div",{key:"action",style:{marginTop:7,textAlign:"center",minHeight:28}},actionContent));
 
+    // Determine player box animation
+    var boxAnim=isW?"winPulse 1.5s ease infinite":"none";
+    var boxBg=isW?"linear-gradient(135deg,rgba(230,180,34,0.07) 0%,rgba(10,10,20,0.95) 100%)":"rgba(14,14,28,0.92)";
+    if(alertActive&&alertType==="flash"){
+      boxAnim="alertFlash 1.5s ease-in-out 1";
+    }else if(alertActive&&alertType==="blackout"){
+      boxAnim="alertBlackout 2s ease-in-out 1";
+    }else if(alertActive&&alertType==="quake"){
+      boxAnim="alertQuake 0.5s ease-in-out infinite";
+    }
+
     return e("div",{key:i,style:{padding:11,borderRadius:11,transition:"all .3s ease",
       border:isW?"2px solid #e6b422":"1.5px solid "+(rc.size>0?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)"),
-      background:isW?"linear-gradient(135deg,rgba(230,180,34,0.07) 0%,rgba(10,10,20,0.95) 100%)":"rgba(14,14,28,0.92)",
-      animation:isW?"winPulse 1.5s ease infinite":"none"}},pKids);
+      background:boxBg,
+      animation:boxAnim}},pKids);
   });
 
   gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(265px,1fr))",gap:9}},playerBoxes));
