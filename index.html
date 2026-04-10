@@ -685,17 +685,7 @@ function NiuNiu(){
       e("span",{style:{fontSize:11}},modeLabel)),
     e("div",{style:{display:"flex",alignItems:"center",gap:5}},
       e("button",{onClick:function(){setSoundOn(!soundOn);},style:{padding:"2px 8px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:soundOn?"#e6b422":"#444",fontSize:14,cursor:"pointer"}},soundOn?"🔊":"🔇"),
-      gameMode!=="simple"?(function(){
-        var types=[null,"red","glitch","rainbow","cow","flash","blackout","quake"];
-        var labels={"red":"🔴","glitch":"👻","rainbow":"🌈","cow":"🐮","flash":"⚡","blackout":"💀","quake":"🔥"};
-        var curIdx=types.indexOf(forceAlert);
-        return e("button",{onClick:function(){var next=types[(curIdx+1)%types.length];setForceAlert(next);},
-          style:{padding:"2px 8px",borderRadius:5,border:"1px solid "+(forceAlert?"rgba(230,180,34,0.5)":"rgba(255,255,255,0.08)"),
-            background:forceAlert?"rgba(230,180,34,0.1)":"transparent",
-            color:forceAlert?"#e6b422":"#444",fontSize:9,cursor:"pointer",fontFamily:"inherit"}},
-          forceAlert?(labels[forceAlert]||forceAlert)+"ON":"TEST");
-      })():null,
-      e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);setForceAlert(null);},
+      e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);},
         style:{padding:"3px 10px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},"リセット"))));
 
   // Scores
