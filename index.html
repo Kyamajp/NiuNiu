@@ -374,7 +374,7 @@ function SqueezeCard(props){
   var sqState=useState(null),sq=sqState[0],setSq=sqState[1];
   var ref=useRef(null),startRef=useRef(null),dirLock=useRef(null);
   var squeezeSounded=useRef(false);
-  var w=small?60:CW,h=small?90:CH;
+  var w=props.cw||CW,h=props.ch||CH;
 
   function getPos(ev){var t=ev.touches?ev.touches[0]:ev;return{x:t.clientX,y:t.clientY};}
   function onStart(ev){if(revealed)return;ev.preventDefault();startRef.current=getPos(ev);dirLock.current=null;squeezeSounded.current=false;}
@@ -626,7 +626,9 @@ function NiuNiu(){
     return{text:idx.length+"枚合計: "+sum,bullSet:findPartialBull(pi)};
   }
 
-  var sm=pc>4,cw=sm?60:CW,ch=sm?90:CH;
+  var sm=pc>4;
+  var cw=pc>=6?48:pc>=5?54:CW;
+  var ch=pc>=6?72:pc>=5?81:CH;
 
   // ─── Setup screen ──────────────────────────────────────────
   if(phase==="setup"){
@@ -714,7 +716,7 @@ function NiuNiu(){
       var finalGlow=full&&res&&res.hasBull&&res.threeIdx&&res.threeIdx.indexOf(ci)>=0;
       if(canSq){
         // Wrap squeeze card with alert glow if active
-        var sqCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,onRevealed:function(){revealCard(i,ci);}});
+        var sqCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,cw:cw,ch:ch,onRevealed:function(){revealCard(i,ci);}});
         if(alertActive){
           var alertAnim,alertBorder,extraStyle={};
           if(alertType==="rainbow"){
@@ -742,14 +744,14 @@ function NiuNiu(){
           // For cow type, replace the squeeze card hint with 🐮
           if(alertType==="cow"){
             return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({
-              borderRadius:(sm?60:CW)*0.09+4,animation:alertAnim,border:alertBorder,padding:1,position:"relative"
+              borderRadius:cw*0.09+4,animation:alertAnim,border:alertBorder,padding:1,position:"relative"
             },extraStyle)},
               sqCard,
               e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",
                 pointerEvents:"none",zIndex:10,fontSize:sm?24:32,animation:"squeezePulse 1s ease-in-out infinite"}},"🐮"));
           }
           return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({
-            borderRadius:(sm?60:CW)*0.09+4,animation:alertAnim,border:alertBorder,padding:1
+            borderRadius:cw*0.09+4,animation:alertAnim,border:alertBorder,padding:1
           },extraStyle)},sqCard);
         }
         return sqCard;
@@ -759,27 +761,28 @@ function NiuNiu(){
       return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},e(CardBack,{w:cw,h:ch}));}):[];
 
     var pKids=[];
-    pKids.push(e("div",{key:"ph",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}},
-      e("div",{style:{display:"flex",alignItems:"center",gap:4}},
-        e("span",{style:{fontSize:17}},PEMOJI[i]),
-        e("span",{style:{color:PCOLORS[i],fontWeight:700,fontSize:12}},names[i]),
-        rc.size>=3&&!full?e("span",{style:{fontSize:9,fontWeight:600,color:"#c084fc",background:"rgba(192,132,252,0.07)",padding:"1px 5px",borderRadius:3}},rc.size===3?"絞り中":"ラスト！"):null),
-      isW?e("span",{style:{fontSize:10,fontWeight:700,color:"#e6b422",background:"rgba(230,180,34,0.08)",padding:"1px 6px",borderRadius:4}},"👑 勝ち"):null));
+    var compactMode=pc>=6;
+    pKids.push(e("div",{key:"ph",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:compactMode?4:7}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:3}},
+        e("span",{style:{fontSize:compactMode?14:17}},PEMOJI[i]),
+        e("span",{style:{color:PCOLORS[i],fontWeight:700,fontSize:compactMode?10:12}},names[i]),
+        rc.size>=3&&!full?e("span",{style:{fontSize:compactMode?7:9,fontWeight:600,color:"#c084fc",background:"rgba(192,132,252,0.07)",padding:"1px 4px",borderRadius:3}},rc.size===3?"絞り中":"ラスト！"):null),
+      isW?e("span",{style:{fontSize:compactMode?8:10,fontWeight:700,color:"#e6b422",background:"rgba(230,180,34,0.08)",padding:"1px 5px",borderRadius:4}},"👑 勝ち"):null));
     pKids.push(e("div",{key:"cards"},
-      e("div",{style:{display:"flex",gap:4,justifyContent:"center",marginBottom:4}},cardEls.slice(0,3)),
-      e("div",{style:{display:"flex",gap:4,justifyContent:"center"}},cardEls.slice(3))));
+      e("div",{style:{display:"flex",gap:compactMode?2:4,justifyContent:"center",marginBottom:compactMode?2:4}},cardEls.slice(0,3)),
+      e("div",{style:{display:"flex",gap:compactMode?2:4,justifyContent:"center"}},cardEls.slice(3))));
     if(pi)pKids.push(e("div",{key:"info",style:{marginTop:4,textAlign:"center",fontSize:10,color:"#555",animation:"fadeUp .3s ease"}},
       pi.text,pi.bullSet?e("span",{style:{color:"#e6b422",marginLeft:4,fontWeight:700,animation:"squeezePulse 1.5s ease-in-out infinite"}},"🐂 牛確定！"):null));
 
     var actionContent=null;
     if(full){var indResult=res||evaluateHand(hands[i]);
-      actionContent=e("div",{style:{fontSize:indResult.hasBull?19:13,fontWeight:800,color:indResult.hasBull?"#e6b422":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
+      actionContent=e("div",{style:{fontSize:indResult.hasBull?(compactMode?14:19):(compactMode?10:13),fontWeight:800,color:indResult.hasBull?"#e6b422":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
     }else if(phase==="reveal"&&rc.size===0){
-      actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:"5px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid #e6b422",background:"transparent",color:"#e6b422",cursor:"pointer",letterSpacing:1}},"3枚オープン");
+      actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid #e6b422",background:"transparent",color:"#e6b422",cursor:"pointer",letterSpacing:1}},"3枚オープン");
     }else if(phase==="reveal"&&rc.size>=3){
-      actionContent=e("div",{style:{fontSize:10,color:"#c084fc",animation:"squeezePulse 2s ease-in-out infinite",fontWeight:600}},"カードをドラッグして絞る");
+      actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#c084fc",animation:"squeezePulse 2s ease-in-out infinite",fontWeight:600}},"ドラッグして絞る");
     }
-    pKids.push(e("div",{key:"action",style:{marginTop:7,textAlign:"center",minHeight:28}},actionContent));
+    pKids.push(e("div",{key:"action",style:{marginTop:compactMode?3:7,textAlign:"center",minHeight:compactMode?20:28}},actionContent));
 
     // Determine player box animation
     var boxAnim=isW?"winPulse 1.5s ease infinite":"none";
@@ -792,13 +795,14 @@ function NiuNiu(){
       boxAnim="alertQuake 0.5s ease-in-out infinite";
     }
 
-    return e("div",{key:i,style:{padding:11,borderRadius:11,transition:"all .3s ease",
+    return e("div",{key:i,style:{padding:pc>=6?7:11,borderRadius:pc>=6?8:11,transition:"all .3s ease",
       border:isW?"2px solid #e6b422":"1.5px solid "+(rc.size>0?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)"),
       background:boxBg,
       animation:boxAnim}},pKids);
   });
 
-  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(265px,1fr))",gap:9}},playerBoxes));
+  var gridMin=pc>=6?"200px":pc>=5?"230px":"265px";
+  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax("+gridMin+",1fr))",gap:pc>=6?6:9}},playerBoxes));
 
   if(phase==="result"){
     gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease"}},
