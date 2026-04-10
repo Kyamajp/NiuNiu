@@ -26,10 +26,12 @@ body{background:linear-gradient(160deg,#060610 0%,#0e0e24 40%,#141434 70%,#0a0a1
 #install-banner button{padding:7px 18px;border-radius:8px;font-weight:700;font-family:inherit;cursor:pointer;font-size:12px;border:none}
 #install-btn{background:linear-gradient(135deg,#e6b422,#d4a017);color:#1a1a2e}
 #dismiss-btn{background:transparent;color:#777;border:1px solid rgba(255,255,255,0.1) !important}
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:998}
 </style>
 </head>
 <body>
 <div id="root"></div>
+<canvas id="confetti-canvas"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -40,6 +42,141 @@ var useCallback=React.useCallback;
 var useRef=React.useRef;
 var useEffect=React.useEffect;
 
+// ─── Sound Engine (Web Audio API) ────────────────────────────────
+var audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq,dur,type,vol,delay){
+  var ctx=getAudioCtx();if(!ctx)return;
+  var t=ctx.currentTime+(delay||0);
+  var osc=ctx.createOscillator();
+  var gain=ctx.createGain();
+  osc.type=type||"sine";
+  osc.frequency.setValueAtTime(freq,t);
+  gain.gain.setValueAtTime(vol||0.15,t);
+  gain.gain.exponentialRampToValueAtTime(0.001,t+(dur||0.2));
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start(t);osc.stop(t+(dur||0.2));
+}
+
+function playNoise(dur,vol,delay){
+  var ctx=getAudioCtx();if(!ctx)return;
+  var t=ctx.currentTime+(delay||0);
+  var bufSize=ctx.sampleRate*dur;
+  var buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);
+  var data=buf.getChannelData(0);
+  for(var i=0;i<bufSize;i++)data[i]=(Math.random()*2-1)*0.5;
+  var src=ctx.createBufferSource();src.buffer=buf;
+  var gain=ctx.createGain();
+  gain.gain.setValueAtTime(vol||0.08,t);
+  gain.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  var filter=ctx.createBiquadFilter();
+  filter.type="highpass";filter.frequency.value=3000;
+  src.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+  src.start(t);src.stop(t+dur);
+}
+
+var SFX={
+  deal:function(){
+    for(var i=0;i<3;i++){
+      playNoise(0.06,0.12,i*0.08);
+      playTone(800+i*100,0.05,"square",0.04,i*0.08);
+    }
+  },
+  squeeze:function(){
+    playNoise(0.04,0.06);
+    playTone(600,0.08,"sine",0.06);
+  },
+  cardReveal:function(){
+    playNoise(0.05,0.1);
+    playTone(1200,0.1,"sine",0.08);
+    playTone(1500,0.08,"sine",0.05,0.05);
+  },
+  bullFound:function(){
+    playTone(523,0.15,"sine",0.15);
+    playTone(659,0.15,"sine",0.15,0.12);
+    playTone(784,0.25,"sine",0.18,0.24);
+  },
+  noBull:function(){
+    playTone(300,0.2,"triangle",0.1);
+    playTone(250,0.3,"triangle",0.08,0.15);
+  },
+  win:function(){
+    var notes=[523,659,784,1047,784,1047];
+    notes.forEach(function(n,i){
+      playTone(n,0.18,"sine",0.12,i*0.1);
+      if(i<3)playTone(n*1.5,0.12,"triangle",0.05,i*0.1+0.05);
+    });
+  },
+  buttonClick:function(){
+    playTone(1000,0.05,"square",0.06);
+  }
+};
+
+// ─── Confetti Engine ─────────────────────────────────────────────
+var confettiParts=[];
+var confettiActive=false;
+var confettiCanvas=null;
+var confettiCtx2d=null;
+
+function initConfetti(){
+  confettiCanvas=document.getElementById("confetti-canvas");
+  if(!confettiCanvas)return;
+  confettiCtx2d=confettiCanvas.getContext("2d");
+  resizeConfetti();
+  window.addEventListener("resize",resizeConfetti);
+}
+function resizeConfetti(){
+  if(!confettiCanvas)return;
+  confettiCanvas.width=window.innerWidth;
+  confettiCanvas.height=window.innerHeight;
+}
+function launchConfetti(){
+  confettiParts=[];
+  var colors=["#e6b422","#c0392b","#f39c12","#e74c3c","#2980b9","#27ae60","#f0d060","#ff6b6b"];
+  for(var i=0;i<80;i++){
+    confettiParts.push({
+      x:Math.random()*window.innerWidth,
+      y:-20-Math.random()*200,
+      w:4+Math.random()*6,
+      h:8+Math.random()*10,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      vx:(Math.random()-0.5)*4,
+      vy:2+Math.random()*4,
+      rot:Math.random()*360,
+      rv:(Math.random()-0.5)*8,
+      life:1
+    });
+  }
+  confettiActive=true;
+  requestAnimationFrame(drawConfetti);
+}
+function drawConfetti(){
+  if(!confettiActive||!confettiCtx2d)return;
+  confettiCtx2d.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  var alive=0;
+  confettiParts.forEach(function(p){
+    if(p.life<=0)return;
+    alive++;
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.12;p.rot+=p.rv;
+    p.life-=0.006;
+    confettiCtx2d.save();
+    confettiCtx2d.translate(p.x,p.y);
+    confettiCtx2d.rotate(p.rot*Math.PI/180);
+    confettiCtx2d.globalAlpha=Math.max(0,p.life);
+    confettiCtx2d.fillStyle=p.color;
+    confettiCtx2d.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    confettiCtx2d.restore();
+  });
+  if(alive>0)requestAnimationFrame(drawConfetti);
+  else{confettiActive=false;confettiCtx2d.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);}
+}
+
+// ─── Card & Game Logic ───────────────────────────────────────────
 var SUITS=["♠","♥","♦","♣"];
 var RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 var RANK_ORDER={"A":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13};
@@ -65,33 +202,22 @@ function createDeck(){
 function evaluateHand(cards){
   var hc=cardStrength(highestCard(cards));
   var best={hasBull:false,bullValue:0,label:"无牛",highCard:hc};
-  for(var i=0;i<3;i++){
-    for(var j=i+1;j<4;j++){
-      for(var k=j+1;k<5;k++){
-        var s3=rankPoints(cards[i].rank)+rankPoints(cards[j].rank)+rankPoints(cards[k].rank);
-        if(s3%10===0){
-          var rest=cards.filter(function(_,idx){return idx!==i&&idx!==j&&idx!==k;});
-          var s2=rankPoints(rest[0].rank)+rankPoints(rest[1].rank);
-          var v=s2%10===0?10:s2%10;
-          if(v>best.bullValue){
-            best={hasBull:true,bullValue:v,threeIdx:[i,j,k],label:v===10?"牛牛！":"牛"+v,highCard:hc};
-          }
-        }
-      }
+  for(var i=0;i<3;i++){for(var j=i+1;j<4;j++){for(var k=j+1;k<5;k++){
+    var s3=rankPoints(cards[i].rank)+rankPoints(cards[j].rank)+rankPoints(cards[k].rank);
+    if(s3%10===0){
+      var rest=cards.filter(function(_,idx){return idx!==i&&idx!==j&&idx!==k;});
+      var s2=rankPoints(rest[0].rank)+rankPoints(rest[1].rank);
+      var v=s2%10===0?10:s2%10;
+      if(v>best.bullValue)best={hasBull:true,bullValue:v,threeIdx:[i,j,k],label:v===10?"牛牛！":"牛"+v,highCard:hc};
     }
-  }
-  if(cards.every(function(c){return["J","Q","K"].indexOf(c.rank)>=0;})){
-    return Object.assign({},best,{hasBull:true,bullValue:15,label:"五花牛！",highCard:hc});
-  }
-  if(RANKS.some(function(r){return cards.filter(function(c){return c.rank===r;}).length===4;})){
-    return Object.assign({},best,{hasBull:true,bullValue:16,label:"炸弹牛！",highCard:hc});
-  }
-  if(cards.every(function(c){return rankValue(c.rank)<=5;})&&cards.reduce(function(s,c){return s+rankValue(c.rank);},0)<=10){
-    return Object.assign({},best,{hasBull:true,bullValue:14,label:"五小牛！",highCard:hc});
-  }
+  }}}
+  if(cards.every(function(c){return["J","Q","K"].indexOf(c.rank)>=0;}))return Object.assign({},best,{hasBull:true,bullValue:15,label:"五花牛！",highCard:hc});
+  if(RANKS.some(function(r){return cards.filter(function(c){return c.rank===r;}).length===4;}))return Object.assign({},best,{hasBull:true,bullValue:16,label:"炸弹牛！",highCard:hc});
+  if(cards.every(function(c){return rankValue(c.rank)<=5;})&&cards.reduce(function(s,c){return s+rankValue(c.rank);},0)<=10)return Object.assign({},best,{hasBull:true,bullValue:14,label:"五小牛！",highCard:hc});
   return best;
 }
 
+// ─── Pip layouts ─────────────────────────────────────────────────
 var PIP={
   "A":[[50,50]],"2":[[50,18],[50,82]],"3":[[50,15],[50,50],[50,85]],
   "4":[[30,15],[70,15],[30,85],[70,85]],"5":[[30,15],[70,15],[50,50],[30,85],[70,85]],
@@ -101,38 +227,33 @@ var PIP={
   "9":[[30,15],[70,15],[30,38],[70,38],[50,50],[30,62],[70,62],[30,85],[70,85]],
   "10":[[30,15],[70,15],[50,27],[30,38],[70,38],[30,62],[70,62],[50,73],[30,85],[70,85]]
 };
-var CW=74;
-var CH=111;
+var CW=74,CH=111;
 
+// ─── Card Components ─────────────────────────────────────────────
 function CardFace(props){
   var card=props.card,w=props.w||CW,h=props.h||CH,highlight=props.highlight||false,showRank=props.showRank!==false;
   if(!card)return null;
-  var isRed=card.suit==="♥"||card.suit==="♦";
-  var color=isRed?"#c0392b":"#1a1a2e";
-  var isFace=["J","Q","K"].indexOf(card.rank)>=0;
-  var pips=PIP[card.rank];
+  var isRed=card.suit==="♥"||card.suit==="♦",color=isRed?"#c0392b":"#1a1a2e";
+  var isFace=["J","Q","K"].indexOf(card.rank)>=0,pips=PIP[card.rank];
   var pipSize=card.rank==="A"?w*0.42:w*0.24;
-  var cTop=h*0.10,cLeft=w*0.08,cW=w*0.84,cH=h*0.80;
+  var cTop=h*0.10,cLeft=w*0.08,cW2=w*0.84,cH2=h*0.80;
   var children=[];
   if(showRank){
     children.push(e("div",{key:"tl",style:{position:"absolute",top:h*0.03,left:w*0.07,textAlign:"center",lineHeight:1,color:color}},
-      e("div",{style:{fontSize:w*0.19,fontWeight:800}},card.rank),
-      e("div",{style:{fontSize:w*0.16,marginTop:-1}},card.suit)));
+      e("div",{style:{fontSize:w*0.19,fontWeight:800}},card.rank),e("div",{style:{fontSize:w*0.16,marginTop:-1}},card.suit)));
     children.push(e("div",{key:"br",style:{position:"absolute",bottom:h*0.03,right:w*0.07,textAlign:"center",lineHeight:1,color:color,transform:"rotate(180deg)"}},
-      e("div",{style:{fontSize:w*0.19,fontWeight:800}},card.rank),
-      e("div",{style:{fontSize:w*0.16,marginTop:-1}},card.suit)));
+      e("div",{style:{fontSize:w*0.19,fontWeight:800}},card.rank),e("div",{style:{fontSize:w*0.16,marginTop:-1}},card.suit)));
   }
   if(isFace){
-    var faceKids=[];
-    if(showRank)faceKids.push(e("div",{key:"r",style:{fontSize:w*0.36,fontWeight:900,color:color,lineHeight:1}},card.rank));
-    faceKids.push(e("div",{key:"s",style:{fontSize:w*0.38,color:color,marginTop:showRank?2:0}},card.suit));
-    children.push(e("div",{key:"fc",style:{position:"absolute",top:cTop,left:cLeft,width:cW,height:cH,display:"flex",alignItems:"center",justifyContent:"center"}},
-      e("div",{style:{width:cW*0.82,height:cH*0.82,borderRadius:5,
+    var fc2=[e("div",{key:"suit",style:{fontSize:w*0.38,color:color,marginTop:showRank?2:0}},card.suit)];
+    if(showRank)fc2.unshift(e("div",{key:"rank",style:{fontSize:w*0.36,fontWeight:900,color:color,lineHeight:1}},card.rank));
+    children.push(e("div",{key:"fc",style:{position:"absolute",top:cTop,left:cLeft,width:cW2,height:cH2,display:"flex",alignItems:"center",justifyContent:"center"}},
+      e("div",{style:{width:cW2*0.82,height:cH2*0.82,borderRadius:5,
         background:isRed?"linear-gradient(135deg,#fce4ec 0%,#f8bbd0 100%)":"linear-gradient(135deg,#e8eaf6 0%,#c5cae9 100%)",
         display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
-        border:"1.5px solid "+(isRed?"#e57373":"#7986cb")}},faceKids)));
+        border:"1.5px solid "+(isRed?"#e57373":"#7986cb")}},fc2)));
   }else if(pips){
-    children.push(e("div",{key:"pips",style:{position:"absolute",top:cTop,left:cLeft,width:cW,height:cH}},
+    children.push(e("div",{key:"pips",style:{position:"absolute",top:cTop,left:cLeft,width:cW2,height:cH2}},
       pips.map(function(p,idx){return e("div",{key:idx,style:{position:"absolute",left:p[0]+"%",top:p[1]+"%",
         transform:"translate(-50%,-50%)"+(p[1]>55?" rotate(180deg)":""),fontSize:pipSize,color:color,lineHeight:1}},card.suit);})));
   }
@@ -155,158 +276,126 @@ function CardBack(props){
         e("div",{style:{fontSize:w*0.3,color:"#e6b422",fontWeight:900,opacity:0.4,fontFamily:"serif",textShadow:"0 0 8px rgba(230,180,34,0.2)"}},"牛"))));
 }
 
+// ─── Squeeze Card ────────────────────────────────────────────────
 function SqueezeCard(props){
   var card=props.card,onRevealed=props.onRevealed,small=props.small;
-  var s1=useState(false),revealed=s1[0],setRevealed=s1[1];
-  var s2=useState(null),sq=s2[0],setSq=s2[1];
+  var revState=useState(false),revealed=revState[0],setRevealed=revState[1];
+  var sqState=useState(null),sq=sqState[0],setSq=sqState[1];
   var ref=useRef(null),startRef=useRef(null),dirLock=useRef(null);
+  var squeezeSounded=useRef(false);
   var w=small?60:CW,h=small?90:CH;
 
   function getPos(ev){var t=ev.touches?ev.touches[0]:ev;return{x:t.clientX,y:t.clientY};}
-
-  function onStart(ev){
-    if(revealed)return;
-    ev.preventDefault();
-    startRef.current=getPos(ev);
-    dirLock.current=null;
-  }
-
+  function onStart(ev){if(revealed)return;ev.preventDefault();startRef.current=getPos(ev);dirLock.current=null;squeezeSounded.current=false;}
   function onMove(ev){
-    if(revealed||!startRef.current)return;
-    ev.preventDefault();
-    var p=getPos(ev);
-    var dx=p.x-startRef.current.x;
-    var dy=p.y-startRef.current.y;
-    if(!dirLock.current){
-      if(Math.abs(dx)<4&&Math.abs(dy)<4)return;
-      dirLock.current=Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"bottom":"top");
-    }
-    var d=dirLock.current;
-    var thr=(d==="left"||d==="right")?w*1.1:h*1.1;
-    var raw=0;
-    if(d==="right")raw=dx/thr;
-    else if(d==="left")raw=-dx/thr;
-    else if(d==="bottom")raw=dy/thr;
-    else raw=-dy/thr;
-    setSq({direction:d,progress:Math.max(0,Math.min(1,raw))});
+    if(revealed||!startRef.current)return;ev.preventDefault();
+    var p=getPos(ev),dx=p.x-startRef.current.x,dy=p.y-startRef.current.y;
+    if(!dirLock.current){if(Math.abs(dx)<4&&Math.abs(dy)<4)return;
+      dirLock.current=Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"bottom":"top");}
+    var d=dirLock.current,thr=(d==="left"||d==="right")?w*1.1:h*1.1,raw=0;
+    if(d==="right")raw=dx/thr;else if(d==="left")raw=-dx/thr;else if(d==="bottom")raw=dy/thr;else raw=-dy/thr;
+    var prog=Math.max(0,Math.min(1,raw));
+    if(prog>0.1&&!squeezeSounded.current){SFX.squeeze();squeezeSounded.current=true;}
+    setSq({direction:d,progress:prog});
   }
-
   function onEnd(){
-    if(!startRef.current)return;
-    startRef.current=null;
-    dirLock.current=null;
-    if(sq&&sq.progress>0.5){setRevealed(true);setSq(null);if(onRevealed)onRevealed();}
+    if(!startRef.current)return;startRef.current=null;dirLock.current=null;
+    if(sq&&sq.progress>0.5){setRevealed(true);setSq(null);SFX.cardReveal();if(onRevealed)onRevealed();}
     else setSq(null);
   }
 
-  useEffect(function(){
-    var el=ref.current;
-    if(!el)return;
+  useEffect(function(){var el=ref.current;if(!el)return;
     function prevent(ev){if(!revealed)ev.preventDefault();}
     el.addEventListener("touchmove",prevent,{passive:false});
-    return function(){el.removeEventListener("touchmove",prevent);};
-  },[revealed]);
+    return function(){el.removeEventListener("touchmove",prevent);};},[revealed]);
 
-  function coverClip(){
-    if(!sq)return{};
-    var d=sq.direction,p=sq.progress,pct=p*100;
+  function coverClip(){if(!sq)return{};var d=sq.direction,p=sq.progress,pct=p*100;
     var clip=d==="right"?"inset(0 0 0 "+pct+"%)":d==="left"?"inset(0 "+pct+"% 0 0)":d==="bottom"?"inset("+pct+"% 0 0 0)":"inset(0 0 "+pct+"% 0)";
     var a=p*30;
     var tf=d==="right"?"perspective(600px) rotateY("+a+"deg)":d==="left"?"perspective(600px) rotateY("+-a+"deg)":d==="bottom"?"perspective(600px) rotateX("+-a+"deg)":"perspective(600px) rotateX("+a+"deg)";
     var origin=d==="right"?"left center":d==="left"?"right center":d==="bottom"?"center top":"center bottom";
-    return{clipPath:clip,transform:tf,transformOrigin:origin};
-  }
-
-  function edgeLine(){
-    if(!sq)return null;
-    var d=sq.direction,pct=sq.progress*100;
+    return{clipPath:clip,transform:tf,transformOrigin:origin};}
+  function edgeLine(){if(!sq)return null;var d=sq.direction,pct=sq.progress*100;
     var base={position:"absolute",zIndex:5,pointerEvents:"none",background:"linear-gradient(to right,rgba(255,255,255,0.35),rgba(255,255,255,0))"};
     if(d==="right")return Object.assign({},base,{left:pct+"%",top:0,bottom:0,width:3});
     if(d==="left")return Object.assign({},base,{right:pct+"%",top:0,bottom:0,width:3});
     if(d==="bottom")return Object.assign({},base,{top:pct+"%",left:0,right:0,height:3,background:"linear-gradient(to bottom,rgba(255,255,255,0.35),rgba(255,255,255,0))"});
-    return Object.assign({},base,{bottom:pct+"%",left:0,right:0,height:3,background:"linear-gradient(to top,rgba(255,255,255,0.35),rgba(255,255,255,0))"});
-  }
-
-  function foldShadow(){
-    if(!sq)return null;
-    var d=sq.direction,pct=sq.progress*100,op=0.12+sq.progress*0.18,sz=14;
+    return Object.assign({},base,{bottom:pct+"%",left:0,right:0,height:3,background:"linear-gradient(to top,rgba(255,255,255,0.35),rgba(255,255,255,0))"});}
+  function foldShadow(){if(!sq)return null;var d=sq.direction,pct=sq.progress*100,op=0.12+sq.progress*0.18,sz=14;
     var base={position:"absolute",zIndex:4,pointerEvents:"none"};
     if(d==="right")return Object.assign({},base,{left:pct+"%",top:0,bottom:0,width:sz,background:"linear-gradient(to right,rgba(0,0,0,"+op+"),transparent)"});
     if(d==="left")return Object.assign({},base,{right:pct+"%",top:0,bottom:0,width:sz,background:"linear-gradient(to left,rgba(0,0,0,"+op+"),transparent)"});
     if(d==="bottom")return Object.assign({},base,{top:pct+"%",left:0,right:0,height:sz,background:"linear-gradient(to bottom,rgba(0,0,0,"+op+"),transparent)"});
-    return Object.assign({},base,{bottom:pct+"%",left:0,right:0,height:sz,background:"linear-gradient(to top,rgba(0,0,0,"+op+"),transparent)"});
-  }
+    return Object.assign({},base,{bottom:pct+"%",left:0,right:0,height:sz,background:"linear-gradient(to top,rgba(0,0,0,"+op+"),transparent)"});}
 
   if(revealed)return e("div",{style:{animation:"cardDeal .3s ease both"}},e(CardFace,{card:card,w:w,h:h,showRank:true}));
-
   var cc=coverClip(),el2=edgeLine(),fs=foldShadow();
   var kids=[
-    e("div",{key:"face",style:{position:"absolute",top:0,left:0,right:0,bottom:0}},e(CardFace,{card:card,w:w,h:h,showRank:false}))
+    e("div",{key:"face",style:{position:"absolute",top:0,left:0,right:0,bottom:0}},e(CardFace,{card:card,w:w,h:h,showRank:false})),
+    fs&&e("div",{key:"fs",style:fs}),
+    e("div",{key:"cover",style:Object.assign({position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:3,transition:sq?"none":"clip-path .25s ease,transform .25s ease"},cc)},
+      e(CardBack,{w:w,h:h,squeeze:!!sq})),
+    el2&&e("div",{key:"el",style:el2})
   ];
-  if(fs)kids.push(e("div",{key:"fs",style:fs}));
-  kids.push(e("div",{key:"cover",style:Object.assign({position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:3,transition:sq?"none":"clip-path .25s ease,transform .25s ease"},cc)},e(CardBack,{w:w,h:h,squeeze:!!sq})));
-  if(el2)kids.push(e("div",{key:"el",style:el2}));
-  if(!sq){
-    kids.push(e("div",{key:"hint",style:{position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:6,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}},
-      e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:0,animation:"squeezePulse 2s ease-in-out infinite"}},
-        e("div",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"↑"),
-        e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-          e("span",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"←"),
-          e("span",{style:{fontSize:11,color:"rgba(230,180,34,0.7)",fontWeight:700,letterSpacing:1}},"絞"),
-          e("span",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"→")),
-        e("div",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"↓"))));
-  }
+  if(!sq)kids.push(e("div",{key:"hint",style:{position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:6,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}},
+    e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:0,animation:"squeezePulse 2s ease-in-out infinite"}},
+      e("div",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"↑"),
+      e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+        e("span",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"←"),
+        e("span",{style:{fontSize:11,color:"rgba(230,180,34,0.7)",fontWeight:700,letterSpacing:1}},"絞"),
+        e("span",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"→")),
+      e("div",{style:{fontSize:10,color:"rgba(230,180,34,0.5)"}},"↓"))));
 
-  return e("div",{ref:ref,
-    onMouseDown:onStart,onMouseMove:onMove,onMouseUp:onEnd,onMouseLeave:onEnd,
+  return e("div",{ref:ref,onMouseDown:onStart,onMouseMove:onMove,onMouseUp:onEnd,onMouseLeave:onEnd,
     onTouchStart:onStart,onTouchMove:onMove,onTouchEnd:onEnd,
-    style:{width:w,height:h,position:"relative",borderRadius:w*0.09,cursor:"grab",
-      userSelect:"none",WebkitUserSelect:"none",touchAction:"none",
-      animation:"cardDeal .4s ease both",overflow:"hidden"}},kids);
+    style:{width:w,height:h,position:"relative",borderRadius:w*0.09,cursor:"grab",userSelect:"none",WebkitUserSelect:"none",
+      touchAction:"none",animation:"cardDeal .4s ease both",overflow:"hidden"}},kids);
 }
 
+// ─── Main App ────────────────────────────────────────────────────
 var PCOLORS=["#e74c3c","#2980b9","#27ae60","#f39c12","#8e44ad","#1abc9c"];
 var PEMOJI=["🐉","🐅","🐍","🦅","🐺","🦊"];
 
 function NiuNiu(){
-  var ps=useState("setup"),phase=ps[0],setPhase=ps[1];
-  var pc_s=useState(4),pc=pc_s[0],setPc=pc_s[1];
-  var ns=useState(["プレイヤー1","プレイヤー2","プレイヤー3","プレイヤー4","プレイヤー5","プレイヤー6"]),names=ns[0],setNames=ns[1];
-  var hs=useState([]),hands=hs[0],setHands=hs[1];
-  var rcs=useState([]),revealedCards=rcs[0],setRevealedCards=rcs[1];
-  var rs=useState([]),results=rs[0],setResults=rs[1];
-  var ss=useState({}),scores=ss[0],setScores=ss[1];
-  var rn=useState(0),roundNum=rn[0],setRoundNum=rn[1];
-  var ws=useState(null),winner=ws[0],setWinner=ws[1];
+  var s1=useState("setup"),phase=s1[0],setPhase=s1[1];
+  var s2=useState(4),pc=s2[0],setPc=s2[1];
+  var s3=useState(["プレイヤー1","プレイヤー2","プレイヤー3","プレイヤー4","プレイヤー5","プレイヤー6"]),names=s3[0],setNames=s3[1];
+  var s4=useState([]),hands=s4[0],setHands=s4[1];
+  var s5=useState([]),revealedCards=s5[0],setRevealedCards=s5[1];
+  var s6=useState([]),results=s6[0],setResults=s6[1];
+  var s7=useState({}),scores=s7[0],setScores=s7[1];
+  var s8=useState(0),roundNum=s8[0],setRoundNum=s8[1];
+  var s9=useState(null),winner=s9[0],setWinner=s9[1];
+  var s10=useState(true),soundOn=s10[0],setSoundOn=s10[1];
+
+  useEffect(function(){initConfetti();},[]);
 
   function dealRound(sc){
-    var deck=createDeck();
-    var h=[];
-    for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
-    setHands(h);
-    var rc=[];
-    for(var j=0;j<pc;j++)rc.push(new Set());
-    setRevealedCards(rc);
-    setResults([]);
-    setWinner(null);
-    setPhase("dealing");
-    if(sc)setScores(sc);
+    var deck=createDeck();var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
+    setHands(h);var rc=[];for(var i2=0;i2<pc;i2++)rc.push(new Set());setRevealedCards(rc);
+    setResults([]);setWinner(null);setPhase("dealing");if(sc)setScores(sc);
     setRoundNum(function(r){return r+1;});
+    if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
   }
 
   function startGame(){
-    var sc={};
-    for(var i=0;i<pc;i++)sc[i]=0;
-    setScores(sc);
-    setRoundNum(0);
+    var sc={};for(var i=0;i<pc;i++)sc[i]=0;setScores(sc);setRoundNum(0);
+    if(soundOn)SFX.buttonClick();
     dealRound(sc);
   }
 
   function openThree(pi){
+    if(soundOn)SFX.deal();
     setRevealedCards(function(prev){
       var ns2=prev.map(function(s){return new Set(s);});
       ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);
+      // Check for bull in first 3 cards
+      var c=hands[pi];
+      if(c){
+        var sum=rankPoints(c[0].rank)+rankPoints(c[1].rank)+rankPoints(c[2].rank);
+        if(sum%10===0&&soundOn)setTimeout(function(){SFX.bullFound();},300);
+      }
       return ns2;
     });
   }
@@ -315,19 +404,34 @@ function NiuNiu(){
     setRevealedCards(function(prev){
       var ns2=prev.map(function(s){return new Set(s);});
       ns2[pi].add(ci);
+
+      // Check if this player just completed 5 cards
+      if(ns2[pi].size===5&&soundOn){
+        var ev2=evaluateHand(hands[pi]);
+        setTimeout(function(){
+          if(ev2.hasBull)SFX.bullFound();else SFX.noBull();
+        },200);
+      }
+
+      // Check partial bull when 4 cards visible
+      if(ns2[pi].size===4&&soundOn){
+        var c=hands[pi],vi=Array.from(ns2[pi]);
+        for(var a=0;a<vi.length;a++)for(var b=a+1;b<vi.length;b++)for(var d=b+1;d<vi.length;d++){
+          if((rankPoints(c[vi[a]].rank)+rankPoints(c[vi[b]].rank)+rankPoints(c[vi[d]].rank))%10===0){
+            setTimeout(function(){SFX.bullFound();},200);a=b=d=99;
+          }
+        }
+      }
+
       if(ns2.every(function(s){return s.size===5;})){
         setTimeout(function(){
           var ev=hands.map(function(h){return evaluateHand(h);});
           setResults(ev);
-          var b=-1,bh=-1,bi=0;
-          ev.forEach(function(x,i){
-            if(x.bullValue>b||(x.bullValue===b&&x.highCard>bh)){
-              b=x.bullValue;bh=x.highCard;bi=i;
-            }
-          });
+          var bb=-1,bh=-1,bi=0;
+          ev.forEach(function(x,i){if(x.bullValue>bb||(x.bullValue===bb&&x.highCard>bh)){bb=x.bullValue;bh=x.highCard;bi=i;}});
           setScores(function(p){var n=Object.assign({},p);n[bi]=(n[bi]||0)+1;return n;});
-          setWinner(bi);
-          setPhase("result");
+          setWinner(bi);setPhase("result");
+          if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
         },400);
       }
       return ns2;
@@ -335,36 +439,22 @@ function NiuNiu(){
   }
 
   function visSet(pi){return revealedCards[pi]||new Set();}
-
   function findPartialBull(pi){
-    var rc=revealedCards[pi],c=hands[pi];
-    if(!c||!rc||rc.size<3||rc.size===5)return null;
+    var rc=revealedCards[pi],c=hands[pi];if(!c||!rc||rc.size<3||rc.size===5)return null;
     var vi=Array.from(rc);
-    for(var a=0;a<vi.length;a++){
-      for(var b=a+1;b<vi.length;b++){
-        for(var d=b+1;d<vi.length;d++){
-          if((rankPoints(c[vi[a]].rank)+rankPoints(c[vi[b]].rank)+rankPoints(c[vi[d]].rank))%10===0){
-            return new Set([vi[a],vi[b],vi[d]]);
-          }
-        }
-      }
-    }
+    for(var a=0;a<vi.length;a++)for(var b=a+1;b<vi.length;b++)for(var d=b+1;d<vi.length;d++){
+      if((rankPoints(c[vi[a]].rank)+rankPoints(c[vi[b]].rank)+rankPoints(c[vi[d]].rank))%10===0)return new Set([vi[a],vi[b],vi[d]]);}
     return null;
   }
-
   function partialInfo(pi){
-    var rc=revealedCards[pi],c=hands[pi];
-    if(!c||!rc||rc.size<3||rc.size===5)return null;
-    var idx=Array.from(rc);
-    var sum=idx.reduce(function(a,i){return a+rankPoints(c[i].rank);},0);
+    var rc=revealedCards[pi],c=hands[pi];if(!c||!rc||rc.size<3||rc.size===5)return null;
+    var idx=Array.from(rc),sum=idx.reduce(function(a,i){return a+rankPoints(c[i].rank);},0);
     return{text:idx.length+"枚合計: "+sum,bullSet:findPartialBull(pi)};
   }
 
-  var sm=pc>4;
-  var cw=sm?60:CW;
-  var ch=sm?90:CH;
+  var sm=pc>4,cw=sm?60:CW,ch=sm?90:CH;
 
-  // Setup screen
+  // ─── Setup screen ──────────────────────────────────────────
   if(phase==="setup"){
     return e("div",{style:{minHeight:"100vh",padding:10,maxWidth:860,margin:"0 auto"}},
       e("div",{style:{maxWidth:420,margin:"0 auto",padding:"26px 16px",textAlign:"center"}},
@@ -376,7 +466,7 @@ function NiuNiu(){
         e("div",{style:{margin:"22px 0 12px"}},
           e("label",{style:{color:"#777",fontSize:10}},"プレイヤー人数"),
           e("div",{style:{display:"flex",gap:7,justifyContent:"center",marginTop:7}},
-            [2,3,4,5,6].map(function(n){return e("button",{key:n,onClick:function(){setPc(n);},style:{padding:"7px 12px",borderRadius:7,fontSize:12,cursor:"pointer",
+            [2,3,4,5,6].map(function(n){return e("button",{key:n,onClick:function(){setPc(n);if(soundOn)SFX.buttonClick();},style:{padding:"7px 12px",borderRadius:7,fontSize:12,cursor:"pointer",
               background:pc===n?"#e6b422":"rgba(255,255,255,0.06)",color:pc===n?"#1a1a2e":"#aaa",fontWeight:pc===n?800:400,
               border:pc===n?"2px solid #e6b422":"2px solid rgba(255,255,255,0.07)"}},n+"人");}))),
         e("div",{style:{margin:"16px 0"}},
@@ -393,16 +483,18 @@ function NiuNiu(){
           e("p",{style:{margin:0,fontSize:11,lineHeight:1.7,color:"#888"}},"5枚配られたカードのうち3枚をオープン。残り2枚はドラッグで絞ります。絞り中はマーク（♠♥♦♣）のみ見え、数字は確定後に表示されます。3枚の合計が10の倍数＝牛。残り2枚の下一桁が役の強さです。"))));
   }
 
-  // Game screen
+  // ─── Game screen ───────────────────────────────────────────
   var gameChildren=[];
 
-  // Header
+  // Header with sound toggle
   gameChildren.push(e("div",{key:"hdr",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,padding:"4px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
     e("div",{style:{display:"flex",alignItems:"center",gap:8}},
       e("span",{style:{fontSize:22,fontWeight:800,color:"#e6b422",fontFamily:"serif"}},"牛牛"),
       e("span",{style:{color:"#666",fontSize:11}},"Round "+roundNum)),
-    e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);},
-      style:{padding:"3px 10px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},"リセット")));
+    e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+      e("button",{onClick:function(){setSoundOn(!soundOn);},style:{padding:"2px 8px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:soundOn?"#e6b422":"#444",fontSize:14,cursor:"pointer"}},soundOn?"🔊":"🔇"),
+      e("button",{onClick:function(){setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);},
+        style:{padding:"3px 10px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},"リセット"))));
 
   // Scores
   gameChildren.push(e("div",{key:"scores",style:{display:"flex",justifyContent:"center",gap:12,flexWrap:"wrap",padding:"6px 0",marginBottom:7,borderBottom:"1px solid rgba(255,255,255,0.04)"}},
@@ -410,62 +502,35 @@ function NiuNiu(){
       return e("div",{key:i,style:{display:"flex",alignItems:"center",gap:4,fontSize:11}},
         e("span",null,PEMOJI[i]),
         e("span",{style:{color:PCOLORS[i],fontWeight:700}},names[i]),
-        e("span",{style:{color:"#e6b422",fontWeight:800,fontSize:13}},scores[i]||0));
-    })));
+        e("span",{style:{color:"#e6b422",fontWeight:800,fontSize:13}},scores[i]||0));})));
 
   // Player cards
   var playerBoxes=Array.from({length:pc}).map(function(_,i){
-    var rc=revealedCards[i]||new Set();
-    var res=results[i];
-    var isW=winner===i;
-    var vs=visSet(i);
-    var pi=partialInfo(i);
-    var full=rc.size===5;
-
-    // Build card elements
+    var rc=revealedCards[i]||new Set(),res=results[i],isW=winner===i,vs=visSet(i),pi=partialInfo(i),full=rc.size===5;
     var cardEls=hands[i]?hands[i].map(function(card,ci){
-      var vis=vs.has(ci);
-      var canSq=phase==="reveal"&&!vis&&rc.size>=3&&(ci===3||ci===4);
+      var vis=vs.has(ci),canSq=phase==="reveal"&&!vis&&rc.size>=3&&(ci===3||ci===4);
       var partialGlow=!full&&pi&&pi.bullSet&&pi.bullSet.has(ci);
       var finalGlow=full&&res&&res.hasBull&&res.threeIdx&&res.threeIdx.indexOf(ci)>=0;
       if(canSq)return e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,onRevealed:function(){revealCard(i,ci);}});
-      if(vis)return e("div",{key:ci,style:{
-        animation:partialGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out infinite":"cardDeal .35s ease "+(ci*0.05)+"s both",
-        borderRadius:cw*0.09+2}},
+      if(vis)return e("div",{key:ci,style:{animation:partialGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out infinite":"cardDeal .35s ease "+(ci*0.05)+"s both",borderRadius:cw*0.09+2}},
         e(CardFace,{card:card,w:cw,h:ch,showRank:true,highlight:finalGlow||partialGlow}));
-      return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},e(CardBack,{w:cw,h:ch}));
-    }):[];
+      return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},e(CardBack,{w:cw,h:ch}));}):[];
 
-    var row1=cardEls.slice(0,3);
-    var row2=cardEls.slice(3);
-
-    // Player box children
     var pKids=[];
-
-    // Header
     pKids.push(e("div",{key:"ph",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}},
       e("div",{style:{display:"flex",alignItems:"center",gap:4}},
         e("span",{style:{fontSize:17}},PEMOJI[i]),
         e("span",{style:{color:PCOLORS[i],fontWeight:700,fontSize:12}},names[i]),
         rc.size>=3&&!full?e("span",{style:{fontSize:9,fontWeight:600,color:"#c084fc",background:"rgba(192,132,252,0.07)",padding:"1px 5px",borderRadius:3}},rc.size===3?"絞り中":"ラスト！"):null),
       isW?e("span",{style:{fontSize:10,fontWeight:700,color:"#e6b422",background:"rgba(230,180,34,0.08)",padding:"1px 6px",borderRadius:4}},"👑 勝ち"):null));
-
-    // Cards (3+2 layout)
     pKids.push(e("div",{key:"cards"},
-      e("div",{style:{display:"flex",gap:4,justifyContent:"center",marginBottom:4}},row1),
-      e("div",{style:{display:"flex",gap:4,justifyContent:"center"}},row2)));
+      e("div",{style:{display:"flex",gap:4,justifyContent:"center",marginBottom:4}},cardEls.slice(0,3)),
+      e("div",{style:{display:"flex",gap:4,justifyContent:"center"}},cardEls.slice(3))));
+    if(pi)pKids.push(e("div",{key:"info",style:{marginTop:4,textAlign:"center",fontSize:10,color:"#555",animation:"fadeUp .3s ease"}},
+      pi.text,pi.bullSet?e("span",{style:{color:"#e6b422",marginLeft:4,fontWeight:700,animation:"squeezePulse 1.5s ease-in-out infinite"}},"🐂 牛確定！"):null));
 
-    // Partial info
-    if(pi){
-      pKids.push(e("div",{key:"info",style:{marginTop:4,textAlign:"center",fontSize:10,color:"#555",animation:"fadeUp .3s ease"}},
-        pi.text,
-        pi.bullSet?e("span",{style:{color:"#e6b422",marginLeft:4,fontWeight:700,animation:"squeezePulse 1.5s ease-in-out infinite"}},"🐂 牛確定！"):null));
-    }
-
-    // Action / result
     var actionContent=null;
-    if(full){
-      var indResult=res||evaluateHand(hands[i]);
+    if(full){var indResult=res||evaluateHand(hands[i]);
       actionContent=e("div",{style:{fontSize:indResult.hasBull?19:13,fontWeight:800,color:indResult.hasBull?"#e6b422":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
     }else if(phase==="reveal"&&rc.size===0){
       actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:"5px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid #e6b422",background:"transparent",color:"#e6b422",cursor:"pointer",letterSpacing:1}},"3枚オープン");
@@ -482,10 +547,9 @@ function NiuNiu(){
 
   gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(265px,1fr))",gap:9}},playerBoxes));
 
-  // Next round button
   if(phase==="result"){
     gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease"}},
-      e("button",{onClick:function(){dealRound(scores);},style:{padding:"9px 30px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
+      e("button",{onClick:function(){if(soundOn)SFX.buttonClick();dealRound(scores);},style:{padding:"9px 30px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
         background:"linear-gradient(135deg,#e6b422,#d4a017)",color:"#1a1a2e",letterSpacing:2,boxShadow:"0 3px 12px rgba(230,180,34,0.22)"}},"次のラウンド →")));
   }
 
@@ -504,32 +568,17 @@ ReactDOM.createRoot(document.getElementById("root")).render(e(NiuNiu));
 </div>
 
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('sw.js').then(function(reg){
-      console.log('SW registered',reg.scope);
-    }).catch(function(err){console.log('SW failed',err);});
-  });
-}
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(r){}).catch(function(e){});});}
 var deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',function(ev){
-  ev.preventDefault();deferredPrompt=ev;
-  document.getElementById('install-banner').classList.add('show');
-});
-function installApp(){
-  if(!deferredPrompt)return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById('install-banner').classList.remove('show');});
-}
-window.addEventListener('appinstalled',function(){document.getElementById('install-banner').classList.remove('show');deferredPrompt=null;});
+window.addEventListener("beforeinstallprompt",function(ev){ev.preventDefault();deferredPrompt=ev;document.getElementById("install-banner").classList.add("show");});
+function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("install-banner").classList.remove("show");});}
+window.addEventListener("appinstalled",function(){document.getElementById("install-banner").classList.remove("show");deferredPrompt=null;});
 (function(){
   var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   var isStandalone=window.navigator.standalone===true;
-  if(isIOS&&!isStandalone){
-    var b=document.getElementById('install-banner');b.classList.add('show');
-    document.getElementById('install-btn').style.display='none';
-    b.querySelector('span').textContent='📲 Safari「共有」→「ホーム画面に追加」でアプリ化できます';
-  }
+  if(isIOS&&!isStandalone){var b=document.getElementById("install-banner");b.classList.add("show");
+    document.getElementById("install-btn").style.display="none";
+    b.querySelector("span").textContent="📲 Safari「共有」→「ホーム画面に追加」でアプリ化できます";}
 })();
 </script>
 </body>
