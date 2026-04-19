@@ -1,4 +1,4 @@
-var CACHE_NAME = 'niuniu-v10';
+var CACHE_NAME = 'niuniu-v17';
 var urlsToCache = [
   './',
   './index.html',
