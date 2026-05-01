@@ -1913,20 +1913,18 @@ function PlayerCards(props){
     revealCard=props.revealCard,soundOn=props.soundOn,isDealer=props.isDealer,
     chipDelta=props.chipDelta,battleMode=props.battleMode,betAmount=props.betAmount,cardSkin=props.cardSkin,cardFace=props.cardFace;
 
-  // Dealer-prominent layout: in battle mode with 3+ players, dealer is large, children are smaller
-  var dealerProminent=battleMode&&pc>=3;
+  // Dealer-prominent layout: only in 3p battle mode
+  var dealerProminent=battleMode&&pc===3;
   var sm=pc>4&&!isDealer;
   var cw,ch,compactMode;
   if(dealerProminent&&isDealer){
-    // Dealer always uses 2-player size
+    // 3p dealer: large size
     cw=CW;ch=CH;compactMode=false;
   }else if(dealerProminent){
-    // Children: 3p/4p use 56x84 compact, 5/6p use 52x78 compact
-    cw=pc>=5?52:56;
-    ch=pc>=5?78:84;
-    compactMode=true;
+    // 3p children: 56x84
+    cw=56;ch=84;compactMode=true;
   }else{
-    // Original logic (flip mode, or 2p battle)
+    // 4p+ battle, flip mode, 2p battle: all same size
     cw=pc>=5?52:pc>=4?56:CW;
     ch=pc>=5?78:pc>=4?84:CH;
     compactMode=pc>=4;
@@ -3514,44 +3512,22 @@ function NiuNiu(){
       cardFace:curFace});
   });
 
-  var dealerProminentLayout=appMode==="battle"&&pc>=3;
-  if(dealerProminentLayout){
-    // Dealer at top (full width), children below
+  if(appMode==="battle"&&pc===3){
+    // 3p battle: dealer prominent (full width) + 2 children in row
     var dealerBox=playerBoxes[dealer];
     var childBoxes=playerBoxes.filter(function(_,i){return i!==dealer;});
-    var childGap=pc>=5?5:8;
-
-    if(pc===4){
-      // Diamond shape: dealer / child-child / child
-      var dealerWrap=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
-      var midRow=e("div",{key:"mid-row",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
-        childBoxes[0],childBoxes[1]);
-      var bottomRow=e("div",{key:"bottom-row",style:{display:"flex",justifyContent:"center"}},
-        e("div",{style:{width:"calc(50% - "+(childGap/2)+"px)"}},childBoxes[2]));
-      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
-        dealerWrap,midRow,bottomRow));
-    }else if(pc===6){
-      // Pentagon shape: dealer / 2 / 2 / 1
-      var dealerWrap6=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
-      var row1=e("div",{key:"row1",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
-        childBoxes[0],childBoxes[1]);
-      var row2=e("div",{key:"row2",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
-        childBoxes[2],childBoxes[3]);
-      var row3=e("div",{key:"row3",style:{display:"flex",justifyContent:"center"}},
-        e("div",{style:{width:"calc(50% - "+(childGap/2)+"px)"}},childBoxes[4]));
-      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
-        dealerWrap6,row1,row2,row3));
-    }else{
-      // 3p: dealer + 2 children in row; 5p: dealer + 4 children in 2x2
-      var childGridCols;
-      if(pc===3)childGridCols="repeat(2,1fr)";
-      else childGridCols="repeat(2,1fr)"; // 5p
-      var dealerWrapElse=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
-      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
-        dealerWrapElse,
-        e("div",{key:"child-row",style:{display:"grid",gridTemplateColumns:childGridCols,gap:childGap}},childBoxes)));
-    }
+    var childGap=8;
+    var dealerWrap=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
+    gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
+      dealerWrap,
+      e("div",{key:"child-row",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},childBoxes)));
+  }else if(appMode==="battle"&&pc>=4){
+    // 4p+ battle: same as flip grid but dealer pinned to top-left (index 0)
+    var orderedBoxes=[playerBoxes[dealer]].concat(playerBoxes.filter(function(_,i){return i!==dealer;}));
+    var gridCols="repeat(2,1fr)";
+    gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},orderedBoxes));
   }else{
+    // flip mode (and 2p battle)
     var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
     gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
   }
