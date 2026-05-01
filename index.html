@@ -441,7 +441,7 @@ function CardFace(props){
   }
   if(isFace){
     var fc2Kids=[];
-    if(showRank)fc2Kids.push(e("div",{key:"rank",style:Object.assign({fontSize:w*0.36,fontWeight:rw,color:color,lineHeight:1,fontFamily:cardFont},italicStyle)},card.rank));
+    fc2Kids.push(e("div",{key:"rank",style:Object.assign({fontSize:w*0.36,fontWeight:rw,color:color,lineHeight:1,fontFamily:cardFont},italicStyle)},card.rank));
     var faceBg,faceBorder;
     if(ft.faceBgs&&ft.faceBgs[card.suit]){
       var fbg=ft.faceBgs[card.suit];
@@ -452,11 +452,11 @@ function CardFace(props){
       faceBorder=isRed?ft.faceRedBorder:ft.faceBlackBorder;
     }
     if(cowPip){
-      fc2Kids.push(e("div",{key:"suit",style:{position:"relative",width:w*0.38*(ft.suitScale||1),height:w*0.38*(ft.suitScale||1),marginTop:showRank?2:0}},
+      fc2Kids.push(e("div",{key:"suit",style:{position:"relative",width:w*0.38*(ft.suitScale||1),height:w*0.38*(ft.suitScale||1),marginTop:2}},
         e("span",{style:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",fontSize:w*0.38*(ft.suitScale||1),color:color,animation:"fadeOut 0.5s ease 10s forwards"}},card.suit),
         e("span",{style:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",fontSize:w*0.34*(ft.suitScale||1),animation:"cowPipIn 0.5s ease 10s both,specialCowGlow 3s ease-in-out 10.5s infinite"}},"🐮")));
     }else{
-      fc2Kids.push(e("div",{key:"suit",style:{fontSize:w*0.38*(ft.suitScale||1),color:color,marginTop:showRank?2:0}},card.suit));
+      fc2Kids.push(e("div",{key:"suit",style:{fontSize:w*0.38*(ft.suitScale||1),color:color,marginTop:2}},card.suit));
     }
     children.push(e("div",{key:"fc",style:{position:"absolute",top:cTop,left:cLeft,width:cW2,height:cH2,display:"flex",alignItems:"center",justifyContent:"center"}},
       e("div",{style:{width:cW2*0.82,height:cH2*0.82,borderRadius:5,background:faceBg,
@@ -1913,10 +1913,24 @@ function PlayerCards(props){
     revealCard=props.revealCard,soundOn=props.soundOn,isDealer=props.isDealer,
     chipDelta=props.chipDelta,battleMode=props.battleMode,betAmount=props.betAmount,cardSkin=props.cardSkin,cardFace=props.cardFace;
 
-  var sm=pc>4;
-  var cw=pc>=5?52:pc>=4?56:CW;
-  var ch=pc>=5?78:pc>=4?84:CH;
-  var compactMode=pc>=4;
+  // Dealer-prominent layout: in battle mode with 3+ players, dealer is large, children are smaller
+  var dealerProminent=battleMode&&pc>=3;
+  var sm=pc>4&&!isDealer;
+  var cw,ch,compactMode;
+  if(dealerProminent&&isDealer){
+    // Dealer always uses 2-player size
+    cw=CW;ch=CH;compactMode=false;
+  }else if(dealerProminent){
+    // Children: 3p uses 2-player size, 4p uses 4p compact, 5/6p uses 5p compact
+    cw=pc>=5?52:pc>=4?56:CW;
+    ch=pc>=5?78:pc>=4?84:CH;
+    compactMode=pc>=4;
+  }else{
+    // Original logic (flip mode, or 2p battle)
+    cw=pc>=5?52:pc>=4?56:CW;
+    ch=pc>=5?78:pc>=4?84:CH;
+    compactMode=pc>=4;
+  }
 
   var rc=revealedCards[i]||new Set(),res=results[i],isW=winner===i;
   var vs=rc;
@@ -2654,7 +2668,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.0 · © 2026 KTR (",
+            "v1.1 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -3500,8 +3514,46 @@ function NiuNiu(){
       cardFace:curFace});
   });
 
-  var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
-  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
+  var dealerProminentLayout=appMode==="battle"&&pc>=3;
+  if(dealerProminentLayout){
+    // Dealer at top (full width), children below
+    var dealerBox=playerBoxes[dealer];
+    var childBoxes=playerBoxes.filter(function(_,i){return i!==dealer;});
+    var childGap=pc>=5?5:8;
+
+    if(pc===4){
+      // Diamond shape: dealer / child-child / child
+      var dealerWrap=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
+      var midRow=e("div",{key:"mid-row",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
+        childBoxes[0],childBoxes[1]);
+      var bottomRow=e("div",{key:"bottom-row",style:{display:"flex",justifyContent:"center"}},
+        e("div",{style:{width:"calc(50% - "+(childGap/2)+"px)"}},childBoxes[2]));
+      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
+        dealerWrap,midRow,bottomRow));
+    }else if(pc===6){
+      // Pentagon shape: dealer / 2 / 2 / 1
+      var dealerWrap6=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
+      var row1=e("div",{key:"row1",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
+        childBoxes[0],childBoxes[1]);
+      var row2=e("div",{key:"row2",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},
+        childBoxes[2],childBoxes[3]);
+      var row3=e("div",{key:"row3",style:{display:"flex",justifyContent:"center"}},
+        e("div",{style:{width:"calc(50% - "+(childGap/2)+"px)"}},childBoxes[4]));
+      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
+        dealerWrap6,row1,row2,row3));
+    }else{
+      // 3p: dealer + 2 children in row; 5p: dealer + 4 children in 2x2
+      var childGridCols;
+      if(pc===3)childGridCols="repeat(2,1fr)";
+      else childGridCols="repeat(2,1fr)"; // 5p
+      gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
+        e("div",{key:"dealer-row"},dealerBox),
+        e("div",{key:"child-row",style:{display:"grid",gridTemplateColumns:childGridCols,gap:childGap}},childBoxes)));
+    }
+  }else{
+    var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
+    gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
+  }
 
   // Next round
   if(phase==="result"){
