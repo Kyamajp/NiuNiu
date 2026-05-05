@@ -441,7 +441,7 @@ function CardFace(props){
   }
   if(isFace){
     var fc2Kids=[];
-    fc2Kids.push(e("div",{key:"rank",style:Object.assign({fontSize:w*0.36,fontWeight:rw,color:color,lineHeight:1,fontFamily:cardFont},italicStyle)},card.rank));
+    if(showRank)fc2Kids.push(e("div",{key:"rank",style:Object.assign({fontSize:w*0.36,fontWeight:rw,color:color,lineHeight:1,fontFamily:cardFont},italicStyle)},card.rank));
     var faceBg,faceBorder;
     if(ft.faceBgs&&ft.faceBgs[card.suit]){
       var fbg=ft.faceBgs[card.suit];
@@ -452,11 +452,11 @@ function CardFace(props){
       faceBorder=isRed?ft.faceRedBorder:ft.faceBlackBorder;
     }
     if(cowPip){
-      fc2Kids.push(e("div",{key:"suit",style:{position:"relative",width:w*0.38*(ft.suitScale||1),height:w*0.38*(ft.suitScale||1),marginTop:2}},
+      fc2Kids.push(e("div",{key:"suit",style:{position:"relative",width:w*0.38*(ft.suitScale||1),height:w*0.38*(ft.suitScale||1),marginTop:showRank?2:0}},
         e("span",{style:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",fontSize:w*0.38*(ft.suitScale||1),color:color,animation:"fadeOut 0.5s ease 10s forwards"}},card.suit),
         e("span",{style:{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",fontSize:w*0.34*(ft.suitScale||1),animation:"cowPipIn 0.5s ease 10s both,specialCowGlow 3s ease-in-out 10.5s infinite"}},"🐮")));
     }else{
-      fc2Kids.push(e("div",{key:"suit",style:{fontSize:w*0.38*(ft.suitScale||1),color:color,marginTop:2}},card.suit));
+      fc2Kids.push(e("div",{key:"suit",style:{fontSize:w*0.38*(ft.suitScale||1),color:color,marginTop:showRank?2:0}},card.suit));
     }
     children.push(e("div",{key:"fc",style:{position:"absolute",top:cTop,left:cLeft,width:cW2,height:cH2,display:"flex",alignItems:"center",justifyContent:"center"}},
       e("div",{style:{width:cW2*0.82,height:cH2*0.82,borderRadius:5,background:faceBg,
@@ -1913,22 +1913,10 @@ function PlayerCards(props){
     revealCard=props.revealCard,soundOn=props.soundOn,isDealer=props.isDealer,
     chipDelta=props.chipDelta,battleMode=props.battleMode,betAmount=props.betAmount,cardSkin=props.cardSkin,cardFace=props.cardFace;
 
-  // Dealer-prominent layout: only in 3p battle mode
-  var dealerProminent=battleMode&&pc===3;
-  var sm=pc>4&&!isDealer;
-  var cw,ch,compactMode;
-  if(dealerProminent&&isDealer){
-    // 3p dealer: large size
-    cw=CW;ch=CH;compactMode=false;
-  }else if(dealerProminent){
-    // 3p children: 56x84
-    cw=56;ch=84;compactMode=true;
-  }else{
-    // 4p+ battle, flip mode, 2p battle: all same size
-    cw=pc>=5?52:pc>=4?56:CW;
-    ch=pc>=5?78:pc>=4?84:CH;
-    compactMode=pc>=4;
-  }
+  var sm=pc>4;
+  var cw=pc>=5?52:pc>=4?56:CW;
+  var ch=pc>=5?78:pc>=4?84:CH;
+  var compactMode=pc>=4;
 
   var rc=revealedCards[i]||new Set(),res=results[i],isW=winner===i;
   var vs=rc;
@@ -2666,7 +2654,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.1 · © 2026 KTR (",
+            "v1.0 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -3512,25 +3500,8 @@ function NiuNiu(){
       cardFace:curFace});
   });
 
-  if(appMode==="battle"&&pc===3){
-    // 3p battle: dealer prominent (full width) + 2 children in row
-    var dealerBox=playerBoxes[dealer];
-    var childBoxes=playerBoxes.filter(function(_,i){return i!==dealer;});
-    var childGap=8;
-    var dealerWrap=e("div",{key:"dealer-row",style:{display:"flex",justifyContent:"center"}},dealerBox);
-    gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
-      dealerWrap,
-      e("div",{key:"child-row",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},childBoxes)));
-  }else if(appMode==="battle"&&pc>=4){
-    // 4p+ battle: same as flip grid but dealer pinned to top-left (index 0)
-    var orderedBoxes=[playerBoxes[dealer]].concat(playerBoxes.filter(function(_,i){return i!==dealer;}));
-    var gridCols="repeat(2,1fr)";
-    gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},orderedBoxes));
-  }else{
-    // flip mode (and 2p battle)
-    var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
-    gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
-  }
+  var gridCols=pc>=4?"repeat(2,1fr)":"1fr";
+  gameChildren.push(e("div",{key:"grid",style:{display:"grid",gridTemplateColumns:gridCols,gap:pc>=5?5:8}},playerBoxes));
 
   // Next round
   if(phase==="result"){
