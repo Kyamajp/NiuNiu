@@ -11,8 +11,8 @@
 <meta property="og:title" content="牛牛 — Niu Niu">
 <meta property="og:description" content="中国伝統のカードゲーム「牛牛」。5枚のカードで役を作り、絞って楽しむ心理戦。2〜6人対戦可能。">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://kyamajp.github.io/niuniu/">
-<meta property="og:image" content="https://kyamajp.github.io/niuniu/icons/ogp.png">
+<meta property="og:url" content="https://kyamajp.github.io/NiuNiu/">
+<meta property="og:image" content="https://kyamajp.github.io/NiuNiu/icons/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="牛牛 — Niu Niu">
@@ -23,7 +23,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="牛牛 — Niu Niu">
 <meta name="twitter:description" content="中国伝統のカードゲーム「牛牛」。5枚のカードで役を作り、絞って楽しむ心理戦。">
-<meta name="twitter:image" content="https://kyamajp.github.io/niuniu/icons/ogp.png">
+<meta name="twitter:image" content="https://kyamajp.github.io/NiuNiu/icons/ogp.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180x180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
@@ -1063,6 +1063,23 @@ var I18N={
     "game.you_score":"あなたの合計",
     "game.copy_result":"結果をコピー",
     "game.copied":"コピーしました",
+    "battle.config":"⚙ 対戦設定",
+    "battle.change_count":"人数を変更",
+    "battle.random_seat":"🎲 ランダム着席",
+    "battle.random_seat_desc":"名前とチップをセットで席替え",
+    "battle.remove_player":"退場させるプレイヤー",
+    "battle.remove_confirm":"このプレイヤーを退場？",
+    "battle.left":"退場",
+    "battle.left_at":"退場ラウンド",
+    "battle.also_random_seat":"続けてランダム着席する？",
+    "battle.skip":"そのまま",
+    "battle.do_random":"🎲 ランダム着席",
+    "battle.add_players_title":"追加プレイヤーの名前",
+    "battle.players_added":"人追加",
+    "battle.new_player":"新規",
+    "battle.returning_player":"退場者を戻す",
+    "battle.choose_returning":"戻すプレイヤーを選択",
+    "battle.left_short":"退",
     "game.rounds":"ラウンド",
     // Pick dealer (battle)
     "battle.pick_dealer":"親を選んでください",
@@ -1378,6 +1395,23 @@ var I18N={
     "game.you_score":"Your total",
     "game.copy_result":"Copy Result",
     "game.copied":"Copied",
+    "battle.config":"⚙ Battle Settings",
+    "battle.change_count":"Change player count",
+    "battle.random_seat":"🎲 Random seat",
+    "battle.random_seat_desc":"Shuffle name+chips together",
+    "battle.remove_player":"Remove a player",
+    "battle.remove_confirm":"Remove this player?",
+    "battle.left":"Left",
+    "battle.left_at":"Left at round",
+    "battle.also_random_seat":"Also random-seat?",
+    "battle.skip":"Keep as is",
+    "battle.do_random":"🎲 Random seat",
+    "battle.add_players_title":"Names for new players",
+    "battle.players_added":" added",
+    "battle.new_player":"New",
+    "battle.returning_player":"Bring back",
+    "battle.choose_returning":"Choose who to bring back",
+    "battle.left_short":"L",
     "game.rounds":"Rounds",
     "battle.pick_dealer":"Pick the dealer",
     "battle.pick_dealer_back":"← Back",
@@ -1684,6 +1718,23 @@ var I18N={
     "game.you_score":"你的总分",
     "game.copy_result":"复制结果",
     "game.copied":"已复制",
+    "battle.config":"⚙ 对战设置",
+    "battle.change_count":"更改人数",
+    "battle.random_seat":"🎲 随机座位",
+    "battle.random_seat_desc":"姓名和筹码一起换位",
+    "battle.remove_player":"让谁离场",
+    "battle.remove_confirm":"让这位玩家离场？",
+    "battle.left":"已离场",
+    "battle.left_at":"离场轮次",
+    "battle.also_random_seat":"是否随机座位？",
+    "battle.skip":"保持原样",
+    "battle.do_random":"🎲 随机座位",
+    "battle.add_players_title":"新玩家姓名",
+    "battle.players_added":"位加入",
+    "battle.new_player":"新玩家",
+    "battle.returning_player":"返场玩家",
+    "battle.choose_returning":"选择返场玩家",
+    "battle.left_short":"离",
     "game.rounds":"轮",
     "battle.pick_dealer":"请选择庄家",
     "battle.pick_dealer_back":"← 返回",
@@ -2131,10 +2182,15 @@ function NiuNiu(){
   var sm1=useState(0),soundTapCount=sm1[0],setSoundTapCount=sm1[1];
   var sm2=useState(0),soundTapLast=sm2[0],setSoundTapLast=sm2[1];
   var sm3=useState(false),secretOpen=sm3[0],setSecretOpen=sm3[1];
-  var sm4=useState(false),fullOpenUsed=sm4[0],setFullOpenUsed=sm4[1];
-  var sm5=useState(false),peekUsed=sm5[0],setPeekUsed=sm5[1];
   var sm6=useState(null),peekActive=sm6[0],setPeekActive=sm6[1]; // null | {dir: "h"|"v", phase: "open"|"hold"|"close"}
   var sm7=useState(false),copyFeedback=sm7[0],setCopyFeedback=sm7[1];
+  // Battle config: inactive (left) players and dialogs
+  var bc1=useState([]),inactivePlayers=bc1[0],setInactivePlayers=bc1[1]; // [{name, chips, leftAtRound}]
+  var bc2=useState(null),battleConfigMode=bc2[0],setBattleConfigMode=bc2[1]; // null|"menu"|{mode:"removePlayer"|"randomSeatAsk"|"randomSeatAtStart"|"addPlayerNames", ...}
+  var bc3=useState(["","","","","",""]),addNameDraft=bc3[0],setAddNameDraft=bc3[1];
+  // For each added slot: {type:"new"} or {type:"returning", inactiveIdx: number}
+  var bc4=useState([null,null,null,null,null,null]),slotChoices=bc4[0],setSlotChoices=bc4[1];
+  var bc5=useState(null),showClearHistoryConfirm=bc5[0],setShowClearHistoryConfirm=bc5[1]; // null|"flip"|"battle"
 
   // Battle mode states
   var b1=useState(0),dealer=b1[0],setDealer=b1[1];
@@ -2257,10 +2313,11 @@ function NiuNiu(){
       maxBet:maxBet,
       dealer:dealer,
       bets:bets,
-      phase:phase
+      phase:phase,
+      inactivePlayers:inactivePlayers
     };
     saveBattleSession(session);
-  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,maxBet,dealer,bets]);
+  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,maxBet,dealer,bets,inactivePlayers]);
 
   function applyResume(session){
     setPc(session.pc||2);
@@ -2273,6 +2330,7 @@ function NiuNiu(){
     setMaxBet(session.maxBet||10);
     setDealer(session.dealer||0);
     setBets(session.bets||{});
+    setInactivePlayers(session.inactivePlayers||[]);
     // Always resume into pickDealer so player picks new dealer for next round
     var sc={};for(var i=0;i<(session.pc||2);i++)sc[i]=0;
     setScores(sc);
@@ -2418,7 +2476,7 @@ function NiuNiu(){
     setAlerts(computeAlerts(h));setRoundDeltas(null);
     setRoundNum(function(r){return r+1;});
     // Reset secret menu usage flags for new round
-    setFullOpenUsed(false);setPeekUsed(false);setPeekActive(null);
+    setPeekActive(null);
     if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
   }
@@ -2497,7 +2555,7 @@ function NiuNiu(){
             for(var k2 in deltas){if(deltas[k2]>bestDelta){bestDelta=deltas[k2];bestIdx=parseInt(k2);}}
             setWinner(bestIdx);
             // Save history
-            setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets)}]);});
+            setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice()}]);});
           }
           setPhase("result");
           if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
@@ -2508,69 +2566,82 @@ function NiuNiu(){
   }
 
   // ─── SECRET MENU ACTIONS ─────────────────────────────────────
-  function doFullOpen(){
-    if(fullOpenUsed||!hands||hands.length===0)return;
-    setFullOpenUsed(true);setSecretOpen(false);
-    if(soundOn)SFX.deal();
-    // Reveal all unrevealed cards at once
-    var pc=hands.length;
-    setRevealedCards(function(prev){
-      var ns2=prev.map(function(s){return new Set(s);});
-      for(var pi=0;pi<pc;pi++){
-        for(var ci=0;ci<5;ci++)ns2[pi].add(ci);
-      }
-      // Trigger end-of-round processing if all 5 revealed
-      if(ns2.every(function(s){return s.size===5;})){
-        setTimeout(function(){
-          var ev=hands.map(function(h){return evaluateHand(h);});
-          setResults(ev);
-          if(appMode==="flip"){
-            var bb=-1,bh=-1,bi=0;
-            ev.forEach(function(x,i){if(x.bullRank>bb||(x.bullRank===bb&&x.highCard>bh)){bb=x.bullRank;bh=x.highCard;bi=i;}});
-            setScores(function(p){var n=Object.assign({},p);n[bi]=(n[bi]||0)+1;return n;});
-            setWinner(bi);
-          }else{
-            // Battle mode: calculate chips
-            var dealerEv=ev[dealer];var deltas={};
-            for(var k=0;k<pc;k++)deltas[k]=0;
-            for(var ci2=0;ci2<pc;ci2++){
-              if(ci2===dealer)continue;
-              var childEv=ev[ci2],bet=bets[ci2]||0,dealerWins=false,mult=1;
-              if(dealerEv.bullRank>childEv.bullRank)dealerWins=true;
-              else if(dealerEv.bullRank<childEv.bullRank)dealerWins=false;
-              else if(dealerEv.highCard>childEv.highCard)dealerWins=true;
-              else dealerWins=false;
-              if(betRule==="offset"){mult=dealerWins?calcMultiplierOffset(dealerEv.bullValue):calcMultiplierOffset(childEv.bullValue);}
-              else{mult=dealerWins?calcMultiplierNoOffset(dealerEv.bullValue):calcMultiplierNoOffset(childEv.bullValue);}
-              var amount=Math.round(bet*mult);
-              if(dealerWins){deltas[dealer]+=amount;deltas[ci2]-=amount;}
-              else{deltas[dealer]-=amount;deltas[ci2]+=amount;}
-            }
-            setRoundDeltas(deltas);
-            setChips(function(prev2){var n=Object.assign({},prev2);for(var k2 in deltas)n[k2]=(n[k2]||0)+deltas[k2];return n;});
-            var bestDelta=-Infinity,bestIdx=0;
-            for(var k3 in deltas){if(deltas[k3]>bestDelta){bestDelta=deltas[k3];bestIdx=parseInt(k3);}}
-            setWinner(bestIdx);
-            setHistory(function(prev3){return prev3.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets)}]);});
-          }
-          setPhase("result");
-          if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
-        },400);
-      }
-      return ns2;
-    });
-  }
-
   function doPeek(){
-    if(peekUsed||!hands||hands.length===0)return;
-    setPeekUsed(true);setSecretOpen(false);
+    if(!hands||hands.length===0)return;
+    if(peekActive)return; // prevent overlapping peeks
     if(soundOn)SFX.deal();
     var dir=Math.random()<0.5?"h":"v";
     setPeekActive({dir:dir,phase:"open"});
-    // open(0.5s) -> hold(2.5s) -> close(0.5s) -> done
+    // open(0.5s) -> hold(2s) -> close(0.5s) -> done
     setTimeout(function(){setPeekActive({dir:dir,phase:"hold"});},500);
-    setTimeout(function(){setPeekActive({dir:dir,phase:"close"});},3000);
-    setTimeout(function(){setPeekActive(null);},3500);
+    setTimeout(function(){setPeekActive({dir:dir,phase:"close"});},2500);
+    setTimeout(function(){setPeekActive(null);},3000);
+  }
+
+  // ─── BATTLE CONFIG ACTIONS ────────────────────────────────────
+  // Random seat: shuffle (name, chips) pairs across active seats
+  function doRandomSeat(targetPc){
+    var n=targetPc||pc;
+    // Build current pairs for active seats
+    var pairs=[];
+    for(var i=0;i<n;i++){
+      pairs.push({name:(names[i]||""),chips:(chips[i]||0)});
+    }
+    // Fisher-Yates shuffle
+    for(var i2=pairs.length-1;i2>0;i2--){
+      var j=Math.floor(Math.random()*(i2+1));
+      var tmp=pairs[i2];pairs[i2]=pairs[j];pairs[j]=tmp;
+    }
+    // Apply to names and chips
+    var newNames=names.slice();
+    var newChips={};
+    for(var k=0;k<n;k++){
+      newNames[k]=pairs[k].name;
+      newChips[k]=pairs[k].chips;
+    }
+    setNames(newNames);
+    setChips(newChips);
+    if(soundOn)SFX.buttonClick();
+  }
+
+  // Remove a player at given seat, archive to inactivePlayers, re-pack remaining seats
+  function doRemovePlayer(seatIdx){
+    // Save the leaving player's info
+    var leavingName=names[seatIdx]||("プレイヤー"+(seatIdx+1));
+    var leavingChips=chips[seatIdx]||0;
+    var entry={name:leavingName,chips:leavingChips,leftAtRound:roundNum,emojiIdx:seatIdx};
+    setInactivePlayers(function(prev){return prev.concat([entry]);});
+    // Re-pack remaining seats: remove seatIdx, shift others down
+    var newNames=[];
+    var newChips={};
+    var newBets={};
+    var newSeat=0;
+    for(var i=0;i<pc;i++){
+      if(i===seatIdx)continue;
+      newNames[newSeat]=names[i]||"";
+      newChips[newSeat]=chips[i]||0;
+      newBets[newSeat]=bets[i]||1;
+      newSeat++;
+    }
+    // Pad names to length 6 for safety
+    while(newNames.length<6)newNames.push("");
+    setNames(newNames);
+    setChips(newChips);
+    setBets(newBets);
+    setPc(pc-1);
+    if(soundOn)SFX.buttonClick();
+  }
+
+  // Add a new player slot (chip 0, default name)
+  function doAddPlayer(targetPc){
+    var newPc=targetPc;
+    var newChips=Object.assign({},chips);
+    for(var i=pc;i<newPc;i++){
+      newChips[i]=0;
+    }
+    setChips(newChips);
+    setPc(newPc);
+    if(soundOn)SFX.buttonClick();
   }
 
   // ─── SPLASH Screen ──────────────────────────────────────────
@@ -2755,7 +2826,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.1 · © 2026 KTR (",
+            "v1.2 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -2885,13 +2956,33 @@ function NiuNiu(){
       // Clear button
       hsKids.push(e("div",{key:"clr",style:{textAlign:"center",marginTop:14}},
         e("button",{onClick:function(){
-          if(confirm(t("history.clear_confirm"))){
-            clearHistory(historyTab==="flip"?"niuniu_history_flip":"niuniu_history_battle");
-            setAppMode("home");
-            setTimeout(function(){setAppMode("history");},50); // re-render
-          }
+          setShowClearHistoryConfirm(historyTab);
         },style:{padding:"6px 14px",borderRadius:6,fontSize:10,cursor:"pointer",fontFamily:"inherit",
           background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("history.clear"))));
+    }
+
+    // Clear history confirmation modal (works on PWA where confirm() may be blocked)
+    if(showClearHistoryConfirm){
+      hsKids.push(e("div",{key:"clrModal",style:{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:999,
+        background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+        animation:"fadeUp 0.3s ease"}},
+        e("div",{style:{maxWidth:340,width:"100%",padding:"22px 22px",borderRadius:14,
+          background:"var(--card)",border:"1.5px solid var(--accent)",
+          boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}},
+          e("div",{style:{fontSize:14,fontWeight:800,marginBottom:14,textAlign:"center",color:"var(--accent)"}},t("history.clear_confirm")),
+          e("div",{style:{display:"flex",gap:10,justifyContent:"center"}},
+            e("button",{onClick:function(){setShowClearHistoryConfirm(null);},style:{
+              padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("common.cancel")||"キャンセル"),
+            e("button",{onClick:function(){
+              clearHistory(showClearHistoryConfirm==="flip"?"niuniu_history_flip":"niuniu_history_battle");
+              setShowClearHistoryConfirm(null);
+              setAppMode("home");
+              setTimeout(function(){setAppMode("history");},50); // re-render
+              if(soundOn)SFX.buttonClick();
+            },style:{
+              padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:"linear-gradient(135deg,#e74c3c,#c0392b)",border:"none",color:"#fff"}},t("history.clear"))))));
     }
 
     return e("div",{style:{minHeight:"100vh",padding:12,maxWidth:860,margin:"0 auto"}},
@@ -3404,12 +3495,35 @@ function NiuNiu(){
       e("button",{onClick:function(){
         var sc={};for(var i=0;i<pc;i++)sc[i]=0;
         setScores(sc);setRoundNum(0);setHistory([]);setRoundDeltas(null);
+        setInactivePlayers([]);
         if(soundOn)SFX.buttonClick();
-        if(appMode==="battle"){setChips(sc);setPhase("pickDealer");}
+        if(appMode==="battle"){
+          setChips(sc);
+          // Ask about random seat before starting
+          setBattleConfigMode({mode:"randomSeatAtStart"});
+        }
         else{dealRound(sc);}
       },style:{padding:"14px 48px",fontSize:16,fontWeight:800,fontFamily:"inherit",borderRadius:12,border:"none",cursor:"pointer",
         background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",color:"var(--bg)",letterSpacing:3,
         boxShadow:"0 4px 20px rgba(212,175,55,0.3),inset 0 1px 0 rgba(255,255,255,0.2)"}},t("setup.start"))));
+
+    // Battle config dialog can also appear on setup screen (e.g. randomSeatAtStart)
+    if(battleConfigMode&&battleConfigMode.mode==="randomSeatAtStart"){
+      setupKids.push(e("div",{key:"battleConfig",style:{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:999,
+        background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+        animation:"fadeUp 0.3s ease"}},
+        e("div",{style:{maxWidth:380,width:"100%",padding:"22px 22px",borderRadius:14,
+          background:"var(--card)",border:"1.5px solid var(--accent)",
+          boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}},
+          e("div",{style:{fontSize:14,fontWeight:800,marginBottom:14,textAlign:"center",color:"var(--accent)"}},t("battle.also_random_seat")),
+          e("div",{style:{display:"flex",gap:10,justifyContent:"center"}},
+            e("button",{onClick:function(){setBattleConfigMode(null);setPhase("pickDealer");},style:{
+              padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("battle.skip")),
+            e("button",{onClick:function(){doRandomSeat(pc);setBattleConfigMode(null);setPhase("pickDealer");},style:{
+              padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",border:"none",color:"#0a1a0f"}},t("battle.do_random"))))));
+    }
 
     return e("div",{style:{minHeight:"100vh",padding:12,maxWidth:860,margin:"0 auto"}},
       e("div",{style:{maxWidth:420,margin:"0 auto",padding:"12px 0"}},setupKids));
@@ -3521,17 +3635,20 @@ function NiuNiu(){
       e("div",{style:{fontSize:20,fontWeight:800,color:"var(--accent)"}},"📊 "+t("game.final")),
       e("div",{style:{fontSize:11,color:"#7a9a7a",marginTop:4}},history.length+t("game.rounds_done"))));
 
-    // Final ranking
-    var ranking=Array.from({length:pc}).map(function(_,i){return{idx:i,total:chips[i]||0};});
+    // Final ranking (active + inactive players)
+    var ranking=Array.from({length:pc}).map(function(_,i){return{idx:i,name:displayName(names,i),baseName:displayName(names,i),emoji:PEMOJI[i],color:PCOLORS[i],total:chips[i]||0,active:true};});
+    inactivePlayers.forEach(function(ip,k){
+      ranking.push({idx:"i_"+k,name:ip.name+" ("+t("battle.left")+")",baseName:ip.name,emoji:PEMOJI[ip.emojiIdx]||"👤",color:"#888",total:ip.chips||0,active:false,leftAtRound:ip.leftAtRound});
+    });
     ranking.sort(function(a,b){return b.total-a.total;});
     sumKids.push(e("div",{key:"ranking",style:{marginBottom:16}},
       e("div",{style:{fontSize:12,fontWeight:700,color:"#7a9a7a",marginBottom:8}},t("game.final_ranking")),
       ranking.map(function(r,pos){
         return e("div",{key:r.idx,style:{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",marginBottom:4,borderRadius:8,
-          background:pos===0?"rgba(212,175,55,0.08)":"rgba(212,175,55,0.03)",border:pos===0?"1px solid rgba(212,175,55,0.2)":"1px solid rgba(212,175,55,0.04)"}},
+          background:pos===0?"rgba(212,175,55,0.08)":"rgba(212,175,55,0.03)",border:pos===0?"1px solid rgba(212,175,55,0.2)":"1px solid rgba(212,175,55,0.04)",opacity:r.active?1:0.7}},
           e("span",{style:{fontSize:14,fontWeight:800,color:pos===0?"#d4af37":"#666",minWidth:20}},pos+1),
-          e("span",{style:{fontSize:16}},PEMOJI[r.idx]),
-          e("span",{style:{color:PCOLORS[r.idx],fontWeight:700,fontSize:13,flex:1}},displayName(names,r.idx)),
+          e("span",{style:{fontSize:16}},r.emoji),
+          e("span",{style:{color:r.color,fontWeight:700,fontSize:13,flex:1}},r.name),
           e("span",{style:{fontSize:16,fontWeight:800,color:r.total>0?"#27ae60":r.total<0?"#e74c3c":"#888"}},r.total>0?"+"+r.total:r.total));
       })));
 
@@ -3539,13 +3656,16 @@ function NiuNiu(){
     sumKids.push(e("div",{key:"hist",style:{marginBottom:16}},
       e("div",{style:{fontSize:12,fontWeight:700,color:"#7a9a7a",marginBottom:8}},t("game.round_history")),
       history.map(function(h,hi){
+        var histNames=h.names||names;
+        var histPc=(h.results&&h.results.length)||pc;
         return e("div",{key:hi,style:{padding:"8px 10px",marginBottom:4,borderRadius:8,background:"rgba(212,175,55,0.03)",border:"1px solid rgba(212,175,55,0.04)",fontSize:10}},
-          e("div",{style:{fontWeight:700,color:"var(--accent)",marginBottom:4}},"R"+(hi+1)+" "+t("battle.dealer_label")+":"+PEMOJI[h.dealer]+displayName(names,h.dealer)),
+          e("div",{style:{fontWeight:700,color:"var(--accent)",marginBottom:4}},"R"+(hi+1)+" "+t("battle.dealer_label")+":"+(PEMOJI[h.dealer]||"")+displayName(histNames,h.dealer)),
           e("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
-            Array.from({length:pc}).map(function(_,i){
-              var d=h.deltas[i];
+            Array.from({length:histPc}).map(function(_,i){
+              if(!h.results||!h.results[i])return null;
+              var d=(h.deltas&&h.deltas[i])||0;
               return e("span",{key:i,style:{color:d>0?"#27ae60":d<0?"#e74c3c":"#888"}},
-                PEMOJI[i]+h.results[i].label+(d>0?"+"+d:d));
+                (PEMOJI[i]||"")+h.results[i].label+(d>0?"+"+d:d));
             })));
       })));
 
@@ -3555,7 +3675,7 @@ function NiuNiu(){
     ranking.forEach(function(r,pos){
       var prefix=pos<3?medals[pos]:(pos+1)+"位";
       var amt=r.total>0?"+"+r.total.toLocaleString():r.total.toLocaleString();
-      summaryText+=prefix+" "+displayName(names,r.idx)+": "+amt+"\n";
+      summaryText+=prefix+" "+r.baseName+": "+amt+"\n";
     });
     summaryText+="─────────────";
 
@@ -3595,30 +3715,16 @@ function NiuNiu(){
       e("span",{style:{color:"#5a8a5a",fontSize:11}},"R"+roundNum),
       e("span",{style:{fontSize:11}},modeIcon+modeLabel)),
     e("div",{style:{display:"flex",alignItems:"center",gap:5}},
-      // Secret mini buttons (appear when secretOpen is true)
+      // Secret mini buttons (appear when secretOpen is true, persists for the session)
       secretOpen?(function(){
-        var canFullOpen=!fullOpenUsed&&hands&&hands.length>0&&phase!=="result"&&phase!=="setup";
-        var canPeek=!peekUsed&&hands&&hands.length>0&&phase!=="result"&&phase!=="setup";
+        var canPeek=hands&&hands.length>0&&phase!=="result"&&phase!=="setup"&&!peekActive;
         return e("div",{key:"secretMini",style:{display:"flex",alignItems:"center",gap:4,animation:"fadeUp 0.3s ease",marginRight:2}},
-          e("button",{onClick:doFullOpen,disabled:!canFullOpen,title:"全オープン",style:{
-            padding:"2px 7px",borderRadius:5,
-            border:"1px solid "+(canFullOpen?"var(--accent)":"rgba(255,255,255,0.08)"),
-            background:canFullOpen?"rgba(212,175,55,0.12)":"rgba(255,255,255,0.03)",
-            color:canFullOpen?"var(--accent)":"#444",
-            fontSize:14,cursor:canFullOpen?"pointer":"not-allowed",
-            opacity:fullOpenUsed?0.4:1}},"🃏"),
           e("button",{onClick:doPeek,disabled:!canPeek,title:"チラ見",style:{
             padding:"2px 7px",borderRadius:5,
             border:"1px solid "+(canPeek?"var(--accent)":"rgba(255,255,255,0.08)"),
             background:canPeek?"rgba(212,175,55,0.12)":"rgba(255,255,255,0.03)",
             color:canPeek?"var(--accent)":"#444",
-            fontSize:14,cursor:canPeek?"pointer":"not-allowed",
-            opacity:peekUsed?0.4:1}},"👁"),
-          e("button",{onClick:function(){setSecretOpen(false);},title:"閉じる",style:{
-            padding:"2px 5px",borderRadius:5,
-            border:"1px solid rgba(255,255,255,0.08)",
-            background:"transparent",color:"var(--text-dim)",
-            fontSize:10,cursor:"pointer"}},"✕"));
+            fontSize:14,cursor:canPeek?"pointer":"not-allowed"}},"👁"));
       })():null,
       e("button",{onClick:function(){
         setSoundOn(!soundOn);
@@ -3653,7 +3759,9 @@ function NiuNiu(){
   // Compute peek override from peekActive state
   var peekOverride=null;
   if(peekActive){
-    var pp=peekActive.phase==="close"?0:0.4;
+    // Horizontal squeeze needs more reveal (30%) than vertical (25%) to show corners
+    var openProgress=peekActive.dir==="h"?0.35:0.25;
+    var pp=peekActive.phase==="close"?0:openProgress;
     peekOverride={dir:peekActive.dir,progress:pp};
   }
 
@@ -3693,8 +3801,9 @@ function NiuNiu(){
 
   // Next round
   if(phase==="result"){
-    gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease",display:"flex",gap:10,justifyContent:"center"}},
+    gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease",display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}},
       appMode==="battle"?e("button",{onClick:function(){setPhase("summary");},style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},"📊 "+t("game.final")):null,
+      appMode==="battle"?e("button",{onClick:function(){if(soundOn)SFX.buttonClick();setBattleConfigMode("menu");},style:{padding:"9px 14px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},t("battle.config")):null,
       appMode==="flip"?e("button",{onClick:function(){
         if(soundOn)SFX.buttonClick();
         saveFlipHistoryIfNeeded();
@@ -3706,6 +3815,220 @@ function NiuNiu(){
         else{dealRound(scores);}
       },style:{padding:"9px 30px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
         background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",color:"var(--bg)",letterSpacing:2,boxShadow:"0 3px 12px rgba(212,175,55,0.22)"}},t("game.next_round_arrow"))));
+  }
+
+  // Battle config modal: change count / random seat / remove player
+  if(battleConfigMode){
+    var modalContent;
+    if(battleConfigMode==="menu"){
+      modalContent=e("div",null,
+        e("div",{style:{fontSize:14,fontWeight:800,marginBottom:14,textAlign:"center",color:"var(--accent)"}},t("battle.config")),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          // Player count buttons
+          e("div",{style:{fontSize:11,color:"var(--text-muted)",marginBottom:4}},t("battle.change_count")+" ("+pc+"→)"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}},
+            [2,3,4,5,6].map(function(n){
+              var sel=pc===n;
+              return e("button",{key:n,onClick:function(){
+                var nn=n;
+                if(nn===pc){return;}
+                if(nn<pc){
+                  // Need to choose who to remove
+                  setBattleConfigMode({mode:"removePlayer",targetPc:nn});
+                }else{
+                  // Show name input dialog for new players
+                  var draft=["","","","","",""];
+                  setAddNameDraft(draft);
+                  // Initialize slot choices: default all "new"
+                  var sc2=[null,null,null,null,null,null];
+                  for(var si=pc;si<nn;si++)sc2[si]={type:"new"};
+                  setSlotChoices(sc2);
+                  setBattleConfigMode({mode:"addPlayerNames",fromPc:pc,toPc:nn});
+                }
+                if(soundOn)SFX.buttonClick();
+              },disabled:sel,style:{
+                padding:"8px 4px",borderRadius:6,fontSize:12,cursor:sel?"default":"pointer",fontFamily:"inherit",
+                background:sel?"linear-gradient(135deg,var(--accent),var(--accent-dark))":"rgba(212,175,55,0.06)",
+                color:sel?"#0a1a0f":"#8faa8f",fontWeight:sel?800:600,
+                border:sel?"none":"1.5px solid rgba(212,175,55,0.12)",opacity:sel?1:0.9}},n);
+            })),
+          // Random seat button
+          e("button",{onClick:function(){doRandomSeat(pc);setBattleConfigMode(null);},style:{
+            marginTop:10,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"linear-gradient(135deg,rgba(212,175,55,0.2),rgba(212,175,55,0.05))",
+            border:"1.5px solid var(--accent)",color:"var(--accent)"}},
+            e("div",{style:{fontSize:13}},t("battle.random_seat")),
+            e("div",{style:{fontSize:9,opacity:0.7,fontWeight:400,marginTop:2}},t("battle.random_seat_desc")))),
+        e("div",{style:{textAlign:"center",marginTop:14}},
+          e("button",{onClick:function(){setBattleConfigMode(null);},style:{
+            padding:"6px 18px",borderRadius:7,fontSize:11,cursor:"pointer",fontFamily:"inherit",
+            background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("game.cancel")||"閉じる")));
+    }else if(battleConfigMode&&battleConfigMode.mode==="removePlayer"){
+      // Pick a player to remove
+      var targetPc=battleConfigMode.targetPc;
+      var diffCount=pc-targetPc; // number of players to remove
+      modalContent=e("div",null,
+        e("div",{style:{fontSize:14,fontWeight:800,marginBottom:6,textAlign:"center",color:"var(--accent)"}},t("battle.remove_player")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",textAlign:"center",marginBottom:12}},pc+" → "+targetPc+" ("+diffCount+t("battle.remove_player").charAt(0)+")"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:6,maxHeight:300,overflowY:"auto"}},
+          Array.from({length:pc}).map(function(_,i){
+            var pname=names[i]||("プレイヤー"+(i+1));
+            var pchips=chips[i]||0;
+            return e("button",{key:i,onClick:function(){
+              doRemovePlayer(i);
+              if(diffCount>1){
+                setBattleConfigMode({mode:"removePlayer",targetPc:targetPc});
+              }else{
+                setBattleConfigMode({mode:"randomSeatAsk",justChanged:true});
+              }
+            },style:{
+              padding:"10px 14px",borderRadius:7,fontSize:12,cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+              background:"rgba(255,255,255,0.04)",
+              border:"1px solid var(--card-border)",color:"var(--text)",
+              display:"flex",justifyContent:"space-between",alignItems:"center"}},
+              e("span",null,PEMOJI[i]+" "+pname),
+              e("span",{style:{color:pchips>=0?"#27ae60":"#e74c3c",fontSize:11}},(pchips>=0?"+":"")+pchips));
+          })),
+        e("div",{style:{textAlign:"center",marginTop:14}},
+          e("button",{onClick:function(){setBattleConfigMode("menu");},style:{
+            padding:"6px 18px",borderRadius:7,fontSize:11,cursor:"pointer",fontFamily:"inherit",
+            background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},"← "+t("battle.config"))));
+    }else if(battleConfigMode&&battleConfigMode.mode==="addPlayerNames"){
+      // Name input + returning-player selection for newly added slots
+      var fromPc=battleConfigMode.fromPc,toPc=battleConfigMode.toPc;
+      var addedSlots=[];
+      for(var ai=fromPc;ai<toPc;ai++)addedSlots.push(ai);
+      var hasInactive=inactivePlayers.length>0;
+      // Track which inactive indices are already chosen
+      var usedInactive={};
+      slotChoices.forEach(function(ch){
+        if(ch&&ch.type==="returning"&&typeof ch.inactiveIdx==="number")usedInactive[ch.inactiveIdx]=true;
+      });
+      modalContent=e("div",null,
+        e("div",{style:{fontSize:14,fontWeight:800,marginBottom:6,textAlign:"center",color:"var(--accent)"}},t("battle.add_players_title")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",textAlign:"center",marginBottom:14}},fromPc+" → "+toPc+" ("+(toPc-fromPc)+t("battle.players_added")+")"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10,maxHeight:380,overflowY:"auto"}},
+          addedSlots.map(function(seatIdx){
+            var slot=slotChoices[seatIdx]||{type:"new"};
+            // Per-slot UI: tabs (new / returning) + content
+            var tabs=hasInactive?e("div",{style:{display:"flex",gap:4,marginBottom:6}},
+              e("button",{onClick:function(){var ns=slotChoices.slice();ns[seatIdx]={type:"new"};setSlotChoices(ns);},style:{
+                flex:1,padding:"5px",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:slot.type==="new"?800:400,
+                background:slot.type==="new"?"rgba(212,175,55,0.18)":"rgba(0,0,0,0.2)",
+                border:slot.type==="new"?"1px solid var(--accent)":"1px solid var(--card-border)",
+                color:slot.type==="new"?"var(--accent)":"var(--text-muted)"}},t("battle.new_player")),
+              e("button",{onClick:function(){
+                // pick first unused inactive
+                var firstUnused=-1;
+                for(var ii=0;ii<inactivePlayers.length;ii++){
+                  if(!usedInactive[ii]||(slot.type==="returning"&&slot.inactiveIdx===ii)){firstUnused=ii;break;}
+                }
+                if(firstUnused<0)return;
+                var ns=slotChoices.slice();ns[seatIdx]={type:"returning",inactiveIdx:firstUnused};setSlotChoices(ns);
+              },style:{
+                flex:1,padding:"5px",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:slot.type==="returning"?800:400,
+                background:slot.type==="returning"?"rgba(212,175,55,0.18)":"rgba(0,0,0,0.2)",
+                border:slot.type==="returning"?"1px solid var(--accent)":"1px solid var(--card-border)",
+                color:slot.type==="returning"?"var(--accent)":"var(--text-muted)"}},t("battle.returning_player"))):null;
+            // Body for "new" or "returning"
+            var body;
+            if(slot.type==="new"){
+              body=e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                e("span",{style:{fontSize:18}},PEMOJI[seatIdx]),
+                e("input",{value:addNameDraft[seatIdx]||"",placeholder:t("setup.name_placeholder").replace("{n}",seatIdx+1),
+                  onChange:function(ev){var d=addNameDraft.slice();d[seatIdx]=ev.target.value;setAddNameDraft(d);},
+                  maxLength:10,
+                  style:{flex:1,padding:"7px 10px",borderRadius:6,border:"1px solid var(--card-border)",background:"rgba(0,0,0,0.3)",color:"var(--text)",fontSize:12,fontFamily:"inherit"}}));
+            }else{
+              // Show selectable list of inactive players
+              body=e("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+                e("div",{style:{fontSize:9,color:"var(--text-muted)",marginBottom:2}},PEMOJI[seatIdx]+" "+t("battle.choose_returning")),
+                inactivePlayers.map(function(ip,ii){
+                  var alreadyUsedElsewhere=usedInactive[ii]&&!(slot.inactiveIdx===ii);
+                  var isSelected=slot.inactiveIdx===ii;
+                  return e("button",{key:ii,onClick:function(){
+                    if(alreadyUsedElsewhere)return;
+                    var ns=slotChoices.slice();ns[seatIdx]={type:"returning",inactiveIdx:ii};setSlotChoices(ns);
+                  },disabled:alreadyUsedElsewhere,style:{
+                    padding:"6px 8px",borderRadius:5,fontSize:11,cursor:alreadyUsedElsewhere?"not-allowed":"pointer",fontFamily:"inherit",textAlign:"left",
+                    background:isSelected?"rgba(212,175,55,0.2)":"rgba(255,255,255,0.04)",
+                    border:isSelected?"1px solid var(--accent)":"1px solid var(--card-border)",
+                    color:isSelected?"var(--accent)":(alreadyUsedElsewhere?"#555":"var(--text)"),
+                    opacity:alreadyUsedElsewhere?0.4:1,
+                    display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                    e("span",null,(PEMOJI[ip.emojiIdx]||"👤")+" "+ip.name+" (R"+ip.leftAtRound+t("battle.left_short")+")"),
+                    e("span",{style:{color:ip.chips>=0?"#27ae60":"#e74c3c",fontSize:10}},(ip.chips>=0?"+":"")+ip.chips));
+                }));
+            }
+            return e("div",{key:seatIdx,style:{padding:"8px",borderRadius:7,background:"rgba(255,255,255,0.04)",border:"1px solid var(--card-border)"}},
+              tabs,body);
+          })),
+        e("div",{style:{display:"flex",gap:10,justifyContent:"center",marginTop:16}},
+          e("button",{onClick:function(){setBattleConfigMode("menu");},style:{
+            padding:"8px 18px",borderRadius:7,fontSize:11,cursor:"pointer",fontFamily:"inherit",
+            background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("common.back")),
+          e("button",{onClick:function(){
+            // Apply: build new names/chips arrays based on slot choices
+            var newNames=names.slice();
+            var newChips=Object.assign({},chips);
+            // Determine which inactive entries are being returned
+            var returningIndices=[]; // indices into inactivePlayers to remove
+            for(var ni=fromPc;ni<toPc;ni++){
+              var ch2=slotChoices[ni]||{type:"new"};
+              if(ch2.type==="returning"&&typeof ch2.inactiveIdx==="number"){
+                var ip2=inactivePlayers[ch2.inactiveIdx];
+                if(ip2){
+                  newNames[ni]=ip2.name;
+                  newChips[ni]=ip2.chips||0;
+                  returningIndices.push(ch2.inactiveIdx);
+                }
+              }else{
+                if(addNameDraft[ni])newNames[ni]=addNameDraft[ni];
+                newChips[ni]=0;
+              }
+            }
+            setNames(newNames);
+            setChips(newChips);
+            setPc(toPc);
+            // Remove returning players from inactivePlayers
+            if(returningIndices.length>0){
+              setInactivePlayers(function(prev){
+                return prev.filter(function(_,k){return returningIndices.indexOf(k)<0;});
+              });
+            }
+            setBattleConfigMode({mode:"randomSeatAsk",justChanged:true});
+            if(soundOn)SFX.buttonClick();
+          },style:{
+            padding:"8px 22px",borderRadius:7,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",border:"none",color:"#0a1a0f"}},t("common.next")||"次へ")));
+    }else if(battleConfigMode&&battleConfigMode.mode==="randomSeatAsk"){
+      modalContent=e("div",null,
+        e("div",{style:{fontSize:14,fontWeight:800,marginBottom:14,textAlign:"center",color:"var(--accent)"}},t("battle.also_random_seat")),
+        e("div",{style:{display:"flex",gap:10,justifyContent:"center"}},
+          e("button",{onClick:function(){setBattleConfigMode(null);setPhase("pickDealer");},style:{
+            padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("battle.skip")),
+          e("button",{onClick:function(){doRandomSeat(pc);setBattleConfigMode(null);setPhase("pickDealer");},style:{
+            padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",border:"none",color:"#0a1a0f"}},t("battle.do_random"))));
+    }else if(battleConfigMode&&battleConfigMode.mode==="randomSeatAtStart"){
+      // At-start dialog: ask about random seat before starting battle
+      modalContent=e("div",null,
+        e("div",{style:{fontSize:14,fontWeight:800,marginBottom:14,textAlign:"center",color:"var(--accent)"}},t("battle.also_random_seat")),
+        e("div",{style:{display:"flex",gap:10,justifyContent:"center"}},
+          e("button",{onClick:function(){setBattleConfigMode(null);setPhase("pickDealer");},style:{
+            padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("battle.skip")),
+          e("button",{onClick:function(){doRandomSeat(pc);setBattleConfigMode(null);setPhase("pickDealer");},style:{
+            padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",border:"none",color:"#0a1a0f"}},t("battle.do_random"))));
+    }
+    gameChildren.push(e("div",{key:"battleConfig",style:{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:999,
+      background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+      animation:"fadeUp 0.3s ease"}},
+      e("div",{style:{maxWidth:380,width:"100%",padding:"22px 22px",borderRadius:14,
+        background:"var(--card)",border:"1.5px solid var(--accent)",
+        boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}},modalContent)));
   }
 
   // Reset confirmation modal (works on all platforms including PWA where confirm() may be blocked)
