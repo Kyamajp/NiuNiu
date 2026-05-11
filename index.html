@@ -426,7 +426,8 @@ function CardFace(props){
     color=isRed?ft.red:ft.black;
   }
   var isFace=["J","Q","K"].indexOf(card.rank)>=0,pips=PIP[card.rank];
-  var pipSize=card.rank==="A"?w*0.42*(ft.suitScale||1):w*0.24*(ft.suitScale||1);
+  var isAceOfSpades=card.rank==="A"&&card.suit==="♠";
+  var pipSize=isAceOfSpades?w*0.95*(ft.suitScale||1):(card.rank==="A"?w*0.42*(ft.suitScale||1):w*0.24*(ft.suitScale||1));
   var cTop=h*0.10,cLeft=w*0.08,cW2=w*0.84,cH2=h*0.80;
   var bgGrad=highlight?"linear-gradient(145deg,"+ft.hlBg[0]+" 0%,"+ft.hlBg[1]+" 100%)":"linear-gradient(145deg,"+ft.bg[0]+" 0%,"+ft.bg[1]+" 100%)";
   var cardFont=ft.font||"'Georgia',serif";
@@ -478,7 +479,32 @@ function CardFace(props){
                 animation:"cowPipIn 0.4s ease "+delay+" both,specialCowGlow 3s ease-in-out "+(parseFloat(delay)+0.5)+"s 3",fontSize:pipSize*0.85}},"🐮")));
         }
         return e("div",{key:idx,style:{position:"absolute",left:p[0]+"%",top:p[1]+"%",
-          transform:"translate(-50%,-50%)"+(p[1]>55?" rotate(180deg)":""),fontSize:pipSize,color:color,lineHeight:1}},card.suit);
+          transform:"translate(-50%,-50%)"+(p[1]>55?" rotate(180deg)":""),fontSize:pipSize,color:color,lineHeight:1}},
+          isAceOfSpades?(function(){
+            // Determine accent (cutout) color based on body color brightness
+            // Light body (e.g. noir's #f0f0f0) → black accent; dark body → white accent
+            function isLight(c){
+              if(typeof c!=="string")return false;
+              if(c.charAt(0)!=="#")return false;
+              var hex=c.length===4?c.charAt(1)+c.charAt(1)+c.charAt(2)+c.charAt(2)+c.charAt(3)+c.charAt(3):c.slice(1);
+              var r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+              return (r+g+b)>=384; // 128*3, midpoint
+            }
+            var accent=isLight(color)?"#1a1a1a":"#fff";
+            return e("svg",{viewBox:"0 0 100 110",width:pipSize,height:pipSize*1.1,style:{display:"block"}},
+              // Main spade silhouette
+              e("path",{d:"M 50 8 C 28 30, 14 50, 18 70 C 20 82, 30 86, 40 80 C 43 78, 46 75, 48 72 L 44 96 Q 50 99 56 96 L 52 72 C 54 75, 57 78, 60 80 C 70 86, 80 82, 82 70 C 86 50, 72 30, 50 8 Z",
+                fill:color,stroke:color,strokeWidth:0.5}),
+              // Crown at top
+              e("path",{d:"M 42 28 L 45 22 L 50 26 L 55 22 L 58 28 L 56 32 L 44 32 Z",
+                fill:accent,stroke:"none",opacity:0.9}),
+              e("circle",{cx:45,cy:22,r:1.5,fill:accent,opacity:0.9}),
+              e("circle",{cx:50,cy:26,r:1.5,fill:accent,opacity:0.9}),
+              e("circle",{cx:55,cy:22,r:1.5,fill:accent,opacity:0.9}),
+              // Letter A (stylized)
+              e("path",{d:"M 42 65 L 50 40 L 58 65 M 45 57 L 55 57",
+                stroke:accent,strokeWidth:2.2,fill:"none",strokeLinecap:"round",strokeLinejoin:"round",opacity:0.95}));
+          })():card.suit);
       })));
   }
   return e("div",{style:{width:w,height:h,position:"relative",
