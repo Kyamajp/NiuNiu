@@ -2033,6 +2033,13 @@ function PlayerCards(props){
     pi2={text:idx2.length+t("game.round_sum")+": "+sum2,bullSet:bullSet2};
   }
 
+  // Compute local result if fully revealed but global results not yet set
+  // (other players may still be squeezing — this lets the 3-card bull set glow immediately)
+  var localRes=res;
+  if(hands[i]&&rc&&rc.size===5&&!res){
+    localRes=evaluateHand(hands[i]);
+  }
+
   var alert=alerts[i];
   var alertActive=false,alertType=null;
   var alertFizzled=false;
@@ -2077,10 +2084,10 @@ function PlayerCards(props){
   var cardEls=hands[i]?hands[i].map(function(card,ci){
     var vis=vs.has(ci),canSq=phase==="reveal"&&!vis&&rc.size>=3&&(ci===3||ci===4);
     var partialGlow=!full&&pi2&&pi2.bullSet&&pi2.bullSet.has(ci);
-    var finalGlow=full&&res&&res.hasBull&&res.threeIdx&&res.threeIdx.indexOf(ci)>=0;
+    var finalGlow=full&&localRes&&localRes.hasBull&&localRes.threeIdx&&localRes.threeIdx.indexOf(ci)>=0;
     if(canSq){
       var sqCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,cw:cw,ch:ch,onRevealed:function(){revealCard(i,ci);},skin:cardSkin,faceTheme:cardFace,peekOverride:props.peekOverride});
-      if(alertActive&&alertType!=="growBull"&&alertType!=="cowPip"){
+      if(alertActive&&alertType!=="growBull"&&alertType!=="cowPip"&&alertType!=="bullEmoji"){
         var alertAnim,alertBorder,extraStyle={};
         if(alertType==="rainbow"){alertAnim="alertRainbow 1.2s linear infinite,alertBorderRainbow 1.2s linear infinite";alertBorder="2px solid #f00";}
         else if(alertType==="glitch"){alertAnim="alertGlitch 0.3s steps(1) infinite,alertGlitchShadow 2s steps(1) infinite";alertBorder="1px solid rgba(255,255,255,0.15)";}
@@ -2097,7 +2104,8 @@ function PlayerCards(props){
     }
     if(vis){
       var useCowPip=alertActive&&alertType==="cowPip"&&alert&&ci===alert.cowPipIdx;
-      return e("div",{key:ci,style:{animation:partialGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out 4":"cardDeal .35s ease "+(ci*0.05)+"s both",borderRadius:cw*0.09+2}},
+      var anyGlow=partialGlow||finalGlow;
+      return e("div",{key:ci,style:{animation:anyGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out 4":"cardDeal .35s ease "+(ci*0.05)+"s both",borderRadius:cw*0.09+2}},
         e(CardFace,{card:card,w:cw,h:ch,showRank:true,highlight:finalGlow||partialGlow,cowPip:useCowPip,faceTheme:cardFace}));
     }
     return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},
@@ -2142,7 +2150,7 @@ function PlayerCards(props){
     e("div",{style:{display:"flex",gap:compactMode?2:4,justifyContent:"center"}},cardEls.slice(3))));
 
   if(pi2)pKids.push(e("div",{key:"info",style:{marginTop:4,textAlign:"center",fontSize:10,color:"var(--text-dim)",animation:"fadeUp .3s ease"}},
-    pi2.text,pi2.bullSet?e("span",{style:{color:"var(--accent)",marginLeft:4,fontWeight:700,animation:"squeezePulse 1.5s ease-in-out 4"}},"🐂 牛確定！"):null));
+    pi2.text,pi2.bullSet?e("span",{style:{color:"var(--accent)",marginLeft:4,fontWeight:700,animation:"squeezePulse 1.5s ease-in-out 4"}},(alertActive&&alertType==="bullEmoji"?"🐮":"🐂")+" 牛確定！"):null));
 
   // Action
   var actionContent=null;
@@ -2217,6 +2225,8 @@ function NiuNiu(){
   // For each added slot: {type:"new"} or {type:"returning", inactiveIdx: number}
   var bc4=useState([null,null,null,null,null,null]),slotChoices=bc4[0],setSlotChoices=bc4[1];
   var bc5=useState(null),showClearHistoryConfirm=bc5[0],setShowClearHistoryConfirm=bc5[1]; // null|"flip"|"battle"
+  // Test alert override (TEST ONLY - remove after testing)
+  var sTA=useState("off"),testAlert=sTA[0],setTestAlert=sTA[1];
 
   // Battle mode states
   var b1=useState(0),dealer=b1[0],setDealer=b1[1];
@@ -2454,6 +2464,17 @@ function NiuNiu(){
 
   function computeAlerts(allHands){
     var newAlerts={};
+    // TEST ONLY: force-generate a specific alert for all players
+    if(testAlert&&testAlert!=="off"){
+      var types=["rainbow","cow","quake","growBull","cowPip","bullEmoji","glitch","red"];
+      allHands.forEach(function(hand,pi){
+        var actualType=testAlert==="random"?types[Math.floor(Math.random()*types.length)]:testAlert;
+        var alertObj={type:actualType,timing:actualType==="cow"?"four":(actualType==="growBull"||actualType==="cowPip"?"three":(Math.random()<0.5?"three":"four"))};
+        if(actualType==="cowPip")alertObj.cowPipIdx=Math.floor(Math.random()*3);
+        newAlerts[pi]=alertObj;
+      });
+      return newAlerts;
+    }
     allHands.forEach(function(hand,pi){
       var ev=evaluateHand(hand);
       var bv=ev.bullRank;
@@ -2461,19 +2482,21 @@ function NiuNiu(){
       var roll=Math.random();
       if(gameMode==="simple"){
         if(isNiuNiu){
-          if(roll<0.01){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.02){newAlerts[pi]={type:"cow",timing:"four"};}
-          else if(roll<0.03){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.04){newAlerts[pi]={type:"growBull",timing:"three"};}
-          else if(roll<0.05){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
+          if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.01667){newAlerts[pi]={type:"cow",timing:"four"};}
+          else if(roll<0.025){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.03333){newAlerts[pi]={type:"growBull",timing:"three"};}
+          else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
+          else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
         }
       }else{
         if(isNiuNiu){
-          if(roll<0.01){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.02){newAlerts[pi]={type:"cow",timing:"four"};}
-          else if(roll<0.03){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.04){newAlerts[pi]={type:"growBull",timing:"three"};}
-          else if(roll<0.05){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
+          if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.01667){newAlerts[pi]={type:"cow",timing:"four"};}
+          else if(roll<0.025){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.03333){newAlerts[pi]={type:"growBull",timing:"three"};}
+          else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
+          else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
           else if(roll<0.25){newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};}
           else if(roll<0.65){newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};}
         }else{
@@ -2492,6 +2515,7 @@ function NiuNiu(){
     else if(type==="cow")SFX.alertCow();
     else if(type==="growBull")SFX.alertGrowBull();
     else if(type==="cowPip"){}
+    else if(type==="bullEmoji"){}
     else SFX.alertRed();
   }
 
@@ -3113,6 +3137,19 @@ function NiuNiu(){
           background:soundOn?"linear-gradient(135deg,var(--accent),var(--accent-dark))":"rgba(0,0,0,0.3)",
           color:soundOn?"var(--bg)":"var(--text-muted)",
           border:soundOn?"none":"1px solid var(--card-border)"}},soundOn?"ON":"OFF")),
+      // Test alert (TEST ONLY - remove after testing)
+      e("div",{style:{padding:"8px 0",borderBottom:"1px solid var(--card-border)"}},
+        e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:2}},"🎰 アラート強制発生（テスト用）"),
+        e("div",{style:{fontSize:9,color:"var(--text-muted)",marginBottom:8}},"次ラウンドで指定の演出を全員に強制発生"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}},
+          [["off","OFF"],["random","🎲 ランダム"],["rainbow","🌈 rainbow"],["cow","🐂 cow"],["quake","💥 quake"],["growBull","🐮 growBull"],["cowPip","🐮 cowPip"],["bullEmoji","🐮 bullEmoji"],["glitch","⚡ glitch"],["red","🔴 red"]].map(function(opt){
+            var sel=testAlert===opt[0];
+            return e("button",{key:opt[0],onClick:function(){setTestAlert(opt[0]);if(soundOn)SFX.buttonClick();},style:{
+              padding:"6px 4px",borderRadius:6,fontSize:9,fontWeight:sel?800:400,cursor:"pointer",fontFamily:"inherit",
+              background:sel?"linear-gradient(135deg,#e74c3c,#c0392b)":"rgba(0,0,0,0.2)",
+              color:sel?"#fff":"var(--text-muted)",
+              border:sel?"none":"1px solid var(--card-border)"}},opt[1]);
+          }))),
       // Game mode (alert style)
       e("div",{style:{padding:"12px 0 4px",borderBottom:"1px solid var(--card-border)"}},
         e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:4}},t("settings.alert_style")),
