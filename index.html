@@ -2225,8 +2225,6 @@ function NiuNiu(){
   // For each added slot: {type:"new"} or {type:"returning", inactiveIdx: number}
   var bc4=useState([null,null,null,null,null,null]),slotChoices=bc4[0],setSlotChoices=bc4[1];
   var bc5=useState(null),showClearHistoryConfirm=bc5[0],setShowClearHistoryConfirm=bc5[1]; // null|"flip"|"battle"
-  // Test alert override (TEST ONLY - remove after testing)
-  var sTA=useState("off"),testAlert=sTA[0],setTestAlert=sTA[1];
 
   // Battle mode states
   var b1=useState(0),dealer=b1[0],setDealer=b1[1];
@@ -2464,17 +2462,6 @@ function NiuNiu(){
 
   function computeAlerts(allHands){
     var newAlerts={};
-    // TEST ONLY: force-generate a specific alert for all players
-    if(testAlert&&testAlert!=="off"){
-      var types=["rainbow","cow","quake","growBull","cowPip","bullEmoji","glitch","red"];
-      allHands.forEach(function(hand,pi){
-        var actualType=testAlert==="random"?types[Math.floor(Math.random()*types.length)]:testAlert;
-        var alertObj={type:actualType,timing:actualType==="cow"?"four":(actualType==="growBull"||actualType==="cowPip"?"three":(Math.random()<0.5?"three":"four"))};
-        if(actualType==="cowPip")alertObj.cowPipIdx=Math.floor(Math.random()*3);
-        newAlerts[pi]=alertObj;
-      });
-      return newAlerts;
-    }
     allHands.forEach(function(hand,pi){
       var ev=evaluateHand(hand);
       var bv=ev.bullRank;
@@ -3137,19 +3124,6 @@ function NiuNiu(){
           background:soundOn?"linear-gradient(135deg,var(--accent),var(--accent-dark))":"rgba(0,0,0,0.3)",
           color:soundOn?"var(--bg)":"var(--text-muted)",
           border:soundOn?"none":"1px solid var(--card-border)"}},soundOn?"ON":"OFF")),
-      // Test alert (TEST ONLY - remove after testing)
-      e("div",{style:{padding:"8px 0",borderBottom:"1px solid var(--card-border)"}},
-        e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:2}},"🎰 アラート強制発生（テスト用）"),
-        e("div",{style:{fontSize:9,color:"var(--text-muted)",marginBottom:8}},"次ラウンドで指定の演出を全員に強制発生"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}},
-          [["off","OFF"],["random","🎲 ランダム"],["rainbow","🌈 rainbow"],["cow","🐂 cow"],["quake","💥 quake"],["growBull","🐮 growBull"],["cowPip","🐮 cowPip"],["bullEmoji","🐮 bullEmoji"],["glitch","⚡ glitch"],["red","🔴 red"]].map(function(opt){
-            var sel=testAlert===opt[0];
-            return e("button",{key:opt[0],onClick:function(){setTestAlert(opt[0]);if(soundOn)SFX.buttonClick();},style:{
-              padding:"6px 4px",borderRadius:6,fontSize:9,fontWeight:sel?800:400,cursor:"pointer",fontFamily:"inherit",
-              background:sel?"linear-gradient(135deg,#e74c3c,#c0392b)":"rgba(0,0,0,0.2)",
-              color:sel?"#fff":"var(--text-muted)",
-              border:sel?"none":"1px solid var(--card-border)"}},opt[1]);
-          }))),
       // Game mode (alert style)
       e("div",{style:{padding:"12px 0 4px",borderBottom:"1px solid var(--card-border)"}},
         e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:4}},t("settings.alert_style")),
