@@ -1016,10 +1016,11 @@ var I18N={
     "event.hurricane.rule_step4":"全員選び終わると山札から1枚補充（捨てた位置に裏向きカードが渦巻きながら登場）",
     "event.hurricane.rule_step5":"補充カードを各自「絞る」→ 5枚揃ったら役判定、結果反映",
     "event.hurricane.rule_step6":"",
-    "event.hurricane.rule_note1":"先バレ・プレミア演出は補充カード出現時のみ発生（最初の5枚は静か）",
-    "event.hurricane.rule_note2":"スコアバー下に「使用済み / 残り山札」が4色で可視化",
-    "event.hurricane.rule_note3":"残り山札に牛確定カードが1枚もなければ、先バレ（red/glitch）は出ない",
-    "event.hurricane.rule_note4":"先バレモードの強度（5段階）もそのまま反映されます",
+    "event.hurricane.rule_note1":"捨て札は山札に戻ります（同じカードが補充で来ることや、他プレイヤーに配られる可能性があります）",
+    "event.hurricane.rule_note2":"先バレ・プレミア演出は補充カード出現時のみ発生（最初の5枚は静か）",
+    "event.hurricane.rule_note3":"スコアバー下に「使用済み / 残り山札」が4色で可視化",
+    "event.hurricane.rule_note4":"残り山札に牛確定カードが1枚もなければ、先バレ（red/glitch）は出ない",
+    "event.hurricane.rule_note5":"先バレモードの強度（5段階）もそのまま反映されます",
     "event.start":"このイベントで始める",
     "event.discard_prompt":"捨てる札を選んでください",
     "event.discard_turn":"の番",
@@ -1300,11 +1301,12 @@ var I18N={
     "rb.event_mode.flow.s3":"3. 全員選び終わると、山札から自動で1枚補充（フェイスダウン）",
     "rb.event_mode.flow.s4":"4. 各自が補充カードを「絞り」で開け、最終的な5枚で役判定",
     "rb.event_mode.feat":"ハリケーンの特徴",
-    "rb.event_mode.feat.s1":"・最初の5枚は静かに表示（先バレ・プレミア演出なし）",
-    "rb.event_mode.feat.s2":"・先バレ・プレミア演出は補充カード出現時にのみ発生",
-    "rb.event_mode.feat.s3":"・必ず1枚捨てる必要あり（パス不可）",
-    "rb.event_mode.feat.s4":"・スコアバー下に「使用済み/残り山札」が可視化される",
-    "rb.event_mode.feat.s5":"・残り山札に牛確定カードが1枚もなければ先バレは出ない",
+    "rb.event_mode.feat.s1":"・捨て札は山札に戻ります（補充で同じカードが来ることや、他プレイヤーに配られることもあります）",
+    "rb.event_mode.feat.s2":"・最初の5枚は静かに表示（先バレ・プレミア演出なし）",
+    "rb.event_mode.feat.s3":"・先バレ・プレミア演出は補充カード出現時にのみ発生",
+    "rb.event_mode.feat.s4":"・必ず1枚捨てる必要あり（パス不可）",
+    "rb.event_mode.feat.s5":"・スコアバー下に「使用済み/残り山札」が可視化される",
+    "rb.event_mode.feat.s6":"・残り山札に牛確定カードが1枚もなければ先バレは出ない",
     "rb.spoiler_level":"🔮 先バレ強度（5段階）",
     "rb.spoiler_level.desc":"先バレモード時、セットアップで「red の的中率」を5段階から選べます。割合（red:glitch = 2:1）は固定で、的中率のみ変動します。",
     "rb.spoiler_level.lv1":"・Lv1 信頼薄: red 15% / glitch 38%",
@@ -1411,10 +1413,11 @@ var I18N={
     "event.hurricane.rule_step4":"After all choose, one face-down card is drawn from the deck (with a swirl animation)",
     "event.hurricane.rule_step5":"Each player squeezes the refill card → 5 complete cards evaluate the hand",
     "event.hurricane.rule_step6":"",
-    "event.hurricane.rule_note1":"Spoiler and premier effects fire ONLY on the refill (initial 5 are silent)",
-    "event.hurricane.rule_note2":"A 4-color used/remaining deck tracker appears under the score bar",
-    "event.hurricane.rule_note3":"If no remaining deck card can complete niuniu, spoilers (red/glitch) are suppressed",
-    "event.hurricane.rule_note4":"The spoiler intensity setting (5 levels) applies here too",
+    "event.hurricane.rule_note1":"Discarded cards return to the deck (the same card may come back as a refill, or be dealt to another player)",
+    "event.hurricane.rule_note2":"Spoiler and premier effects fire ONLY on the refill (initial 5 are silent)",
+    "event.hurricane.rule_note3":"A 4-color used/remaining deck tracker appears under the score bar",
+    "event.hurricane.rule_note4":"If no remaining deck card can complete niuniu, spoilers (red/glitch) are suppressed",
+    "event.hurricane.rule_note5":"The spoiler intensity setting (5 levels) applies here too",
     "event.start":"Start This Event",
     "event.discard_prompt":"Choose a card to discard",
     "event.discard_turn":"'s turn",
@@ -1680,11 +1683,12 @@ var I18N={
     "rb.event_mode.flow.s3":"3. When all have chosen, a card is auto-drawn from the deck (face-down)",
     "rb.event_mode.flow.s4":"4. Each player squeezes the refill card; final 5 cards determine the hand",
     "rb.event_mode.feat":"Hurricane Features",
-    "rb.event_mode.feat.s1":"• Initial 5 cards are quiet (no spoiler/premier effects)",
-    "rb.event_mode.feat.s2":"• Spoilers and premier effects only fire on the refill card",
-    "rb.event_mode.feat.s3":"• You must discard one card (no pass allowed)",
-    "rb.event_mode.feat.s4":"• Used vs. remaining deck is shown below the score bar",
-    "rb.event_mode.feat.s5":"• No spoiler appears if no remaining card can complete niuniu",
+    "rb.event_mode.feat.s1":"• Discarded cards return to the deck (the same card may be drawn as a refill, or dealt to another player)",
+    "rb.event_mode.feat.s2":"• Initial 5 cards are quiet (no spoiler/premier effects)",
+    "rb.event_mode.feat.s3":"• Spoilers and premier effects only fire on the refill card",
+    "rb.event_mode.feat.s4":"• You must discard one card (no pass allowed)",
+    "rb.event_mode.feat.s5":"• Used vs. remaining deck is shown below the score bar",
+    "rb.event_mode.feat.s6":"• No spoiler appears if no remaining card can complete niuniu",
     "rb.spoiler_level":"🔮 Spoiler Intensity (5 levels)",
     "rb.spoiler_level.desc":"In spoiler mode, setup lets you pick from 5 reliability levels for red alerts. The ratio (red:glitch = 2:1) is fixed; only the reliability shifts.",
     "rb.spoiler_level.lv1":"• Lv1 Low trust: red 15% / glitch 38%",
@@ -1788,10 +1792,11 @@ var I18N={
     "event.hurricane.rule_step4":"全员选完后,从牌堆补1张(以漩涡动画背面登场)",
     "event.hurricane.rule_step5":"各自挤补充的牌→5张齐全后判定牌型,结算结果",
     "event.hurricane.rule_step6":"",
-    "event.hurricane.rule_note1":"剧透/高级预告仅在补充牌出现时触发(最初5张静默)",
-    "event.hurricane.rule_note2":"分数栏下显示4色「已用/剩余牌堆」",
-    "event.hurricane.rule_note3":"剩余牌堆中无可成牛牛的牌时,剧透(red/glitch)被抑制",
-    "event.hurricane.rule_note4":"剧透强度设定(5档)同样适用",
+    "event.hurricane.rule_note1":"弃掉的牌会回到牌堆(同一张牌可能再次作为补充牌出现,或被发给其他玩家)",
+    "event.hurricane.rule_note2":"剧透/高级预告仅在补充牌出现时触发(最初5张静默)",
+    "event.hurricane.rule_note3":"分数栏下显示4色「已用/剩余牌堆」",
+    "event.hurricane.rule_note4":"剩余牌堆中无可成牛牛的牌时,剧透(red/glitch)被抑制",
+    "event.hurricane.rule_note5":"剧透强度设定(5档)同样适用",
     "event.start":"开始本活动",
     "event.discard_prompt":"请选择要弃掉的牌",
     "event.discard_turn":"的回合",
@@ -2057,11 +2062,12 @@ var I18N={
     "rb.event_mode.flow.s3":"3. 全员选完后,从牌堆自动补1张(背面)",
     "rb.event_mode.flow.s4":"4. 各自挤补充的牌,最终5张定胜负",
     "rb.event_mode.feat":"飓风的特点",
-    "rb.event_mode.feat.s1":"・最初5张静默显示(无剧透/高级预告)",
-    "rb.event_mode.feat.s2":"・剧透/高级预告仅在补充牌出现时触发",
-    "rb.event_mode.feat.s3":"・必须弃1张(不可跳过)",
-    "rb.event_mode.feat.s4":"・分数栏下显示「已用/剩余牌堆」",
-    "rb.event_mode.feat.s5":"・剩余牌堆中无可成牛牛的牌时不出剧透",
+    "rb.event_mode.feat.s1":"・弃掉的牌会回到牌堆(同一张牌可能再次作为补充牌出现,或被发给其他玩家)",
+    "rb.event_mode.feat.s2":"・最初5张静默显示(无剧透/高级预告)",
+    "rb.event_mode.feat.s3":"・剧透/高级预告仅在补充牌出现时触发",
+    "rb.event_mode.feat.s4":"・必须弃1张(不可跳过)",
+    "rb.event_mode.feat.s5":"・分数栏下显示「已用/剩余牌堆」",
+    "rb.event_mode.feat.s6":"・剩余牌堆中无可成牛牛的牌时不出剧透",
     "rb.spoiler_level":"🔮 剧透强度(5档)",
     "rb.spoiler_level.desc":"剧透模式时,可在设置中从5档选择红光的可信度。比例(red:glitch = 2:1)固定,仅可信度变化。",
     "rb.spoiler_level.lv1":"・Lv1 低可信:red 15% / glitch 38%",
@@ -2919,16 +2925,10 @@ function NiuNiu(){
     });
     // Re-compute alerts based on new hands
     var newAlerts=computeAlerts(newHands);
-    // Compute the deck pool: all 52 cards minus (current hands + already-discarded cards in this round)
+    // Compute the deck pool: all 52 cards minus current hands.
+    // Discards return to the pool (per hurricaneRefill logic), so they're NOT excluded.
     var poolUsed={};
     newHands.forEach(function(h){if(h)h.forEach(function(c){if(c)poolUsed[c.rank+c.suit]=true;});});
-    // Also exclude this round's discards (kept in hurricaneDiscardedCards)
-    if(hurricaneDiscardedCards){
-      for(var dpiK in hurricaneDiscardedCards){
-        var dcK=hurricaneDiscardedCards[dpiK];
-        if(dcK)poolUsed[dcK.rank+dcK.suit]=true;
-      }
-    }
     var deckPool=[];
     for(var psi=0;psi<SUITS.length;psi++){
       for(var pri=0;pri<RANKS.length;pri++){
@@ -3405,7 +3405,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.3 · © 2026 KTR (",
+            "v1.3.2 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -3430,7 +3430,7 @@ function NiuNiu(){
 
     if(curEvent==="hurricane"){
       var ruleSteps=[1,2,3,4,5].map(function(n){return t("event.hurricane.rule_step"+n);});
-      var ruleNotes=[1,2,3,4].map(function(n){return t("event.hurricane.rule_note"+n);});
+      var ruleNotes=[1,2,3,4,5].map(function(n){return t("event.hurricane.rule_note"+n);});
       evKids.push(e("div",{key:"hcard",style:{
         padding:"24px 18px",borderRadius:16,position:"relative",
         background:"linear-gradient(165deg,rgba(120,80,200,0.22) 0%,rgba(60,40,100,0.4) 100%)",
@@ -4042,7 +4042,8 @@ function NiuNiu(){
           t("rb.event_mode.feat.s2"),e("br"),
           t("rb.event_mode.feat.s3"),e("br"),
           t("rb.event_mode.feat.s4"),e("br"),
-          t("rb.event_mode.feat.s5"))));
+          t("rb.event_mode.feat.s5"),e("br"),
+          t("rb.event_mode.feat.s6"))));
 
       // 先バレ強度
       rbKids.push(e("div",{key:"m2spo",style:rbCard},
@@ -4453,8 +4454,8 @@ function NiuNiu(){
 
   // Deck tracker (event mode only): 4 suits × 13 ranks grid, used cards greyed out
   if(appMode==="event"&&hands&&hands.length>0&&phase!=="setup"&&phase!=="summary"){
-    // Build set of REVEALED cards (only what the players have actually seen) + discarded
-    // NOT all dealt cards — that would spoil unrevealed cards through process of elimination
+    // Build set of REVEALED cards (only what the players have actually seen).
+    // Discarded cards return to the pool (per hurricaneRefill logic), so they're NOT counted as used here.
     var usedSet={};
     hands.forEach(function(h,pi){
       if(!h)return;
@@ -4464,12 +4465,6 @@ function NiuNiu(){
         if(revSet.has(ci))usedSet[c.rank+c.suit]=true;
       });
     });
-    if(hurricaneDiscardedCards){
-      for(var dpi in hurricaneDiscardedCards){
-        var dc=hurricaneDiscardedCards[dpi];
-        if(dc)usedSet[dc.rank+dc.suit]=true;
-      }
-    }
     var remaining=52-Object.keys(usedSet).length;
     // Four-color deck convention (standard online poker): ♠ black, ♥ red, ♦ blue, ♣ green
     var suitDisplay=["♠","♥","♦","♣"];
