@@ -57,6 +57,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',Georgia,
 @keyframes alertGlitchShadow{0%,80%{box-shadow:none;filter:none}82%{box-shadow:2px 0 0 rgba(255,0,0,0.4),-2px 0 0 rgba(0,255,255,0.4);filter:brightness(1.3)}84%{box-shadow:none;filter:none}90%{box-shadow:-1px 0 0 rgba(255,0,255,0.3),1px 0 0 rgba(0,255,0,0.3);filter:brightness(0.8)}92%{box-shadow:none;filter:none}}
 @keyframes alertQuake{0%{transform:translate(0,0)}5%{transform:translate(-3px,2px)}10%{transform:translate(3px,-2px)}15%{transform:translate(-2px,-3px)}20%{transform:translate(2px,3px)}25%{transform:translate(-3px,1px)}30%{transform:translate(3px,-1px)}35%{transform:translate(0,0)}100%{transform:translate(0,0)}}
 @keyframes alertQuakeCard{0%{transform:translate(0,0) rotate(0)}8%{transform:translate(-4px,2px) rotate(-2deg)}16%{transform:translate(4px,-3px) rotate(2deg)}24%{transform:translate(-3px,-2px) rotate(-1deg)}32%{transform:translate(3px,3px) rotate(1deg)}40%{transform:translate(-2px,1px) rotate(-1deg)}50%{transform:translate(0,0) rotate(0)}}
+@keyframes hurricaneSpiralOut{0%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1}30%{transform:translate(40px,-30px) rotate(180deg) scale(0.85);opacity:0.95}60%{transform:translate(120px,-80px) rotate(540deg) scale(0.5);opacity:0.6}100%{transform:translate(250px,-160px) rotate(1080deg) scale(0.1);opacity:0}}
+@keyframes hurricaneRefillSpawn{0%{transform:translate(-160px,80px) rotate(-720deg) scale(0.05);opacity:0}30%{transform:translate(-90px,40px) rotate(-360deg) scale(0.4);opacity:0.7}65%{transform:translate(-25px,10px) rotate(-90deg) scale(0.85);opacity:1}100%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1}}
+@keyframes hurricaneTurnPulse{0%,100%{box-shadow:0 0 12px rgba(140,100,220,0.4),0 0 24px rgba(140,100,220,0.2)}50%{box-shadow:0 0 24px rgba(176,128,240,0.9),0 0 48px rgba(140,100,220,0.5),0 0 80px rgba(120,80,200,0.3)}}
+@keyframes hurricaneTurnBadge{0%,100%{transform:scale(1);opacity:0.9}50%{transform:scale(1.08);opacity:1}}
+@keyframes hurricaneDim{0%{opacity:1}100%{opacity:0.32}}
 @keyframes growBull{0%{font-size:6px;opacity:0}5%{opacity:0.05}20%{font-size:20px;opacity:0.08}40%{font-size:50px;opacity:0.12}60%{font-size:100px;opacity:0.16}80%{font-size:200px;opacity:0.2}100%{font-size:300px;opacity:0.3}}
 @keyframes cowPipIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes fadeOut{0%{opacity:1}100%{opacity:0}}
@@ -294,10 +299,30 @@ function drawConfetti(){
 }
 
 // ─── Card & Game Logic ───────────────────────────────────────────
+// 月替りイベント定義: YYYY-MM → イベントID
+// PWAなのでハードコード（オフライン対応）、月跨ぐ前に新バージョンをリリース運用
+var EVENTS={
+  "2026-05":"hurricane",
+  "2026-06":"hurricane", // TBD、当面はハリケーンにフォールバック
+  "2026-07":"hurricane"  // TBD
+};
+function getCurrentEvent(){
+  var d=new Date();
+  var ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  return EVENTS[ym]||"hurricane"; // 未定義の月はハリケーンにフォールバック
+}
+function getCurrentEventYM(){
+  var d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+
 var SUITS=["♠","♥","♦","♣"];
 var RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 var RANK_ORDER={"A":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13};
 var SUIT_ORDER={"♠":4,"♥":3,"♦":2,"♣":1};
+// 先バレ強度スライダー: Lv1〜Lv5、非牛時のglitch/red出現率にこのscaleを乗算
+// Lv3=1.0が現状デフォルト(red的中30%/glitch的中60%)、計算根拠は計算ドキュメント参照
+var SPOILER_SCALE=[null,2.429,1.520,1.000,0.524,0.231];
 
 function cardStrength(card){return RANK_ORDER[card.rank]*10+SUIT_ORDER[card.suit];}
 function rankPoints(r){if(["10","J","Q","K"].indexOf(r)>=0)return 10;if(r==="A")return 1;return parseInt(r);}
@@ -396,6 +421,20 @@ function canStillBeNiuNiu(known){
   }
   // For fewer revealed, too expensive, assume possible
   return true;
+}
+
+// Hurricane-specific: given 4 known cards from a player and the explicit pool of cards
+// remaining in the deck (cards not held by anyone and not discarded), check if any
+// single card from that pool could complete a niuniu (bullRank >= 10).
+// Returns true if at least one pool card achieves niuniu+, false otherwise.
+function canHurricaneStillBeNiuNiu(fourKnown,deckPool){
+  if(!fourKnown||fourKnown.length!==4||!deckPool)return true; // be safe
+  for(var i=0;i<deckPool.length;i++){
+    var testHand=fourKnown.concat([deckPool[i]]);
+    var ev=evaluateHand(testHand);
+    if(ev.bullRank>=10)return true;
+  }
+  return false;
 }
 
 
@@ -963,6 +1002,32 @@ var I18N={
     "home.flip_desc":"サクッと勝負",
     "home.battle":"対戦",
     "home.battle_desc":"親子＋チップ計算",
+    "home.event":"イベント",
+    "home.event_desc":"月替り特別ルール",
+    "event.title":"イベントモード",
+    "event.this_month":"今月のイベント",
+    "event.hurricane.name":"🌪️ ハリケーン",
+    "event.hurricane.tagline":"嵐の手札交換",
+    "event.hurricane.desc":"5枚見えた後、1枚を捨てて山から1枚補充。判断力と運の両方が試される。",
+    "event.hurricane.rule_title":"🌪️ ハリケーン ルール",
+    "event.hurricane.rule_step1":"5枚配布後、「📂 5枚オープン」で5枚を一気に開示",
+    "event.hurricane.rule_step2":"全員開示後、親の左隣のプレイヤーから順に「捨てる札」を1枚選択（パス不可）",
+    "event.hurricane.rule_step3":"捨て札は手札エリアに記録として残り、空位には「?」プレースホルダーが表示",
+    "event.hurricane.rule_step4":"全員選び終わると山札から1枚補充（捨てた位置に裏向きカードが渦巻きながら登場）",
+    "event.hurricane.rule_step5":"補充カードを各自「絞る」→ 5枚揃ったら役判定、結果反映",
+    "event.hurricane.rule_step6":"",
+    "event.hurricane.rule_note1":"先バレ・プレミア演出は補充カード出現時のみ発生（最初の5枚は静か）",
+    "event.hurricane.rule_note2":"スコアバー下に「使用済み / 残り山札」が4色で可視化",
+    "event.hurricane.rule_note3":"残り山札に牛確定カードが1枚もなければ、先バレ（red/glitch）は出ない",
+    "event.hurricane.rule_note4":"先バレモードの強度（5段階）もそのまま反映されます",
+    "event.start":"このイベントで始める",
+    "event.discard_prompt":"捨てる札を選んでください",
+    "event.discard_turn":"の番",
+    "event.discard_waiting":"待機中…",
+    "event.discard_done":"全員選択完了！補充します",
+    "event.your_turn":"⏰ あなたの番",
+    "event.refill_announce":"補充カードを配布中…",
+    "history.tab.event":"イベント",
     "home.rulebook":"遊び方",
     "home.settings":"設定",
     "home.history":"履歴",
@@ -1005,6 +1070,13 @@ var I18N={
     "settings.mode_simple_desc":"プレミアのみ",
     "settings.mode_spoiler":"先バレ",
     "settings.mode_spoiler_desc":"赤オーラ＋プレミア",
+    "setup.spoiler_intensity":"先バレ強度",
+    "setup.spoiler_intensity_desc":"先バレの信頼度",
+    "spoiler.lv1":"信頼薄",
+    "spoiler.lv2":"やや信頼薄",
+    "spoiler.lv3":"標準",
+    "spoiler.lv4":"やや信頼高",
+    "spoiler.lv5":"信頼高",
     "settings.shop_link":"ショップで追加コンテンツを購入",
     "settings.language":"🌐 言語",
     "settings.shortcuts":"⚡ ベット額ショートカット",
@@ -1073,6 +1145,7 @@ var I18N={
     "game.reset_confirm":"ゲームを中断しますか？ 現在の進行は履歴に保存されます。",
     "game.round":"R",
     "game.open_three":"3枚オープン",
+    "game.open_five":"📂 5枚オープン",
     "game.drag_squeeze":"ドラッグして絞る",
     "game.next_round":"次のラウンド",
     "game.final":"最終結果",
@@ -1219,6 +1292,26 @@ var I18N={
     "rb.flip_judge.desc_2":"チップ計算なし、シンプルに楽しめます。",
     "rb.battle_mode":"⚔️ 対戦モード",
     "rb.battle_mode.desc":"親子対戦＋チップ計算で本格的に遊ぶモードです。",
+    "rb.event_mode":"🎉 イベントモード",
+    "rb.event_mode.desc":"月替りで特別ルールが切り替わる新モード。今月は「🌪️ ハリケーン」を実施中。",
+    "rb.event_mode.flow":"進行の流れ",
+    "rb.event_mode.flow.s1":"1. 通常通り配布、各プレイヤーが「📂 5枚オープン」で5枚一気にめくる",
+    "rb.event_mode.flow.s2":"2. 全員5枚オープンしたら、親の左隣のプレイヤーから順に「捨て札」を選ぶ",
+    "rb.event_mode.flow.s3":"3. 全員選び終わると、山札から自動で1枚補充（フェイスダウン）",
+    "rb.event_mode.flow.s4":"4. 各自が補充カードを「絞り」で開け、最終的な5枚で役判定",
+    "rb.event_mode.feat":"ハリケーンの特徴",
+    "rb.event_mode.feat.s1":"・最初の5枚は静かに表示（先バレ・プレミア演出なし）",
+    "rb.event_mode.feat.s2":"・先バレ・プレミア演出は補充カード出現時にのみ発生",
+    "rb.event_mode.feat.s3":"・必ず1枚捨てる必要あり（パス不可）",
+    "rb.event_mode.feat.s4":"・スコアバー下に「使用済み/残り山札」が可視化される",
+    "rb.event_mode.feat.s5":"・残り山札に牛確定カードが1枚もなければ先バレは出ない",
+    "rb.spoiler_level":"🔮 先バレ強度（5段階）",
+    "rb.spoiler_level.desc":"先バレモード時、セットアップで「red の的中率」を5段階から選べます。割合（red:glitch = 2:1）は固定で、的中率のみ変動します。",
+    "rb.spoiler_level.lv1":"・Lv1 信頼薄: red 15% / glitch 38%",
+    "rb.spoiler_level.lv2":"・Lv2 やや信頼薄: red 22% / glitch 50%",
+    "rb.spoiler_level.lv3":"・Lv3 標準（デフォルト）: red 30% / glitch 60%",
+    "rb.spoiler_level.lv4":"・Lv4 やや信頼高: red 45% / glitch 74%",
+    "rb.spoiler_level.lv5":"・Lv5 信頼高: red 65% / glitch 87%",
     "rb.battle_flow":"基本の流れ",
     "rb.battle_flow.step1":"1. 人数・名前・倍率ルール・演出モードを設定",
     "rb.battle_flow.step2":"2. 毎ラウンド「親」を1人選ぶ",
@@ -1304,6 +1397,32 @@ var I18N={
     "home.flip_desc":"Quick play",
     "home.battle":"Battle",
     "home.battle_desc":"Dealer + chips",
+    "home.event":"Event",
+    "home.event_desc":"Monthly special rule",
+    "event.title":"Event Mode",
+    "event.this_month":"This Month's Event",
+    "event.hurricane.name":"🌪️ Hurricane",
+    "event.hurricane.tagline":"Stormy hand swap",
+    "event.hurricane.desc":"After all 5 cards are revealed, discard 1 and draw 1 from the deck. Test your judgment AND luck.",
+    "event.hurricane.rule_title":"🌪️ Hurricane Rules",
+    "event.hurricane.rule_step1":"After dealing, tap '📂 Open All 5' to reveal all 5 cards at once",
+    "event.hurricane.rule_step2":"Starting left of the dealer, each player picks one card to discard (no pass)",
+    "event.hurricane.rule_step3":"Discarded cards are kept as a record; the empty slot shows a '?' placeholder",
+    "event.hurricane.rule_step4":"After all choose, one face-down card is drawn from the deck (with a swirl animation)",
+    "event.hurricane.rule_step5":"Each player squeezes the refill card → 5 complete cards evaluate the hand",
+    "event.hurricane.rule_step6":"",
+    "event.hurricane.rule_note1":"Spoiler and premier effects fire ONLY on the refill (initial 5 are silent)",
+    "event.hurricane.rule_note2":"A 4-color used/remaining deck tracker appears under the score bar",
+    "event.hurricane.rule_note3":"If no remaining deck card can complete niuniu, spoilers (red/glitch) are suppressed",
+    "event.hurricane.rule_note4":"The spoiler intensity setting (5 levels) applies here too",
+    "event.start":"Start This Event",
+    "event.discard_prompt":"Choose a card to discard",
+    "event.discard_turn":"'s turn",
+    "event.discard_waiting":"Waiting…",
+    "event.discard_done":"All chose! Drawing refills…",
+    "event.your_turn":"⏰ Your turn",
+    "event.refill_announce":"Dealing refill cards…",
+    "history.tab.event":"Event",
     "home.rulebook":"How to Play",
     "home.settings":"Settings",
     "home.history":"History",
@@ -1343,6 +1462,13 @@ var I18N={
     "settings.mode_simple_desc":"Premium only",
     "settings.mode_spoiler":"Spoiler",
     "settings.mode_spoiler_desc":"Red aura + Premium",
+    "setup.spoiler_intensity":"Spoiler Intensity",
+    "setup.spoiler_intensity_desc":"Spoiler reliability",
+    "spoiler.lv1":"Low trust",
+    "spoiler.lv2":"Lowish trust",
+    "spoiler.lv3":"Standard",
+    "spoiler.lv4":"Highish trust",
+    "spoiler.lv5":"High trust",
     "settings.shop_link":"Shop for more content",
     "settings.language":"🌐 Language",
     "settings.shortcuts":"⚡ Bet Shortcuts",
@@ -1405,6 +1531,7 @@ var I18N={
     "game.reset_confirm":"Interrupt the game? Current progress will be saved to history.",
     "game.round":"R",
     "game.open_three":"Open 3",
+    "game.open_five":"📂 Open All 5",
     "game.drag_squeeze":"Drag to squeeze",
     "game.next_round":"Next Round",
     "game.final":"Final Results",
@@ -1545,6 +1672,26 @@ var I18N={
     "rb.flip_judge.desc_2":"No chip calculations — simply enjoy the game.",
     "rb.battle_mode":"⚔️ Battle Mode",
     "rb.battle_mode.desc":"Dealer vs players with chip calculations — for a real gambling feel.",
+    "rb.event_mode":"🎉 Event Mode",
+    "rb.event_mode.desc":"A monthly rotating special-rule mode. This month: 🌪️ Hurricane.",
+    "rb.event_mode.flow":"How It Flows",
+    "rb.event_mode.flow.s1":"1. Cards are dealt; each player taps '📂 Open All 5' to reveal all 5 at once",
+    "rb.event_mode.flow.s2":"2. After all reveal, starting left of the dealer, each picks one card to discard",
+    "rb.event_mode.flow.s3":"3. When all have chosen, a card is auto-drawn from the deck (face-down)",
+    "rb.event_mode.flow.s4":"4. Each player squeezes the refill card; final 5 cards determine the hand",
+    "rb.event_mode.feat":"Hurricane Features",
+    "rb.event_mode.feat.s1":"• Initial 5 cards are quiet (no spoiler/premier effects)",
+    "rb.event_mode.feat.s2":"• Spoilers and premier effects only fire on the refill card",
+    "rb.event_mode.feat.s3":"• You must discard one card (no pass allowed)",
+    "rb.event_mode.feat.s4":"• Used vs. remaining deck is shown below the score bar",
+    "rb.event_mode.feat.s5":"• No spoiler appears if no remaining card can complete niuniu",
+    "rb.spoiler_level":"🔮 Spoiler Intensity (5 levels)",
+    "rb.spoiler_level.desc":"In spoiler mode, setup lets you pick from 5 reliability levels for red alerts. The ratio (red:glitch = 2:1) is fixed; only the reliability shifts.",
+    "rb.spoiler_level.lv1":"• Lv1 Low trust: red 15% / glitch 38%",
+    "rb.spoiler_level.lv2":"• Lv2 Lowish: red 22% / glitch 50%",
+    "rb.spoiler_level.lv3":"• Lv3 Standard (default): red 30% / glitch 60%",
+    "rb.spoiler_level.lv4":"• Lv4 Highish: red 45% / glitch 74%",
+    "rb.spoiler_level.lv5":"• Lv5 High trust: red 65% / glitch 87%",
     "rb.battle_flow":"Flow",
     "rb.battle_flow.step1":"1. Set players, names, multiplier rule, and alert mode",
     "rb.battle_flow.step2":"2. Each round, pick one \"Dealer\"",
@@ -1627,6 +1774,32 @@ var I18N={
     "home.flip_desc":"快速对战",
     "home.battle":"对战",
     "home.battle_desc":"庄家+筹码",
+    "home.event":"活动",
+    "home.event_desc":"每月特别规则",
+    "event.title":"活动模式",
+    "event.this_month":"本月活动",
+    "event.hurricane.name":"🌪️ 飓风",
+    "event.hurricane.tagline":"暴风换牌",
+    "event.hurricane.desc":"5张牌全部翻开后,弃1张并从牌堆补1张。考验你的判断力和运气。",
+    "event.hurricane.rule_title":"🌪️ 飓风规则",
+    "event.hurricane.rule_step1":"发牌后,点「📂 开5张」一次性翻开全部5张",
+    "event.hurricane.rule_step2":"全员翻开后,从庄家左侧玩家开始依次选「要弃掉的牌」(不可跳过)",
+    "event.hurricane.rule_step3":"弃掉的牌作为记录保留,空位显示「?」占位符",
+    "event.hurricane.rule_step4":"全员选完后,从牌堆补1张(以漩涡动画背面登场)",
+    "event.hurricane.rule_step5":"各自挤补充的牌→5张齐全后判定牌型,结算结果",
+    "event.hurricane.rule_step6":"",
+    "event.hurricane.rule_note1":"剧透/高级预告仅在补充牌出现时触发(最初5张静默)",
+    "event.hurricane.rule_note2":"分数栏下显示4色「已用/剩余牌堆」",
+    "event.hurricane.rule_note3":"剩余牌堆中无可成牛牛的牌时,剧透(red/glitch)被抑制",
+    "event.hurricane.rule_note4":"剧透强度设定(5档)同样适用",
+    "event.start":"开始本活动",
+    "event.discard_prompt":"请选择要弃掉的牌",
+    "event.discard_turn":"的回合",
+    "event.discard_waiting":"等待中…",
+    "event.discard_done":"全员选完!开始补牌",
+    "event.your_turn":"⏰ 你的回合",
+    "event.refill_announce":"正在发补充牌…",
+    "history.tab.event":"活动",
     "home.rulebook":"玩法",
     "home.settings":"设置",
     "home.history":"历史",
@@ -1666,6 +1839,13 @@ var I18N={
     "settings.mode_simple_desc":"仅高级预告",
     "settings.mode_spoiler":"剧透",
     "settings.mode_spoiler_desc":"红光+高级预告",
+    "setup.spoiler_intensity":"剧透强度",
+    "setup.spoiler_intensity_desc":"剧透的可信度",
+    "spoiler.lv1":"低可信",
+    "spoiler.lv2":"较低可信",
+    "spoiler.lv3":"标准",
+    "spoiler.lv4":"较高可信",
+    "spoiler.lv5":"高可信",
     "settings.shop_link":"商店购买更多内容",
     "settings.language":"🌐 语言",
     "settings.shortcuts":"⚡ 下注快捷",
@@ -1728,6 +1908,7 @@ var I18N={
     "game.reset_confirm":"中断游戏？当前进度将保存到历史。",
     "game.round":"R",
     "game.open_three":"开3张",
+    "game.open_five":"📂 开5张",
     "game.drag_squeeze":"拖动挤牌",
     "game.next_round":"下一轮",
     "game.final":"最终结果",
@@ -1868,6 +2049,26 @@ var I18N={
     "rb.flip_judge.desc_2":"无筹码计算，简单好玩。",
     "rb.battle_mode":"⚔️ 对战模式",
     "rb.battle_mode.desc":"庄闲对战＋筹码计算的正式模式。",
+    "rb.event_mode":"🎉 活动模式",
+    "rb.event_mode.desc":"每月轮换的特别规则模式。本月活动:🌪️ 飓风。",
+    "rb.event_mode.flow":"流程",
+    "rb.event_mode.flow.s1":"1. 正常发牌,每位玩家点「📂 开5张」一次性翻开5张",
+    "rb.event_mode.flow.s2":"2. 全员翻开后,从庄家左侧玩家开始依次选「弃牌」",
+    "rb.event_mode.flow.s3":"3. 全员选完后,从牌堆自动补1张(背面)",
+    "rb.event_mode.flow.s4":"4. 各自挤补充的牌,最终5张定胜负",
+    "rb.event_mode.feat":"飓风的特点",
+    "rb.event_mode.feat.s1":"・最初5张静默显示(无剧透/高级预告)",
+    "rb.event_mode.feat.s2":"・剧透/高级预告仅在补充牌出现时触发",
+    "rb.event_mode.feat.s3":"・必须弃1张(不可跳过)",
+    "rb.event_mode.feat.s4":"・分数栏下显示「已用/剩余牌堆」",
+    "rb.event_mode.feat.s5":"・剩余牌堆中无可成牛牛的牌时不出剧透",
+    "rb.spoiler_level":"🔮 剧透强度(5档)",
+    "rb.spoiler_level.desc":"剧透模式时,可在设置中从5档选择红光的可信度。比例(red:glitch = 2:1)固定,仅可信度变化。",
+    "rb.spoiler_level.lv1":"・Lv1 低可信:red 15% / glitch 38%",
+    "rb.spoiler_level.lv2":"・Lv2 较低:red 22% / glitch 50%",
+    "rb.spoiler_level.lv3":"・Lv3 标准(默认):red 30% / glitch 60%",
+    "rb.spoiler_level.lv4":"・Lv4 较高:red 45% / glitch 74%",
+    "rb.spoiler_level.lv5":"・Lv5 高可信:red 65% / glitch 87%",
     "rb.battle_flow":"基本流程",
     "rb.battle_flow.step1":"1. 设置人数·名字·倍率规则·演出模式",
     "rb.battle_flow.step2":"2. 每轮选1位「庄家」",
@@ -1999,7 +2200,15 @@ function PlayerCards(props){
     winner=props.winner,phase=props.phase,pc=props.pc,alerts=props.alerts,
     roundNum=props.roundNum,names=props.names,openThree=props.openThree,
     revealCard=props.revealCard,soundOn=props.soundOn,isDealer=props.isDealer,
-    chipDelta=props.chipDelta,battleMode=props.battleMode,betAmount=props.betAmount,cardSkin=props.cardSkin,cardFace=props.cardFace;
+    chipDelta=props.chipDelta,battleMode=props.battleMode,betAmount=props.betAmount,cardSkin=props.cardSkin,cardFace=props.cardFace,
+    hurricaneTurn=props.hurricaneTurn,hurricaneDiscards=props.hurricaneDiscards,
+    hurricaneDiscardedCards=props.hurricaneDiscardedCards,
+    hurricaneRefills=props.hurricaneRefills,
+    hurricaneRefilledRevealed=props.hurricaneRefilledRevealed,
+    hurricaneAnimatingDiscard=props.hurricaneAnimatingDiscard,
+    hurricaneAnimatingRefill=props.hurricaneAnimatingRefill,
+    hurricaneDiscard=props.hurricaneDiscard,hurricaneRevealRefill=props.hurricaneRevealRefill,
+    dealer=props.dealer;
 
   // Dealer-prominent layout: only in 3p battle mode
   var dealerProminent=battleMode&&pc===3;
@@ -2085,6 +2294,30 @@ function PlayerCards(props){
     var vis=vs.has(ci),canSq=phase==="reveal"&&!vis&&rc.size>=3&&(ci===3||ci===4);
     var partialGlow=!full&&pi2&&pi2.bullSet&&pi2.bullSet.has(ci);
     var finalGlow=full&&localRes&&localRes.hasBull&&localRes.threeIdx&&localRes.threeIdx.indexOf(ci)>=0;
+    // Hurricane refill slot: this card was discarded and replaced, needs to be re-squeezed regardless of index
+    var isRefillSlot=phase==="hurricane"&&hurricaneDiscards&&hurricaneDiscards[i]===ci&&hurricaneTurn===null;
+    if(isRefillSlot&&!vis){
+      var spawningRefill=hurricaneAnimatingRefill&&hurricaneAnimatingRefill.has(i);
+      var refillAnim=spawningRefill?"hurricaneRefillSpawn .9s cubic-bezier(0.25,0.85,0.45,1) both":"cardDeal .45s ease both";
+      var refillCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci+"-refill",card:card,small:sm,cw:cw,ch:ch,onRevealed:function(){hurricaneRevealRefill(i);},skin:cardSkin,faceTheme:cardFace,peekOverride:props.peekOverride});
+      // Apply alert visual wrap if an alert was assigned by post-refill computeAlerts
+      if(alertActive&&alertType!=="growBull"&&alertType!=="cowPip"&&alertType!=="bullEmoji"){
+        var rAlertAnim,rAlertBorder,rExtraStyle={};
+        if(alertType==="rainbow"){rAlertAnim="alertRainbow 1.2s linear infinite,alertBorderRainbow 1.2s linear infinite";rAlertBorder="2px solid #f00";}
+        else if(alertType==="glitch"){rAlertAnim="alertGlitch 0.3s steps(1) infinite,alertGlitchShadow 2s steps(1) infinite";rAlertBorder="1px solid rgba(255,255,255,0.15)";}
+        else if(alertType==="quake"){rAlertAnim="alertQuakeCard 0.4s ease-in-out infinite,alertBorderRainbow 1.2s linear infinite";rAlertBorder="2px solid #f00";rExtraStyle={boxShadow:"0 0 18px rgba(255,0,200,0.35)"};}
+        else if(alertType==="cow"){rAlertAnim="bullGlow 1.2s ease-in-out 3";rAlertBorder="2px solid #d4af37";}
+        else{rAlertAnim="alertRed 1.5s ease-in-out 3,alertBorderRed 1.5s ease-in-out 3";rAlertBorder="2px solid rgba(255,0,0,0.5)";}
+        if(alertType==="cow"){
+          return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},
+            e("div",{style:Object.assign({borderRadius:cw*0.09+4,animation:rAlertAnim,border:rAlertBorder,padding:1,position:"relative"},rExtraStyle)},
+              refillCard,e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:10,fontSize:sm?24:32,animation:"squeezePulse 1s ease-in-out 3,specialCowGlow 3s ease-in-out 3"}},"🐮")));
+        }
+        return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},
+          e("div",{style:Object.assign({borderRadius:cw*0.09+4,animation:rAlertAnim,border:rAlertBorder,padding:1},rExtraStyle)},refillCard));
+      }
+      return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},refillCard);
+    }
     if(canSq){
       var sqCard=e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci,card:card,small:sm,cw:cw,ch:ch,onRevealed:function(){revealCard(i,ci);},skin:cardSkin,faceTheme:cardFace,peekOverride:props.peekOverride});
       if(alertActive&&alertType!=="growBull"&&alertType!=="cowPip"&&alertType!=="bullEmoji"){
@@ -2105,8 +2338,36 @@ function PlayerCards(props){
     if(vis){
       var useCowPip=alertActive&&alertType==="cowPip"&&alert&&ci===alert.cowPipIdx;
       var anyGlow=partialGlow||finalGlow;
+      // Hurricane: this player's turn and not yet discarded → make cards clickable
+      var hurricaneClickable=phase==="hurricane"&&hurricaneTurn===i&&(!hurricaneDiscards||hurricaneDiscards[i]===undefined)&&!hurricaneAnimatingDiscard;
+      // Hurricane: card being animated out (spiral)
+      var isSpiraling=hurricaneAnimatingDiscard&&hurricaneAnimatingDiscard.pi===i&&hurricaneAnimatingDiscard.ci===ci;
+      // Hurricane: this slot was discarded but refill hasn't arrived yet → show empty placeholder
+      // Must check hurricaneRefills to exclude the case where refill happened and card was re-revealed
+      var hasRefilled=hurricaneRefills&&hurricaneRefills[i];
+      var isEmptySlot=phase==="hurricane"&&hurricaneDiscards&&hurricaneDiscards[i]===ci&&!hasRefilled&&!isSpiraling;
+      var cardInner=e(CardFace,{card:card,w:cw,h:ch,showRank:true,highlight:finalGlow||partialGlow,cowPip:useCowPip,faceTheme:cardFace});
+      if(isSpiraling){
+        return e("div",{key:ci,style:{animation:"hurricaneSpiralOut .7s cubic-bezier(0.45,0.1,0.7,0.4) forwards",borderRadius:cw*0.09+2,position:"relative",zIndex:5}},
+          cardInner);
+      }
+      if(isEmptySlot){
+        // Empty slot placeholder: dashed border, "?" mark
+        return e("div",{key:ci,style:{
+          width:cw,height:ch,borderRadius:cw*0.09+2,
+          border:"1.5px dashed rgba(176,128,240,0.45)",
+          background:"rgba(140,100,220,0.04)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          animation:"fadeUp .3s ease both",
+          boxSizing:"border-box"}},
+          e("span",{style:{fontSize:Math.round(cw*0.35),color:"rgba(176,128,240,0.4)",fontWeight:300,fontFamily:"serif"}},"?"));
+      }
+      if(hurricaneClickable){
+        return e("div",{key:ci,onClick:function(){hurricaneDiscard(i,ci);},style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both,squeezePulse 1.5s ease-in-out infinite",borderRadius:cw*0.09+2,cursor:"pointer",outline:"2px dashed rgba(176,128,240,0.6)",outlineOffset:1,padding:0,transition:"transform 0.2s"}},
+          cardInner);
+      }
       return e("div",{key:ci,style:{animation:anyGlow?"cardDeal .35s ease "+(ci*0.05)+"s both,bullGlow 1.2s ease-in-out 4":"cardDeal .35s ease "+(ci*0.05)+"s both",borderRadius:cw*0.09+2}},
-        e(CardFace,{card:card,w:cw,h:ch,showRank:true,highlight:finalGlow||partialGlow,cowPip:useCowPip,faceTheme:cardFace}));
+        cardInner);
     }
     return e("div",{key:ci,style:{animation:"cardDeal .35s ease "+(ci*0.05)+"s both"}},
       e(SqueezeCard,{key:roundNum+"-"+i+"-"+ci+"-disabled",card:card,small:sm,cw:cw,ch:ch,skin:cardSkin,faceTheme:cardFace,peekOverride:props.peekOverride,disabled:true}));
@@ -2119,8 +2380,19 @@ function PlayerCards(props){
       e("span",{style:{fontSize:compactMode?14:17}},PEMOJI[i]),
       e("span",{style:{color:PCOLORS[i],fontWeight:700,fontSize:compactMode?10:12}},displayName(names,i)),
       isDealer?e("span",{style:{fontSize:compactMode?7:9,fontWeight:800,color:"#fff",background:"linear-gradient(135deg,#c0392b,#962d22)",padding:"1px 6px",borderRadius:4,letterSpacing:1,boxShadow:"0 1px 4px rgba(192,57,43,0.3)"}},"親"):null,
+      // Hurricane: highlight current chooser's badge
+      phase==="hurricane"&&hurricaneTurn===i?e("span",{style:{fontSize:compactMode?7:9,fontWeight:800,color:"#fff",background:"linear-gradient(135deg,#b080f0,#7050c0)",padding:"1px 6px",borderRadius:4,letterSpacing:0.5,boxShadow:"0 1px 6px rgba(140,100,220,0.5)",animation:"hurricaneTurnBadge 1.2s ease-in-out infinite"}},t("event.your_turn")):null,
       !isDealer&&betAmount?e("span",{style:{fontSize:compactMode?7:9,fontWeight:600,color:"#f39c12",background:"rgba(243,156,18,0.1)",padding:"1px 5px",borderRadius:3}},"BET "+betAmount):null,
-      rc.size>=3&&!full?e("span",{style:{fontSize:compactMode?7:9,fontWeight:600,color:"#4ecdc4",background:"rgba(78,205,196,0.07)",padding:"1px 4px",borderRadius:3}},rc.size===3?"絞り中":"ラスト！"):null),
+      rc.size>=3&&!full?e("span",{style:{fontSize:compactMode?7:9,fontWeight:600,color:"#4ecdc4",background:"rgba(78,205,196,0.07)",padding:"1px 4px",borderRadius:3}},rc.size===3?"絞り中":"ラスト！"):null,
+      // Hurricane: display this player's discarded card (rank+suit, small)
+      hurricaneDiscardedCards&&hurricaneDiscardedCards[i]?(function(){
+        var dc=hurricaneDiscardedCards[i];
+        var isRed=dc.suit==="♥"||dc.suit==="♦";
+        return e("span",{style:{fontSize:compactMode?8:10,fontWeight:700,padding:"1px 5px",borderRadius:3,background:"rgba(140,100,220,0.12)",border:"1px solid rgba(140,100,220,0.35)",color:isRed?"#e04848":"#e8e8f0",display:"inline-flex",alignItems:"center",gap:2,letterSpacing:0.3}},
+          e("span",{style:{fontSize:compactMode?7:8,color:"#b080f0",marginRight:1}},"🗑"),
+          e("span",null,dc.rank),
+          e("span",{style:{color:isRed?"#e04848":"#1a1a22"}},dc.suit));
+      })():null),
     e("div",{style:{display:"flex",alignItems:"center",gap:4}},
       chipDelta!==undefined&&chipDelta!==null&&chipDelta!==0?e("div",{style:{position:"relative",display:"inline-flex",alignItems:"center"}},
         // Burst of chip particles spreading outward
@@ -2154,10 +2426,27 @@ function PlayerCards(props){
 
   // Action
   var actionContent=null;
-  if(full){var indResult=res||evaluateHand(hands[i]);
+  // Hurricane phase UI — but if this player has completed their squeeze (full=true), show result label
+  if(phase==="hurricane"&&!full){
+    var myDiscarded=hurricaneDiscards&&hurricaneDiscards[i]!==undefined;
+    var myTurn=hurricaneTurn===i;
+    var myRefillRevealed=hurricaneRefilledRevealed&&hurricaneRefilledRevealed.has(i);
+    if(myTurn&&!myDiscarded){
+      actionContent=e("div",{style:{fontSize:compactMode?10:12,color:"#b080f0",fontWeight:700,letterSpacing:1,animation:"squeezePulse 1.2s ease-in-out infinite"}},t("event.discard_prompt"));
+    }else if(myDiscarded&&hurricaneTurn===null&&!myRefillRevealed){
+      // Refill arrived: card is already a SqueezeCard, just prompt to drag-squeeze
+      actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#b080f0",animation:"squeezePulse 2s ease-in-out infinite",fontWeight:600}},t("game.drag_squeeze"));
+    }else if(myDiscarded&&hurricaneTurn!==null&&hurricaneTurn!==i){
+      // Already discarded, waiting for others to choose
+      actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#8a8a9a",fontWeight:600}},"✓");
+    }else if(!myTurn&&!myDiscarded){
+      // Not my turn yet
+      actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#5a5a6a"}},t("event.discard_waiting"));
+    }
+  }else if(full){var indResult=res||evaluateHand(hands[i]);
     actionContent=e("div",{style:{fontSize:indResult.hasBull?(compactMode?14:19):(compactMode?10:13),fontWeight:800,color:indResult.hasBull?"#d4af37":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
   }else if(phase==="reveal"&&rc.size===0){
-    actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid var(--accent)",background:"transparent",color:"var(--accent)",cursor:"pointer",letterSpacing:1}},t("game.open_three"));
+    actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid var(--accent)",background:"transparent",color:"var(--accent)",cursor:"pointer",letterSpacing:1}},t(props.eventMode?"game.open_five":"game.open_three"));
   }else if(phase==="reveal"&&rc.size>=3){
     actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#4ecdc4",animation:"squeezePulse 2s ease-in-out 4",fontWeight:600}},t("game.drag_squeeze"));
   }
@@ -2166,6 +2455,13 @@ function PlayerCards(props){
   var boxAnim=isW?"winPulse 1.5s ease 3":"none";
   var boxBg=isW?"linear-gradient(135deg,rgba(212,175,55,0.07) 0%,var(--card) 100%)":"var(--card)";
   if(alertActive&&alertType==="quake")boxAnim="alertQuake 0.5s ease-in-out infinite";
+  // Hurricane: highlight the active chooser, dim the rest
+  var isMyHurricaneTurn=phase==="hurricane"&&hurricaneTurn===i;
+  var isHurricaneSelectionPending=phase==="hurricane"&&hurricaneTurn!==null&&hurricaneTurn!==i;
+  if(isMyHurricaneTurn){
+    boxAnim="hurricaneTurnPulse 1.4s ease-in-out infinite";
+    boxBg="linear-gradient(135deg,rgba(140,100,220,0.12) 0%,var(--card) 100%)";
+  }
 
   if(alertActive&&alertType==="growBull"){
     pKids.push(e("div",{key:"growbull",style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:0,overflow:"hidden",borderRadius:pc>=4?8:11}},
@@ -2173,16 +2469,19 @@ function PlayerCards(props){
   }
 
   return e("div",{key:i,style:{padding:pc>=4?7:11,borderRadius:pc>=4?8:11,transition:"all .3s ease",position:"relative",overflow:"hidden",
-    border:isW?"2px solid #d4af37":isDealer?"2px solid rgba(192,57,43,0.5)":"1.5px solid "+(rc.size>0?"rgba(255,255,255,0.08)":"rgba(212,175,55,0.03)"),
-    background:isDealer&&!isW?"linear-gradient(135deg,rgba(192,57,43,0.04) 0%,var(--card) 100%)":boxBg,
-    boxShadow:isDealer&&!isW?"inset 0 0 12px rgba(192,57,43,0.06)":"none",
+    border:isMyHurricaneTurn?"2.5px solid #b080f0":isW?"2px solid #d4af37":isDealer?"2px solid rgba(192,57,43,0.5)":"1.5px solid "+(rc.size>0?"rgba(255,255,255,0.08)":"rgba(212,175,55,0.03)"),
+    background:isDealer&&!isW&&!isMyHurricaneTurn?"linear-gradient(135deg,rgba(192,57,43,0.04) 0%,var(--card) 100%)":boxBg,
+    boxShadow:isDealer&&!isW&&!isMyHurricaneTurn?"inset 0 0 12px rgba(192,57,43,0.06)":"none",
+    opacity:isHurricaneSelectionPending?0.42:1,
     animation:boxAnim}},pKids);
 }
 
 // ─── NiuNiu App ──────────────────────────────────────────────────
 function NiuNiu(){
-  // Top-level mode: "splash", "home", "flip", "battle", "rulebook"
+  // Top-level mode: "splash", "home", "flip", "battle", "event", "rulebook"
   var s0=useState("splash"),appMode=s0[0],setAppMode=s0[1];
+  // Helper: battle-like mode (battle or event) shares dealer/chips/bet mechanics
+  function isBattleLike(m){return m==="battle"||m==="event";}
 
   // Tutorial state - show on first launch
   var st0=useState(function(){
@@ -2209,6 +2508,7 @@ function NiuNiu(){
   var s10=useState(loadPref("niuniu_sound","1")==="1"),soundOn=s10[0],setSoundOnState=s10[1];
   function setSoundOn(v){setSoundOnState(v);savePref("niuniu_sound",v?"1":"0");}
   var s13=useState(loadPref("niuniu_mode","sakibare")),gameMode=s13[0],setGameModeState=s13[1];
+  var s13b=useState(parseInt(loadPref("niuniu_spoiler_level","3"),10)||3),spoilerLevel=s13b[0],setSpoilerLevel=s13b[1];
   function setGameMode(v){setGameModeState(v);savePref("niuniu_mode",v);}
   var s11=useState({}),alerts=s11[0],setAlerts=s11[1];
 
@@ -2216,6 +2516,15 @@ function NiuNiu(){
   var sm1=useState(0),soundTapCount=sm1[0],setSoundTapCount=sm1[1];
   var sm2=useState(0),soundTapLast=sm2[0],setSoundTapLast=sm2[1];
   var sm3=useState(false),secretOpen=sm3[0],setSecretOpen=sm3[1];
+  // Hurricane event state
+  var sh1=useState(null),hurricaneTurn=sh1[0],setHurricaneTurn=sh1[1]; // current player index choosing, null=not started
+  var sh2=useState({}),hurricaneDiscards=sh2[0],setHurricaneDiscards=sh2[1]; // {pi: cardIdx}
+  var sh2b=useState({}),hurricaneDiscardedCards=sh2b[0],setHurricaneDiscardedCards=sh2b[1]; // {pi: cardObj} - the actual discarded card for display
+  var sh3=useState({}),hurricaneRefills=sh3[0],setHurricaneRefills=sh3[1]; // {pi: card} the new card
+  var sh4=useState(new Set()),hurricaneRefilledRevealed=sh4[0],setHurricaneRefilledRevealed=sh4[1]; // pi set of revealed refills
+  var sh5=useState(false),eventRulesExpanded=sh5[0],setEventRulesExpanded=sh5[1]; // toggle rule details on event card
+  var sh6=useState(null),hurricaneAnimatingDiscard=sh6[0],setHurricaneAnimatingDiscard=sh6[1]; // {pi:N, ci:N} during spiral-out animation
+  var sh7=useState(new Set()),hurricaneAnimatingRefill=sh7[0],setHurricaneAnimatingRefill=sh7[1]; // Set of pi currently showing spawn animation
   var sm6=useState(null),peekActive=sm6[0],setPeekActive=sm6[1]; // null | {dir: "h"|"v", phase: "open"|"hold"|"close"}
   var sm7=useState(false),copyFeedback=sm7[0],setCopyFeedback=sm7[1];
   // Battle config: inactive (left) players and dialogs
@@ -2275,6 +2584,7 @@ function NiuNiu(){
   useEffect(function(){savePref("niuniu_table",tableId);},[tableId]);
   useEffect(function(){savePref("niuniu_sound",soundOn?"1":"0");},[soundOn]);
   useEffect(function(){savePref("niuniu_mode",gameMode);},[gameMode]);
+  useEffect(function(){savePref("niuniu_spoiler_level",String(spoilerLevel));},[spoilerLevel]);
   var c3=useState("default"),soundPackId=c3[0],setSoundPackId=c3[1];  // unused, kept for backward compat
   var c4=useState({allpass:true,skins:true,tables:true,noads:true}),purchased=c4[0],setPurchased=c4[1]; // All unlocked for public release
   var c5=useState(null),settingsFrom=c5[0],setSettingsFrom=c5[1]; // track where settings was opened from
@@ -2297,7 +2607,7 @@ function NiuNiu(){
   // Clamp all bets to current maxBet when maxBet changes or when entering betting phase.
   // Fixes: stale bets from a previous round can exceed new maxBet and silently get used.
   useEffect(function(){
-    if(appMode!=="battle")return;
+    if(!isBattleLike(appMode))return;
     setBets(function(prev){
       var changed=false;
       var next=Object.assign({},prev);
@@ -2330,7 +2640,7 @@ function NiuNiu(){
 
   // Auto-save battle session during a live battle (before summary)
   useEffect(function(){
-    if(appMode!=="battle")return;
+    if(!isBattleLike(appMode))return;
     // Only save when in-game phases (not setup/summary)
     if(phase==="setup"||phase==="summary")return;
     // Don't save empty state
@@ -2341,6 +2651,7 @@ function NiuNiu(){
       names:names,
       betRule:betRule,
       gameMode:gameMode,
+      spoilerLevel:spoilerLevel,
       chips:chips,
       roundNum:roundNum,
       history:history,
@@ -2351,13 +2662,14 @@ function NiuNiu(){
       inactivePlayers:inactivePlayers
     };
     saveBattleSession(session);
-  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,maxBet,dealer,bets,inactivePlayers]);
+  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,dealer,bets,inactivePlayers]);
 
   function applyResume(session){
     setPc(session.pc||2);
     setNames(session.names||["","","","","",""]);
     setBetRule(session.betRule||"offset");
     setGameMode(session.gameMode||"spoiler");
+    if(typeof session.spoilerLevel==="number")setSpoilerLevel(session.spoilerLevel);
     setChips(session.chips||{});
     setRoundNum(session.roundNum||0);
     setHistory(session.history||[]);
@@ -2397,7 +2709,7 @@ function NiuNiu(){
     pushHistory("niuniu_history_flip",entry);
   }  // Save battle history when summary is reached
   function saveBattleHistoryIfNeeded(){
-    if(appMode!=="battle")return;
+    if(!isBattleLike(appMode))return;
     if(!history||history.length===0)return; // no rounds played
     var cs=chips||{};
     var maxChip=-Infinity,winners=[];
@@ -2413,14 +2725,14 @@ function NiuNiu(){
       betRule:betRule,
       roundHistory:history // full per-round breakdown
     };
-    pushHistory("niuniu_history_battle",entry);
+    pushHistory(appMode==="event"?"niuniu_history_event":"niuniu_history_battle",entry);
     clearBattleSession(); // Clear interrupted session since we tallied
   }
 
   // When entering summary (battle), save history and clear interrupted session (once)
   var battleSavedRef=useRef({phase:null});
   useEffect(function(){
-    if(appMode==="battle"&&phase==="summary"&&history&&history.length>0){
+    if(isBattleLike(appMode)&&phase==="summary"&&history&&history.length>0){
       if(battleSavedRef.current.phase!=="summary"){
         battleSavedRef.current.phase="summary";
         saveBattleHistoryIfNeeded();
@@ -2487,8 +2799,9 @@ function NiuNiu(){
           else if(roll<0.25){newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};}
           else if(roll<0.65){newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};}
         }else{
-          if(roll<0.01097){newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.08773){newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};}
+          var _ss=SPOILER_SCALE[spoilerLevel]||1.0;
+          if(roll<0.01097*_ss){newAlerts[pi]={type:"glitch",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.08773*_ss){newAlerts[pi]={type:"red",timing:Math.random()<0.5?"three":"four"};}
         }
       }
     });
@@ -2510,16 +2823,224 @@ function NiuNiu(){
     var deck=createDeck();var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
     setHands(h);var rc=[];for(var i2=0;i2<pc;i2++)rc.push(new Set());setRevealedCards(rc);
     setResults([]);setWinner(null);setPhase("dealing");if(sc)setScores(sc);
-    setAlerts(computeAlerts(h));setRoundDeltas(null);
+    // In event mode, suppress all alerts/premier effects on initial 5 cards.
+    // Alerts are computed after the hurricane refill instead.
+    setAlerts(appMode==="event"?{}:computeAlerts(h));
+    setRoundDeltas(null);
     setRoundNum(function(r){return r+1;});
     // Reset secret menu usage flags for new round
     setPeekActive(null);
+    // Reset hurricane state for event mode
+    setHurricaneTurn(null);
+    setHurricaneDiscards({});
+    setHurricaneDiscardedCards({});
+    setHurricaneRefills({});
+    setHurricaneRefilledRevealed(new Set());
+    setHurricaneAnimatingDiscard(null);
+    setHurricaneAnimatingRefill(new Set());
     if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
   }
 
+  // ─── HURRICANE EVENT ACTIONS ─────────────────────────────────
+  // Player pi picks card index ci to discard
+  function hurricaneDiscard(pi,ci){
+    if(phase!=="hurricane")return;
+    if(hurricaneTurn!==pi)return; // wrong turn
+    if(hurricaneDiscards[pi]!==undefined)return; // already chose
+    if(hurricaneAnimatingDiscard)return; // already animating
+    if(soundOn)SFX.deal();
+    // Step 1: trigger spiral-out animation by marking this card
+    setHurricaneAnimatingDiscard({pi:pi,ci:ci});
+    // Step 2: after animation completes (~700ms), commit the discard
+    setTimeout(function(){
+      var newDiscards=Object.assign({},hurricaneDiscards);newDiscards[pi]=ci;
+      setHurricaneDiscards(newDiscards);
+      var discardedCard=hands[pi]&&hands[pi][ci];
+      if(discardedCard){
+        setHurricaneDiscardedCards(function(prev){var n=Object.assign({},prev);n[pi]=discardedCard;return n;});
+      }
+      setHurricaneAnimatingDiscard(null);
+      // Advance turn
+      var nextTurn=(pi+1)%pc;
+      var firstChooser=(dealer+1)%pc;
+      if(nextTurn===firstChooser){
+        setHurricaneTurn(null);
+        setTimeout(function(){hurricaneRefill(newDiscards);},500);
+      }else{
+        setHurricaneTurn(nextTurn);
+      }
+    },700);
+  }
+
+  // Draw refill cards from remaining deck and replace discarded ones
+  function hurricaneRefill(discards){
+    // Build set of "used" cards (all hands flat, except discarded)
+    var usedKey={};
+    hands.forEach(function(h,pi){
+      h.forEach(function(c,ci){
+        if(discards[pi]===ci)return; // discarded → don't include
+        usedKey[c.rank+c.suit]=true;
+      });
+    });
+    // Generate fresh deck and find first unused card per player needing refill
+    var fullDeck=createDeck();
+    var refills={};
+    var newHands=hands.map(function(h){return h.slice();});
+    for(var pi=0;pi<pc;pi++){
+      if(discards[pi]===undefined)continue;
+      // Find a card not in usedKey
+      for(var di=0;di<fullDeck.length;di++){
+        var c=fullDeck[di];
+        var k=c.rank+c.suit;
+        if(!usedKey[k]){
+          refills[pi]=c;
+          usedKey[k]=true; // reserve
+          newHands[pi][discards[pi]]=c; // replace
+          break;
+        }
+      }
+    }
+    setHurricaneRefills(refills);
+    setHands(newHands);
+    // Mark all refilled slots as animating spawn
+    var spawnSet=new Set();
+    for(var pi3=0;pi3<pc;pi3++){if(discards[pi3]!==undefined)spawnSet.add(pi3);}
+    setHurricaneAnimatingRefill(spawnSet);
+    // Clear after animation duration
+    setTimeout(function(){setHurricaneAnimatingRefill(new Set());},900);
+    // Clear the discarded card's revealed state so the player can re-squeeze
+    setRevealedCards(function(prev){
+      var ns=prev.map(function(s){return new Set(s);});
+      for(var pi2=0;pi2<pc;pi2++){
+        if(discards[pi2]!==undefined)ns[pi2].delete(discards[pi2]);
+      }
+      return ns;
+    });
+    // Re-compute alerts based on new hands
+    var newAlerts=computeAlerts(newHands);
+    // Compute the deck pool: all 52 cards minus (current hands + already-discarded cards in this round)
+    var poolUsed={};
+    newHands.forEach(function(h){if(h)h.forEach(function(c){if(c)poolUsed[c.rank+c.suit]=true;});});
+    // Also exclude this round's discards (kept in hurricaneDiscardedCards)
+    if(hurricaneDiscardedCards){
+      for(var dpiK in hurricaneDiscardedCards){
+        var dcK=hurricaneDiscardedCards[dpiK];
+        if(dcK)poolUsed[dcK.rank+dcK.suit]=true;
+      }
+    }
+    var deckPool=[];
+    for(var psi=0;psi<SUITS.length;psi++){
+      for(var pri=0;pri<RANKS.length;pri++){
+        var pk=RANKS[pri]+SUITS[psi];
+        if(!poolUsed[pk])deckPool.push({rank:RANKS[pri],suit:SUITS[psi],flipped:false});
+      }
+    }
+    // Suppress fake alerts (red/glitch) when no remaining deck card can complete niuniu+
+    // This applies even though refill already gave one of those cards — the alert may have been
+    // assigned to a card that can't reach niuniu+. Use the 4 NON-refilled cards as fixed context
+    // and check the pool: if no pool card yields niuniu+, suppress.
+    for(var spi=0;spi<pc;spi++){
+      if(discards[spi]===undefined)continue;
+      var sa=newAlerts[spi];
+      if(!sa)continue;
+      if(sa.type!=="red"&&sa.type!=="glitch")continue;
+      var fourKnown=[];
+      for(var fki=0;fki<5;fki++){if(fki!==discards[spi])fourKnown.push(newHands[spi][fki]);}
+      // For suppression, we ask: from the entire remaining deck pool, could ANY card complete niuniu?
+      // (We include the refill card itself in the pool so this matches "what could have happened".)
+      var poolWithRefill=deckPool.slice();
+      var refillCard=newHands[spi]&&newHands[spi][discards[spi]];
+      if(refillCard)poolWithRefill.push(refillCard);
+      if(!canHurricaneStillBeNiuNiu(fourKnown,poolWithRefill)){
+        delete newAlerts[spi];
+      }
+    }
+    setAlerts(newAlerts);
+    // Play alert SFX immediately when refill card appears (synced with spawn animation)
+    if(soundOn){
+      for(var pi4=0;pi4<pc;pi4++){
+        if(discards[pi4]===undefined)continue;
+        var alert4=newAlerts[pi4];
+        if(!alert4)continue;
+        (function(at,offset){setTimeout(function(){playAlertSFX(at);},300+offset);})(alert4.type,pi4*60);
+      }
+    }
+  }
+
+  // Player re-reveals the refilled card (re-squeeze experience)
+  function hurricaneRevealRefill(pi){
+    var ci=hurricaneDiscards[pi];
+    if(ci===undefined)return;
+    if(hurricaneRefilledRevealed.has(pi))return;
+    if(soundOn)SFX.deal();
+    var ns=new Set(hurricaneRefilledRevealed);ns.add(pi);
+    setHurricaneRefilledRevealed(ns);
+    // Reveal the card in revealedCards too
+    setRevealedCards(function(prev){
+      var ns2=prev.map(function(s){return new Set(s);});
+      ns2[pi].add(ci);
+      // Standard size=5 sound (same as normal revealCard)
+      if(ns2[pi].size===5&&soundOn){
+        var ev2=evaluateHand(hands[pi]);
+        setTimeout(function(){if(ev2.hasBull)SFX.bullFound();else SFX.noBull();},200);
+      }
+      // If all players have revealed their refills, transition to result calculation
+      if(ns.size===pc){
+        setTimeout(function(){
+          var ev=hands.map(function(h){return evaluateHand(h);});
+          setResults(ev);
+          // Reuse battle result logic
+          var dealerEv=ev[dealer];
+          var deltas={};for(var ii=0;ii<pc;ii++)deltas[ii]=0;
+          for(var ci2=0;ci2<pc;ci2++){
+            if(ci2===dealer)continue;
+            var childEv=ev[ci2];
+            var dealerWins=dealerEv.bullRank>childEv.bullRank||(dealerEv.bullRank===childEv.bullRank&&dealerEv.highCard>childEv.highCard);
+            var bet=bets[ci2]||1;
+            var mult;
+            if(betRule==="offset"){mult=calcMultiplierOffset(dealerEv.bullValue,childEv.bullValue);}
+            else{mult=dealerWins?calcMultiplierNoOffset(dealerEv.bullValue):calcMultiplierNoOffset(childEv.bullValue);}
+            var amount=Math.round(bet*mult);
+            if(dealerWins){deltas[dealer]+=amount;deltas[ci2]-=amount;}
+            else{deltas[dealer]-=amount;deltas[ci2]+=amount;}
+          }
+          setRoundDeltas(deltas);
+          setChips(function(prev){var n=Object.assign({},prev);for(var k in deltas)n[k]=(n[k]||0)+deltas[k];return n;});
+          var bestDelta=-Infinity,bestIdx=0;
+          for(var k2 in deltas){if(deltas[k2]>bestDelta){bestDelta=deltas[k2];bestIdx=parseInt(k2);}}
+          setWinner(bestIdx);
+          setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice(),event:"hurricane"}]);});
+          setPhase("result");
+          if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
+        },400);
+      }
+      return ns2;
+    });
+  }
+
   function openThree(pi){
     if(soundOn)SFX.deal();
+    // Event mode: reveal all 5 cards at once (no alerts/bull sounds — those come after hurricane refill)
+    if(appMode==="event"){
+      setRevealedCards(function(prev){
+        var ns2=prev.map(function(s){return new Set(s);});
+        ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);ns2[pi].add(3);ns2[pi].add(4);
+        // Trigger hurricane phase if all players have opened (no alert/bull sound calls)
+        if(ns2.every(function(s){return s.size===5;})){
+          setTimeout(function(){
+            if(getCurrentEvent()==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
+              var firstChooser=(dealer+1)%pc;
+              setHurricaneTurn(firstChooser);
+              setPhase("hurricane");
+              if(soundOn)SFX.deal();
+            }
+          },400);
+        }
+        return ns2;
+      });
+      return;
+    }
     var alert=alerts[pi];
     // Check if alert would be suppressed (niuniu impossible with 3 cards revealed)
     var willSuppress=false;
@@ -2560,6 +3081,15 @@ function NiuNiu(){
       }
       if(ns2.every(function(s){return s.size===5;})){
         setTimeout(function(){
+          // EVENT MODE: Hurricane — if event mode and hurricane not yet processed, enter hurricane phase
+          if(appMode==="event"&&getCurrentEvent()==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
+            // Start hurricane: first chooser is the player left of the dealer
+            var firstChooser=(dealer+1)%pc;
+            setHurricaneTurn(firstChooser);
+            setPhase("hurricane");
+            if(soundOn)SFX.deal();
+            return; // skip result calculation
+          }
           var ev=hands.map(function(h){return evaluateHand(h);});
           setResults(ev);
 
@@ -2815,30 +3345,42 @@ function NiuNiu(){
             e("span",{style:{fontSize:52,fontWeight:900,color:"#c0392b",textShadow:"0 2px 20px rgba(192,57,43,0.3),0 0 40px rgba(192,57,43,0.1)",fontFamily:"'Playfair Display','Noto Serif JP',serif"}},"牛")),
           e("div",{style:{fontSize:13,fontWeight:700,letterSpacing:6,color:"var(--accent)",opacity:0.7,fontFamily:"'Playfair Display',serif"}},"NIU NIU"),
           e("div",{style:{width:40,height:1,background:"linear-gradient(90deg,transparent,var(--accent),transparent)",margin:"10px auto"}})),
-        // Main mode buttons - 2 column grid, bigger
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}},
+        // Main mode buttons - 3 column grid
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}},
           // Flip mode
           e("button",{onClick:function(){setAppMode("flip");setPhase("setup");if(soundOn)SFX.buttonClick();},
-            style:{padding:"36px 16px",borderRadius:16,border:"1.5px solid rgba(212,175,55,0.45)",
+            style:{padding:"22px 8px",borderRadius:14,border:"1.5px solid rgba(212,175,55,0.45)",
               background:"linear-gradient(165deg,rgba(212,175,55,0.22) 0%,rgba(0,0,0,0.4) 100%)",
-              cursor:"pointer",textAlign:"center",fontFamily:"inherit",minHeight:260,
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:18,
+              cursor:"pointer",textAlign:"center",fontFamily:"inherit",minHeight:200,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,
               boxShadow:"0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1),inset 0 -20px 40px rgba(0,0,0,0.25)"}},
-            e("div",{style:{width:88,height:88,borderRadius:22,background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,boxShadow:"0 6px 20px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.3)"}},"🎴"),
+            e("div",{style:{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,boxShadow:"0 6px 20px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.3)"}},"🎴"),
             e("div",null,
-              e("div",{style:{fontSize:20,fontWeight:800,color:"#fff",letterSpacing:1.5,marginBottom:6,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("home.flip")),
-              e("div",{style:{fontSize:10,color:"rgba(255,255,255,0.72)",lineHeight:1.5,textShadow:"0 1px 2px rgba(0,0,0,0.4)"}},t("home.flip_desc")))),
+              e("div",{style:{fontSize:15,fontWeight:800,color:"#fff",letterSpacing:1,marginBottom:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("home.flip")),
+              e("div",{style:{fontSize:9,color:"rgba(255,255,255,0.72)",lineHeight:1.4,textShadow:"0 1px 2px rgba(0,0,0,0.4)"}},t("home.flip_desc")))),
           // Battle mode
           e("button",{onClick:function(){setAppMode("battle");setPhase("setup");if(soundOn)SFX.buttonClick();},
-            style:{padding:"36px 16px",borderRadius:16,border:"1.5px solid rgba(220,70,60,0.5)",
+            style:{padding:"22px 8px",borderRadius:14,border:"1.5px solid rgba(220,70,60,0.5)",
               background:"linear-gradient(165deg,rgba(192,57,43,0.28) 0%,rgba(0,0,0,0.4) 100%)",
-              cursor:"pointer",textAlign:"center",fontFamily:"inherit",minHeight:260,
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:18,
+              cursor:"pointer",textAlign:"center",fontFamily:"inherit",minHeight:200,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,
               boxShadow:"0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1),inset 0 -20px 40px rgba(0,0,0,0.25)"}},
-            e("div",{style:{width:88,height:88,borderRadius:22,background:"linear-gradient(135deg,#e04a38,#a02d20)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,boxShadow:"0 6px 20px rgba(220,70,60,0.5),inset 0 1px 0 rgba(255,255,255,0.3)"}},"⚔️"),
+            e("div",{style:{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#e04a38,#a02d20)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,boxShadow:"0 6px 20px rgba(220,70,60,0.5),inset 0 1px 0 rgba(255,255,255,0.3)"}},"⚔️"),
             e("div",null,
-              e("div",{style:{fontSize:20,fontWeight:800,color:"#fff",letterSpacing:1.5,marginBottom:6,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("home.battle")),
-              e("div",{style:{fontSize:10,color:"rgba(255,255,255,0.72)",lineHeight:1.5,textShadow:"0 1px 2px rgba(0,0,0,0.4)"}},t("home.battle_desc"))))),
+              e("div",{style:{fontSize:15,fontWeight:800,color:"#fff",letterSpacing:1,marginBottom:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("home.battle")),
+              e("div",{style:{fontSize:9,color:"rgba(255,255,255,0.72)",lineHeight:1.4,textShadow:"0 1px 2px rgba(0,0,0,0.4)"}},t("home.battle_desc")))),
+          // Event mode (NEW)
+          e("button",{onClick:function(){setAppMode("event");setPhase("event_select");if(soundOn)SFX.buttonClick();},
+            style:{padding:"22px 8px",borderRadius:14,border:"1.5px solid rgba(140,100,220,0.5)",
+              background:"linear-gradient(165deg,rgba(120,80,200,0.28) 0%,rgba(0,0,0,0.4) 100%)",
+              cursor:"pointer",textAlign:"center",fontFamily:"inherit",minHeight:200,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,position:"relative",
+              boxShadow:"0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1),inset 0 -20px 40px rgba(0,0,0,0.25)"}},
+            e("div",{style:{position:"absolute",top:6,right:6,fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:8,background:"rgba(255,200,80,0.85)",color:"#3a2010",letterSpacing:0.5}},"NEW"),
+            e("div",{style:{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#a070e8,#6040a0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,boxShadow:"0 6px 20px rgba(140,100,220,0.5),inset 0 1px 0 rgba(255,255,255,0.3)"}},"🎉"),
+            e("div",null,
+              e("div",{style:{fontSize:15,fontWeight:800,color:"#fff",letterSpacing:1,marginBottom:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("home.event")),
+              e("div",{style:{fontSize:9,color:"rgba(255,255,255,0.72)",lineHeight:1.4,textShadow:"0 1px 2px rgba(0,0,0,0.4)"}},t("home.event_desc"))))),
         // Sub buttons - 3 column (rulebook / history / settings)
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}},
           e("button",{onClick:function(){setAppMode("rulebook");if(soundOn)SFX.buttonClick();},
@@ -2863,11 +3405,75 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.2 · © 2026 KTR (",
+            "v1.3 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
       resumeOverlay,tutorialOverlay);
+  }
+
+  // ─── EVENT Screen (selection / intro) ────────────────────────
+  if(appMode==="event"&&phase==="event_select"){
+    var evCard={padding:"14px 16px",borderRadius:12,background:"var(--card)",border:"1px solid var(--card-border)",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.2)"};
+    var evKids=[];
+    var curEvent=getCurrentEvent();
+    var curYM=getCurrentEventYM();
+
+    // Header
+    evKids.push(e("div",{key:"hdr",style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}},
+      e("button",{onClick:function(){setAppMode("home");if(soundOn)SFX.buttonClick();},style:{padding:"5px 12px",borderRadius:6,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("common.back")),
+      e("div",{style:{fontSize:16,fontWeight:900,color:"#a070e8"}},t("event.title")),
+      e("div",{style:{width:60}})));
+
+    // This month's event card
+    evKids.push(e("div",{key:"month",style:{textAlign:"center",marginBottom:10,fontSize:10,color:"var(--text-muted)",letterSpacing:2}},t("event.this_month")+" · "+curYM));
+
+    if(curEvent==="hurricane"){
+      var ruleSteps=[1,2,3,4,5].map(function(n){return t("event.hurricane.rule_step"+n);});
+      var ruleNotes=[1,2,3,4].map(function(n){return t("event.hurricane.rule_note"+n);});
+      evKids.push(e("div",{key:"hcard",style:{
+        padding:"24px 18px",borderRadius:16,position:"relative",
+        background:"linear-gradient(165deg,rgba(120,80,200,0.22) 0%,rgba(60,40,100,0.4) 100%)",
+        border:"1.5px solid rgba(140,100,220,0.5)",
+        marginBottom:18,textAlign:"center",
+        boxShadow:"0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1)"}},
+        // Rule book icon (top-right)
+        e("button",{onClick:function(){setEventRulesExpanded(!eventRulesExpanded);if(soundOn)SFX.buttonClick();},
+          title:t("event.hurricane.rule_title"),
+          style:{position:"absolute",top:10,right:10,width:36,height:36,borderRadius:18,
+            border:eventRulesExpanded?"1.5px solid #d0b0ff":"1.5px solid rgba(176,128,240,0.4)",
+            background:eventRulesExpanded?"rgba(176,128,240,0.2)":"rgba(0,0,0,0.25)",
+            color:"#d0b0ff",fontSize:16,cursor:"pointer",fontFamily:"inherit",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            transition:"all 0.2s",zIndex:2}},"📖"),
+        e("div",{style:{fontSize:48,marginBottom:8}},"🌪️"),
+        e("div",{style:{fontSize:22,fontWeight:800,color:"#fff",letterSpacing:1.5,marginBottom:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("event.hurricane.name")),
+        e("div",{style:{fontSize:11,color:"#d0b0ff",letterSpacing:2,marginBottom:14,fontStyle:"italic"}},t("event.hurricane.tagline")),
+        e("div",{style:{fontSize:11,color:"rgba(255,255,255,0.78)",lineHeight:1.7,maxWidth:300,margin:"0 auto 18px",textAlign:"left",padding:"0 8px"}},t("event.hurricane.desc")),
+        // Expanded rules section
+        eventRulesExpanded?e("div",{style:{
+          marginTop:0,marginBottom:18,padding:"14px 14px",borderRadius:10,
+          background:"rgba(0,0,0,0.3)",border:"1px solid rgba(176,128,240,0.3)",
+          textAlign:"left",animation:"fadeUp 0.3s ease"}},
+          e("div",{style:{fontSize:12,fontWeight:800,color:"#d0b0ff",marginBottom:10,letterSpacing:1,textAlign:"center"}},t("event.hurricane.rule_title")),
+          // Numbered steps
+          e("ol",{style:{margin:0,paddingLeft:20,fontSize:10.5,color:"rgba(255,255,255,0.82)",lineHeight:1.7}},
+            ruleSteps.map(function(step,idx){return e("li",{key:idx,style:{marginBottom:5}},step);})),
+          // Notes divider
+          e("div",{style:{height:1,background:"rgba(176,128,240,0.2)",margin:"10px 0"}}),
+          // Notes
+          e("div",{style:{fontSize:9.5,color:"#b8a8d0",lineHeight:1.6,paddingLeft:2}},
+            ruleNotes.map(function(note,idx){return e("div",{key:idx,style:{marginBottom:3}},"※ "+note);}))):null,
+        e("button",{onClick:function(){setPhase("setup");if(soundOn)SFX.buttonClick();},style:{
+          padding:"12px 32px",borderRadius:10,border:"none",
+          background:"linear-gradient(135deg,#b080f0,#7050c0)",
+          color:"#fff",fontSize:14,fontWeight:800,fontFamily:"inherit",
+          cursor:"pointer",letterSpacing:1.2,
+          boxShadow:"0 4px 14px rgba(140,100,220,0.6)"}},t("event.start"))));
+    }
+
+    return e("div",{style:{minHeight:"100vh",padding:12,maxWidth:860,margin:"0 auto"}},
+      e("div",{style:{maxWidth:440,margin:"0 auto",padding:"12px 0"}},evKids));
   }
 
   // ─── SHOP Screen ──────────────────────────────────────────
@@ -2921,6 +3527,7 @@ function NiuNiu(){
     var hsKids=[];
     var flipHist=loadHistory("niuniu_history_flip");
     var battleHist=loadHistory("niuniu_history_battle");
+    var eventHist=loadHistory("niuniu_history_event");
 
     // Header
     hsKids.push(e("div",{key:"hdr",style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}},
@@ -2929,7 +3536,7 @@ function NiuNiu(){
       e("div",{style:{width:50}})));
 
     // Tab bar
-    var histTabs=[{id:"flip",labelKey:"history.tab.flip"},{id:"battle",labelKey:"history.tab.battle"}];
+    var histTabs=[{id:"flip",labelKey:"history.tab.flip"},{id:"battle",labelKey:"history.tab.battle"},{id:"event",labelKey:"history.tab.event"}];
     hsKids.push(e("div",{key:"tabs",style:{display:"flex",gap:0,marginBottom:14,borderRadius:10,overflow:"hidden",border:"1px solid var(--card-border)"}},
       histTabs.map(function(tb){
         var sel=historyTab===tb.id;
@@ -2946,7 +3553,7 @@ function NiuNiu(){
       return (d.getMonth()+1)+"/"+d.getDate()+" "+pad(d.getHours())+":"+pad(d.getMinutes());
     }
 
-    var curHist=historyTab==="flip"?flipHist:battleHist;
+    var curHist=historyTab==="flip"?flipHist:(historyTab==="event"?eventHist:battleHist);
     var recentLabel=historyTab==="flip"?t("history.flip_recent"):t("history.battle_recent");
 
     if(curHist.length===0){
@@ -2957,9 +3564,13 @@ function NiuNiu(){
       hsKids.push(e("div",{key:"label",style:{fontSize:10,color:"var(--text-muted)",marginBottom:8,textAlign:"center"}},recentLabel));
       curHist.forEach(function(entry,ei){
         var kids=[];
-        // Header row: date + players count
+        // Detect hurricane event from any round in this entry
+        var isHurricane=entry.roundHistory&&entry.roundHistory.length>0&&entry.roundHistory.some(function(r){return r&&r.event==="hurricane";});
+        // Header row: date + (hurricane badge) + players count
         kids.push(e("div",{key:"h",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,fontSize:10,color:"var(--text-muted)"}},
-          e("span",null,fmtDate(entry.ts)),
+          e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+            e("span",null,fmtDate(entry.ts)),
+            isHurricane?e("span",{style:{fontSize:9,padding:"1px 6px",borderRadius:4,background:"rgba(140,100,220,0.15)",border:"1px solid rgba(140,100,220,0.4)",color:"#d0b0ff",fontWeight:700,letterSpacing:0.5}},"🌪️ "+t("event.hurricane.name").replace("🌪️ ","").replace("🌪️","").trim()):null),
           e("span",null,entry.pc+(currentLang==="en"?"P":t("setup.people")+" · "+entry.rounds+t("game.round")))));
         // Winner highlight
         var winnerNames=(entry.winners||[]).map(function(idx){
@@ -3012,7 +3623,7 @@ function NiuNiu(){
               padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
               background:"transparent",border:"1px solid var(--card-border)",color:"var(--text-muted)"}},t("common.cancel")||"キャンセル"),
             e("button",{onClick:function(){
-              clearHistory(showClearHistoryConfirm==="flip"?"niuniu_history_flip":"niuniu_history_battle");
+              clearHistory(showClearHistoryConfirm==="flip"?"niuniu_history_flip":(showClearHistoryConfirm==="event"?"niuniu_history_event":"niuniu_history_battle"));
               setShowClearHistoryConfirm(null);
               setAppMode("home");
               setTimeout(function(){setAppMode("history");},50); // re-render
@@ -3415,6 +4026,35 @@ function NiuNiu(){
           t("rb.battle_flow.step7"),e("br"),
           t("rb.battle_flow.step8"))));
 
+      // イベントモード（NEW）
+      rbKids.push(e("div",{key:"m2evt",style:Object.assign({},rbCard,{border:"1px solid rgba(140,100,220,0.4)",background:"linear-gradient(135deg,rgba(140,100,220,0.06) 0%,var(--card) 100%)"})},
+        e("div",{style:Object.assign({},rbTitle,{color:"#b080f0"})},t("rb.event_mode")),
+        e("div",{style:rbText},t("rb.event_mode.desc")),
+        e("div",{style:rbSub},t("rb.event_mode.flow")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8}},
+          t("rb.event_mode.flow.s1"),e("br"),
+          t("rb.event_mode.flow.s2"),e("br"),
+          t("rb.event_mode.flow.s3"),e("br"),
+          t("rb.event_mode.flow.s4")),
+        e("div",{style:rbSub},t("rb.event_mode.feat")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8}},
+          t("rb.event_mode.feat.s1"),e("br"),
+          t("rb.event_mode.feat.s2"),e("br"),
+          t("rb.event_mode.feat.s3"),e("br"),
+          t("rb.event_mode.feat.s4"),e("br"),
+          t("rb.event_mode.feat.s5"))));
+
+      // 先バレ強度
+      rbKids.push(e("div",{key:"m2spo",style:rbCard},
+        e("div",{style:rbTitle},t("rb.spoiler_level")),
+        e("div",{style:rbText},t("rb.spoiler_level.desc")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8,marginTop:8}},
+          t("rb.spoiler_level.lv1"),e("br"),
+          t("rb.spoiler_level.lv2"),e("br"),
+          t("rb.spoiler_level.lv3"),e("br"),
+          t("rb.spoiler_level.lv4"),e("br"),
+          t("rb.spoiler_level.lv5"))));
+
       // チップの動き アニメーションデモ
       rbKids.push(e("div",{key:"m2a",style:rbCard},
         e("div",{style:rbTitle},t("rb.chip_flow")),
@@ -3511,8 +4151,26 @@ function NiuNiu(){
             boxShadow:sel?"0 0 12px rgba(212,175,55,0.1)":"none"}},
             e("span",{style:{fontSize:18}},m.icon),t(m.nameKey));}))));
 
+    // Spoiler intensity slider (only visible in sakibare mode)
+    if(gameMode==="sakibare"){
+      var SPOILER_LABEL_KEYS=["spoiler.lv1","spoiler.lv2","spoiler.lv3","spoiler.lv4","spoiler.lv5"];
+      setupKids.push(e("div",{key:"spoilerLv",style:cardStyle},
+        e("label",{style:labelStyle},t("setup.spoiler_intensity")),
+        e("div",{style:{display:"flex",gap:4,justifyContent:"space-between",marginBottom:8}},
+          [1,2,3,4,5].map(function(lv){
+            var sel=spoilerLevel===lv;
+            return e("button",{key:lv,onClick:function(){setSpoilerLevel(lv);if(soundOn)SFX.buttonClick();},style:{
+              flex:1,padding:"8px 4px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:10,
+              fontWeight:sel?700:400,
+              background:sel?"rgba(212,175,55,0.12)":"rgba(0,0,0,0.2)",
+              border:sel?"1.5px solid #d4af37":"1.5px solid rgba(212,175,55,0.08)",
+              color:sel?"#d4af37":"#8faa8f",
+              boxShadow:sel?"0 0 12px rgba(212,175,55,0.1)":"none"}},t(SPOILER_LABEL_KEYS[lv-1]));})),
+        e("div",{style:{fontSize:9,color:"#5a7a5a",textAlign:"center"}},t("setup.spoiler_intensity_desc"))));
+    }
+
     // Battle-specific settings
-    if(appMode==="battle"){
+    if(isBattleLike(appMode)){
       setupKids.push(e("div",{key:"rule",style:cardStyle},
         e("label",{style:labelStyle},t("setup.bet_rule")),
         e("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
@@ -3534,7 +4192,7 @@ function NiuNiu(){
         setScores(sc);setRoundNum(0);setHistory([]);setRoundDeltas(null);
         setInactivePlayers([]);
         if(soundOn)SFX.buttonClick();
-        if(appMode==="battle"){
+        if(isBattleLike(appMode)){
           setChips(sc);
           // Ask about random seat before starting
           setBattleConfigMode({mode:"randomSeatAtStart"});
@@ -3781,17 +4439,68 @@ function NiuNiu(){
         style:{padding:"3px 10px",borderRadius:5,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"var(--text-dim)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("game.reset")):null)));
 
   // Scores
-  gameChildren.push(e("div",{key:"scores",style:{display:"flex",justifyContent:"center",gap:appMode==="battle"?8:12,flexWrap:"wrap",padding:"6px 0",marginBottom:7,borderBottom:"1px solid var(--card-border)"}},
+  gameChildren.push(e("div",{key:"scores",style:{display:"flex",justifyContent:"center",gap:isBattleLike(appMode)?8:12,flexWrap:"wrap",padding:"6px 0",marginBottom:7,borderBottom:"1px solid var(--card-border)"}},
     Array.from({length:pc}).map(function(_,i){
-      var chipVal=appMode==="battle"?(chips[i]||0):scores[i]||0;
+      var chipVal=isBattleLike(appMode)?(chips[i]||0):scores[i]||0;
       return e("div",{key:i,style:{display:"flex",alignItems:"center",gap:3,fontSize:11}},
         e("span",null,PEMOJI[i]),
         e("span",{style:{color:PCOLORS[i],fontWeight:700,fontSize:10}},displayName(names,i)),
-        i===dealer&&appMode==="battle"?e("span",{style:{fontSize:7,color:"#c0392b"}},t("battle.dealer_label")):null,
-        appMode==="battle"?
+        i===dealer&&isBattleLike(appMode)?e("span",{style:{fontSize:7,color:"#c0392b"}},t("battle.dealer_label")):null,
+        isBattleLike(appMode)?
           e("span",{style:{fontWeight:800,fontSize:12,color:chipVal>0?"#27ae60":chipVal<0?"#e74c3c":"#888"}},chipVal>0?"+"+chipVal:chipVal):
           e("span",{style:{color:"var(--accent)",fontWeight:800,fontSize:12}},chipVal));
     })));
+
+  // Deck tracker (event mode only): 4 suits × 13 ranks grid, used cards greyed out
+  if(appMode==="event"&&hands&&hands.length>0&&phase!=="setup"&&phase!=="summary"){
+    // Build set of REVEALED cards (only what the players have actually seen) + discarded
+    // NOT all dealt cards — that would spoil unrevealed cards through process of elimination
+    var usedSet={};
+    hands.forEach(function(h,pi){
+      if(!h)return;
+      var revSet=revealedCards[pi]||new Set();
+      h.forEach(function(c,ci){
+        if(!c)return;
+        if(revSet.has(ci))usedSet[c.rank+c.suit]=true;
+      });
+    });
+    if(hurricaneDiscardedCards){
+      for(var dpi in hurricaneDiscardedCards){
+        var dc=hurricaneDiscardedCards[dpi];
+        if(dc)usedSet[dc.rank+dc.suit]=true;
+      }
+    }
+    var remaining=52-Object.keys(usedSet).length;
+    // Four-color deck convention (standard online poker): ♠ black, ♥ red, ♦ blue, ♣ green
+    var suitDisplay=["♠","♥","♦","♣"];
+    var suitColors={"♠":"#1a1a22","♥":"#d83838","♦":"#3878e8","♣":"#2ea846"};
+    var suitTextColors={"♠":"#e8e8f0","♥":"#ff8a8a","♦":"#8aa8ff","♣":"#8ad89a"};
+    gameChildren.push(e("div",{key:"decktracker",style:{
+      padding:"6px 8px",marginBottom:7,borderRadius:8,
+      background:"rgba(0,0,0,0.18)",
+      border:"1px solid rgba(140,100,220,0.18)"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
+        e("span",{style:{fontSize:8,color:"#b080f0",letterSpacing:1,fontWeight:700}},"🃠 DECK"),
+        e("span",{style:{fontSize:8,color:"var(--text-muted)"}},remaining+" / 52")),
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(13,1fr)",gap:1.5}},
+        suitDisplay.map(function(suit){
+          return RANKS.map(function(rank){
+            var used=usedSet[rank+suit];
+            return e("div",{key:suit+rank,style:{
+              fontSize:8,padding:"2px 0",borderRadius:2,textAlign:"center",
+              background:used?"rgba(255,255,255,0.02)":"rgba(140,100,220,0.12)",
+              border:used?"1px solid rgba(255,255,255,0.04)":"1px solid rgba(176,128,240,0.4)",
+              color:used?"rgba(255,255,255,0.15)":suitTextColors[suit],
+              fontWeight:used?400:700,
+              opacity:used?0.4:1,
+              lineHeight:1.2,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:0,
+              minHeight:14}},
+              e("span",{style:{fontSize:7,marginRight:0.5,color:used?"inherit":suitColors[suit]}},suit),
+              e("span",null,rank));
+          });
+        }).reduce(function(a,b){return a.concat(b);},[]))));
+  }
 
   // Compute peek override from peekActive state
   var peekOverride=null;
@@ -3807,16 +4516,25 @@ function NiuNiu(){
     return e(PlayerCards,{key:roundNum+"-"+i,idx:i,hands:hands,revealedCards:revealedCards,results:results,
       winner:winner,phase:phase,pc:pc,alerts:alerts,roundNum:roundNum,names:names,
       openThree:openThree,revealCard:revealCard,soundOn:soundOn,
-      isDealer:appMode==="battle"&&i===dealer,
+      isDealer:isBattleLike(appMode)&&i===dealer,
       chipDelta:roundDeltas?roundDeltas[i]:null,
-      battleMode:appMode==="battle",
-      betAmount:appMode==="battle"?bets[i]:null,
+      battleMode:isBattleLike(appMode),
+      betAmount:isBattleLike(appMode)?bets[i]:null,
       cardSkin:curSkin,
       cardFace:curFace,
-      peekOverride:peekOverride});
+      peekOverride:peekOverride,
+      hurricaneTurn:hurricaneTurn,hurricaneDiscards:hurricaneDiscards,
+      hurricaneDiscardedCards:hurricaneDiscardedCards,
+      hurricaneRefills:hurricaneRefills,
+      hurricaneRefilledRevealed:hurricaneRefilledRevealed,
+      hurricaneAnimatingDiscard:hurricaneAnimatingDiscard,
+      hurricaneAnimatingRefill:hurricaneAnimatingRefill,
+      eventMode:appMode==="event",
+      hurricaneDiscard:hurricaneDiscard,hurricaneRevealRefill:hurricaneRevealRefill,
+      dealer:dealer});
   });
 
-  if(appMode==="battle"&&pc===3){
+  if(isBattleLike(appMode)&&pc===3){
     // 3p battle: dealer prominent (full width) + 2 children in row
     var dealerBox=playerBoxes[dealer];
     var childBoxes=playerBoxes.filter(function(_,i){return i!==dealer;});
@@ -3825,7 +4543,7 @@ function NiuNiu(){
     gameChildren.push(e("div",{key:"grid",style:{display:"flex",flexDirection:"column",gap:childGap}},
       dealerWrap,
       e("div",{key:"child-row",style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:childGap}},childBoxes)));
-  }else if(appMode==="battle"&&pc>=4){
+  }else if(isBattleLike(appMode)&&pc>=4){
     // 4p+ battle: same as flip grid but dealer pinned to top-left (index 0)
     var orderedBoxes=[playerBoxes[dealer]].concat(playerBoxes.filter(function(_,i){return i!==dealer;}));
     var gridCols="repeat(2,1fr)";
@@ -3839,8 +4557,8 @@ function NiuNiu(){
   // Next round
   if(phase==="result"){
     gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease",display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}},
-      appMode==="battle"?e("button",{onClick:function(){setPhase("summary");},style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},"📊 "+t("game.final")):null,
-      appMode==="battle"?e("button",{onClick:function(){if(soundOn)SFX.buttonClick();setBattleConfigMode("menu");},style:{padding:"9px 14px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},t("battle.config")):null,
+      isBattleLike(appMode)?e("button",{onClick:function(){setPhase("summary");},style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},"📊 "+t("game.final")):null,
+      isBattleLike(appMode)?e("button",{onClick:function(){if(soundOn)SFX.buttonClick();setBattleConfigMode("menu");},style:{padding:"9px 14px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},t("battle.config")):null,
       appMode==="flip"?e("button",{onClick:function(){
         if(soundOn)SFX.buttonClick();
         saveFlipHistoryIfNeeded();
@@ -3848,7 +4566,7 @@ function NiuNiu(){
       },style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},"🏁 "+t("game.end")):null,
       e("button",{onClick:function(){
         if(soundOn)SFX.buttonClick();
-        if(appMode==="battle"){setPhase("pickDealer");}
+        if(isBattleLike(appMode)){setPhase("pickDealer");}
         else{dealRound(scores);}
       },style:{padding:"9px 30px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
         background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",color:"var(--bg)",letterSpacing:2,boxShadow:"0 3px 12px rgba(212,175,55,0.22)"}},t("game.next_round_arrow"))));
@@ -4085,7 +4803,7 @@ function NiuNiu(){
           e("button",{onClick:function(){
             setShowResetConfirm(false);
             saveFlipHistoryIfNeeded();
-            if(appMode==="battle")saveBattleHistoryIfNeeded();
+            if(isBattleLike(appMode))saveBattleHistoryIfNeeded();
             setAppMode("home");setPhase("setup");setHands([]);setResults([]);setRoundNum(0);setRevealedCards([]);
             if(soundOn)SFX.buttonClick();
           },style:{
