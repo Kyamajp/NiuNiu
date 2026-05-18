@@ -62,6 +62,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',Georgia,
 @keyframes hurricaneTurnPulse{0%,100%{box-shadow:0 0 12px rgba(140,100,220,0.4),0 0 24px rgba(140,100,220,0.2)}50%{box-shadow:0 0 24px rgba(176,128,240,0.9),0 0 48px rgba(140,100,220,0.5),0 0 80px rgba(120,80,200,0.3)}}
 @keyframes hurricaneTurnBadge{0%,100%{transform:scale(1);opacity:0.9}50%{transform:scale(1.08);opacity:1}}
 @keyframes hurricaneDim{0%{opacity:1}100%{opacity:0.32}}
+@keyframes whiteblackPulse{0%,100%{box-shadow:0 0 14px rgba(255,255,255,0.8),0 0 28px rgba(0,0,0,0.85),0 0 50px rgba(255,255,255,0.4);background:linear-gradient(135deg,rgba(255,255,255,0.32) 0%,rgba(0,0,0,0.7) 100%)}50%{box-shadow:0 0 24px rgba(0,0,0,0.95),0 0 50px rgba(255,255,255,0.85),0 0 80px rgba(0,0,0,0.6);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(255,255,255,0.32) 100%)}}
+@keyframes whiteblackBorder{0%{border-color:rgba(255,255,255,1)}25%{border-color:rgba(0,0,0,1)}50%{border-color:rgba(255,255,255,1)}75%{border-color:rgba(0,0,0,1)}100%{border-color:rgba(255,255,255,1)}}
+@keyframes whiteblackYin{0%{transform:rotate(0deg) scale(1);opacity:0.45}50%{transform:rotate(180deg) scale(1.15);opacity:0.7}100%{transform:rotate(360deg) scale(1);opacity:0.45}}
+@keyframes whiteblackThump{0%,55%,100%{transform:scale(1)}15%{transform:scale(1.06)}35%{transform:scale(0.96)}}
+@keyframes whiteblackFlash{0%,100%{filter:brightness(1) contrast(1)}50%{filter:brightness(1.6) contrast(1.4)}}
 @keyframes growBull{0%{font-size:6px;opacity:0}5%{opacity:0.05}20%{font-size:20px;opacity:0.08}40%{font-size:50px;opacity:0.12}60%{font-size:100px;opacity:0.16}80%{font-size:200px;opacity:0.2}100%{font-size:300px;opacity:0.3}}
 @keyframes cowPipIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes fadeOut{0%{opacity:1}100%{opacity:0}}
@@ -218,7 +223,29 @@ var ALERT_CLASSIC={
   alertGlitch:function(){playNoise(0.03,0.12,0);playNoise(0.02,0.08,0.15);playTone(440,0.04,"square",0.06,0.1);playNoise(0.03,0.1,0.4);playTone(880,0.02,"square",0.04,0.45);playNoise(0.02,0.06,0.7);playTone(220,0.05,"sawtooth",0.05,0.75);playTone(55,0.8,"sine",0.06,0.2);playTone(57,0.8,"sine",0.04,0.2);},
   alertQuake:function(){var sp=[2637,2793,3136,3520,3951,4186,4699,5274];sp.forEach(function(f,i){playTone(f,0.1,"sine",0.07,i*0.05);playTone(f*1.008,0.08,"sine",0.04,i*0.05+0.015);});setTimeout(function(){var sp2=[5274,4699,4186,3951,3520,3136,2793,2637];sp2.forEach(function(f,i){playTone(f,0.1,"triangle",0.06,i*0.05);});},450);playTone(1760,0.6,"sine",0.09,0);playTone(2093,0.6,"sine",0.07,0.15);playTone(2637,0.5,"sine",0.06,0.3);playNoise(0.15,0.08,0.05);playNoise(0.12,0.06,0.5);},
   alertCow:function(){playTone(130,0.6,"sawtooth",0.12,0);playTone(138,0.6,"sawtooth",0.1,0);playTone(523,0.2,"sine",0.1,0.2);playTone(659,0.2,"sine",0.1,0.35);playTone(784,0.3,"sine",0.12,0.5);playTone(110,0.4,"triangle",0.08,0.3);},
-  alertGrowBull:function(){playTone(60,2.5,"sine",0.04,0);playTone(63,2.5,"sine",0.03,0);playTone(90,1.5,"triangle",0.03,0.8);playTone(120,1.0,"sine",0.05,1.5);playTone(180,0.8,"sine",0.06,2.0);}
+  alertGrowBull:function(){playTone(60,2.5,"sine",0.04,0);playTone(63,2.5,"sine",0.03,0);playTone(90,1.5,"triangle",0.03,0.8);playTone(120,1.0,"sine",0.05,1.5);playTone(180,0.8,"sine",0.06,2.0);},
+  // Whiteblack: low resonant heartbeat — drama through deep bass, not shimmer
+  alertWhiteblack:function(){
+    // Sub-bass drone (continuous resonance under everything)
+    playTone(33,2.4,"sine",0.10,0);
+    playTone(40,2.4,"sine",0.07,0);
+    // Deep heartbeat thumps (4 beats, getting heavier)
+    playTone(55,0.5,"sine",0.25,0);       // beat 1
+    playTone(58,0.5,"sine",0.18,0);
+    playTone(48,0.5,"sine",0.24,0.55);    // beat 2 (lower=darker)
+    playTone(51,0.5,"sine",0.18,0.55);
+    playTone(62,0.5,"sine",0.26,1.1);     // beat 3 (rising=lighter)
+    playTone(65,0.5,"sine",0.19,1.1);
+    playTone(45,0.6,"sine",0.28,1.7);     // beat 4 (final, deepest)
+    playTone(48,0.6,"sine",0.20,1.7);
+    // Tension noise wash (rising, kept for atmosphere)
+    playNoise(0.5,0.06,0.3);
+    playNoise(0.6,0.09,0.9);
+    playNoise(0.7,0.12,1.5);
+    // Low final thud (the moment of truth)
+    playTone(110,0.5,"triangle",0.14,2.0);
+    playTone(82,0.6,"sine",0.18,2.05);
+  }
 };
 
 
@@ -236,6 +263,7 @@ var SFX={
   alertQuake:function(){ALERT_CLASSIC.alertQuake();},
   alertCow:function(){ALERT_CLASSIC.alertCow();},
   alertGrowBull:function(){ALERT_CLASSIC.alertGrowBull();},
+  alertWhiteblack:function(){ALERT_CLASSIC.alertWhiteblack();},
   alertFizzle:function(){SFX_CLASSIC.alertFizzle();}
 };
 
@@ -1071,6 +1099,9 @@ var I18N={
     "settings.mode_simple_desc":"プレミアのみ",
     "settings.mode_spoiler":"先バレ",
     "settings.mode_spoiler_desc":"赤オーラ＋プレミア",
+    "settings.mode_undei":"雲泥",
+    "settings.mode_undei_desc":"白黒＋プレミア",
+    "alert.whiteblack":"白黒の予兆",
     "setup.spoiler_intensity":"先バレ強度",
     "setup.spoiler_intensity_desc":"先バレの信頼度",
     "spoiler.lv1":"信頼薄",
@@ -1314,6 +1345,13 @@ var I18N={
     "rb.spoiler_level.lv3":"・Lv3 標準（デフォルト）: red 30% / glitch 60%",
     "rb.spoiler_level.lv4":"・Lv4 やや信頼高: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 信頼高: red 65% / glitch 87%",
+    "rb.undei_mode":"☯️ 雲泥モード",
+    "rb.undei_mode.desc":"白黒の予兆「whiteblack」が出現する特殊先バレモード。信頼度はちょうど 50/50。",
+    "rb.undei_mode.s1":"・whiteblack が出たら、その手札は「牛牛以上」または「役なし・牛1（最低クラス）」のどちらか",
+    "rb.undei_mode.s2":"・つまり当たれば大きいが、ハズレも極端 → 文字通り「雲泥の差」",
+    "rb.undei_mode.s3":"・牛牛以上の手札は必ず予告される（プレミア演出 または whiteblack のどちらかが出る、無予告なし）",
+    "rb.undei_mode.s4":"・red/glitch などの先バレは雲泥モードでは出ない",
+    "rb.undei_mode.s5":"・先バレ強度スライダーは雲泥モードでは無効（信頼度50%固定）",
     "rb.battle_flow":"基本の流れ",
     "rb.battle_flow.step1":"1. 人数・名前・倍率ルール・演出モードを設定",
     "rb.battle_flow.step2":"2. 毎ラウンド「親」を1人選ぶ",
@@ -1465,6 +1503,9 @@ var I18N={
     "settings.mode_simple_desc":"Premium only",
     "settings.mode_spoiler":"Spoiler",
     "settings.mode_spoiler_desc":"Red aura + Premium",
+    "settings.mode_undei":"Undei",
+    "settings.mode_undei_desc":"Black/White + Premium",
+    "alert.whiteblack":"Black/White omen",
     "setup.spoiler_intensity":"Spoiler Intensity",
     "setup.spoiler_intensity_desc":"Spoiler reliability",
     "spoiler.lv1":"Low trust",
@@ -1696,6 +1737,13 @@ var I18N={
     "rb.spoiler_level.lv3":"• Lv3 Standard (default): red 30% / glitch 60%",
     "rb.spoiler_level.lv4":"• Lv4 Highish: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"• Lv5 High trust: red 65% / glitch 87%",
+    "rb.undei_mode":"☯️ Undei Mode",
+    "rb.undei_mode.desc":"A special spoiler mode where the 'whiteblack' omen appears. Reliability is exactly 50/50.",
+    "rb.undei_mode.s1":"• When whiteblack appears, the hand is either niuniu+ OR no-bull/niu-1 (the lowest tier)",
+    "rb.undei_mode.s2":"• Hits are big, misses are extreme — literally a 'cloud-and-mud' (worlds apart) gap",
+    "rb.undei_mode.s3":"• Any niuniu+ hand is always announced (either a premier effect OR whiteblack — never silent)",
+    "rb.undei_mode.s4":"• red/glitch spoilers do NOT appear in undei mode",
+    "rb.undei_mode.s5":"• The spoiler intensity slider is disabled in undei (fixed at 50% reliability)",
     "rb.battle_flow":"Flow",
     "rb.battle_flow.step1":"1. Set players, names, multiplier rule, and alert mode",
     "rb.battle_flow.step2":"2. Each round, pick one \"Dealer\"",
@@ -1844,6 +1892,9 @@ var I18N={
     "settings.mode_simple_desc":"仅高级预告",
     "settings.mode_spoiler":"剧透",
     "settings.mode_spoiler_desc":"红光+高级预告",
+    "settings.mode_undei":"云泥",
+    "settings.mode_undei_desc":"黑白+高级预告",
+    "alert.whiteblack":"黑白之兆",
     "setup.spoiler_intensity":"剧透强度",
     "setup.spoiler_intensity_desc":"剧透的可信度",
     "spoiler.lv1":"低可信",
@@ -2075,6 +2126,13 @@ var I18N={
     "rb.spoiler_level.lv3":"・Lv3 标准(默认):red 30% / glitch 60%",
     "rb.spoiler_level.lv4":"・Lv4 较高:red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 高可信:red 65% / glitch 87%",
+    "rb.undei_mode":"☯️ 云泥模式",
+    "rb.undei_mode.desc":"出现「黑白」预兆 whiteblack 的特殊剧透模式。可信度刚好 50/50。",
+    "rb.undei_mode.s1":"・whiteblack 出现时,该手牌要么「牛牛以上」,要么「无役·牛1」(最低档)",
+    "rb.undei_mode.s2":"・命中很大,落空也极端 → 名副其实的「云泥之差」",
+    "rb.undei_mode.s3":"・牛牛以上的手牌必定有预告(高级预告 或 whiteblack 之一出现,绝无无预告)",
+    "rb.undei_mode.s4":"・red/glitch 等剧透在云泥模式中不会出现",
+    "rb.undei_mode.s5":"・剧透强度滑块在云泥模式下无效(固定 50% 可信度)",
     "rb.battle_flow":"基本流程",
     "rb.battle_flow.step1":"1. 设置人数·名字·倍率规则·演出模式",
     "rb.battle_flow.step2":"2. 每轮选1位「庄家」",
@@ -2313,11 +2371,17 @@ function PlayerCards(props){
         else if(alertType==="glitch"){rAlertAnim="alertGlitch 0.3s steps(1) infinite,alertGlitchShadow 2s steps(1) infinite";rAlertBorder="1px solid rgba(255,255,255,0.15)";}
         else if(alertType==="quake"){rAlertAnim="alertQuakeCard 0.4s ease-in-out infinite,alertBorderRainbow 1.2s linear infinite";rAlertBorder="2px solid #f00";rExtraStyle={boxShadow:"0 0 18px rgba(255,0,200,0.35)"};}
         else if(alertType==="cow"){rAlertAnim="bullGlow 1.2s ease-in-out 3";rAlertBorder="2px solid #d4af37";}
+        else if(alertType==="whiteblack"){rAlertAnim="whiteblackPulse 0.9s ease-in-out infinite,whiteblackBorder 0.9s ease-in-out infinite,whiteblackThump 0.9s ease-in-out infinite,whiteblackFlash 0.9s ease-in-out infinite";rAlertBorder="3px solid rgba(255,255,255,1)";rExtraStyle={boxShadow:"0 0 22px rgba(255,255,255,0.7),0 0 44px rgba(0,0,0,0.85),0 0 70px rgba(255,255,255,0.4)"};}
         else{rAlertAnim="alertRed 1.5s ease-in-out 3,alertBorderRed 1.5s ease-in-out 3";rAlertBorder="2px solid rgba(255,0,0,0.5)";}
         if(alertType==="cow"){
           return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},
             e("div",{style:Object.assign({borderRadius:cw*0.09+4,animation:rAlertAnim,border:rAlertBorder,padding:1,position:"relative"},rExtraStyle)},
               refillCard,e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:10,fontSize:sm?24:32,animation:"squeezePulse 1s ease-in-out 3,specialCowGlow 3s ease-in-out 3"}},"🐮")));
+        }
+        if(alertType==="whiteblack"){
+          return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},
+            e("div",{style:Object.assign({borderRadius:cw*0.09+4,animation:rAlertAnim,border:rAlertBorder,padding:1,position:"relative"},rExtraStyle)},
+              refillCard,e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:10,fontSize:sm?28:36,animation:"whiteblackYin 2.4s linear infinite",textShadow:"0 0 8px rgba(255,255,255,0.9),0 0 16px rgba(0,0,0,0.9)"}},"☯")));
         }
         return e("div",{key:ci,style:{animation:refillAnim,borderRadius:cw*0.09+2}},
           e("div",{style:Object.assign({borderRadius:cw*0.09+4,animation:rAlertAnim,border:rAlertBorder,padding:1},rExtraStyle)},refillCard));
@@ -2332,10 +2396,15 @@ function PlayerCards(props){
         else if(alertType==="glitch"){alertAnim="alertGlitch 0.3s steps(1) infinite,alertGlitchShadow 2s steps(1) infinite";alertBorder="1px solid rgba(255,255,255,0.15)";}
         else if(alertType==="quake"){alertAnim="alertQuakeCard 0.4s ease-in-out infinite,alertBorderRainbow 1.2s linear infinite";alertBorder="2px solid #f00";extraStyle={boxShadow:"0 0 18px rgba(255,0,200,0.35)"};}
         else if(alertType==="cow"){alertAnim="bullGlow 1.2s ease-in-out 3";alertBorder="2px solid #d4af37";}
+        else if(alertType==="whiteblack"){alertAnim="whiteblackPulse 0.9s ease-in-out infinite,whiteblackBorder 0.9s ease-in-out infinite,whiteblackThump 0.9s ease-in-out infinite,whiteblackFlash 0.9s ease-in-out infinite";alertBorder="3px solid rgba(255,255,255,1)";extraStyle={boxShadow:"0 0 22px rgba(255,255,255,0.7),0 0 44px rgba(0,0,0,0.85),0 0 70px rgba(255,255,255,0.4)"};}
         else{alertAnim="alertRed 1.5s ease-in-out 3,alertBorderRed 1.5s ease-in-out 3";alertBorder="2px solid rgba(255,0,0,0.5)";}
         if(alertType==="cow"){
           return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({borderRadius:cw*0.09+4,animation:alertAnim,border:alertBorder,padding:1,position:"relative"},extraStyle)},
             sqCard,e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:10,fontSize:sm?24:32,animation:"squeezePulse 1s ease-in-out 3,specialCowGlow 3s ease-in-out 3"}},"🐮"));
+        }
+        if(alertType==="whiteblack"){
+          return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({borderRadius:cw*0.09+4,animation:alertAnim,border:alertBorder,padding:1,position:"relative"},extraStyle)},
+            sqCard,e("div",{style:{position:"absolute",top:0,left:0,right:0,bottom:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",zIndex:10,fontSize:sm?28:36,animation:"whiteblackYin 2.4s linear infinite",textShadow:"0 0 8px rgba(255,255,255,0.9),0 0 16px rgba(0,0,0,0.9)"}},"☯"));
         }
         return e("div",{key:roundNum+"-"+i+"-"+ci+"-wrap",style:Object.assign({borderRadius:cw*0.09+4,animation:alertAnim,border:alertBorder,padding:1},extraStyle)},sqCard);
       }
@@ -2451,8 +2520,12 @@ function PlayerCards(props){
     }
   }else if(full){var indResult=res||evaluateHand(hands[i]);
     actionContent=e("div",{style:{fontSize:indResult.hasBull?(compactMode?14:19):(compactMode?10:13),fontWeight:800,color:indResult.hasBull?"#d4af37":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
-  }else if(phase==="reveal"&&rc.size===0){
-    actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid var(--accent)",background:"transparent",color:"var(--accent)",cursor:"pointer",letterSpacing:1}},t(props.eventMode?"game.open_five":"game.open_three"));
+  }else if(phase==="reveal"&&rc.size===0&&!props.eventMode){
+    // Normal modes: per-player open button
+    actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid var(--accent)",background:"transparent",color:"var(--accent)",cursor:"pointer",letterSpacing:1}},t("game.open_three"));
+  }else if(phase==="reveal"&&rc.size===0&&props.eventMode){
+    // Event mode: waiting for centralized "all open" button
+    actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#5a5a6a",fontStyle:"italic"}},"…");
   }else if(phase==="reveal"&&rc.size>=3){
     actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#4ecdc4",animation:"squeezePulse 2s ease-in-out 4",fontWeight:600}},t("game.drag_squeeze"));
   }
@@ -2513,7 +2586,7 @@ function NiuNiu(){
   var s9=useState(null),winner=s9[0],setWinner=s9[1];
   var s10=useState(loadPref("niuniu_sound","1")==="1"),soundOn=s10[0],setSoundOnState=s10[1];
   function setSoundOn(v){setSoundOnState(v);savePref("niuniu_sound",v?"1":"0");}
-  var s13=useState(loadPref("niuniu_mode","sakibare")),gameMode=s13[0],setGameModeState=s13[1];
+  var s13=useState(function(){var v=loadPref("niuniu_mode","spoiler");return v==="sakibare"?"spoiler":v;}),gameMode=s13[0],setGameModeState=s13[1];
   var s13b=useState(parseInt(loadPref("niuniu_spoiler_level","3"),10)||3),spoilerLevel=s13b[0],setSpoilerLevel=s13b[1];
   function setGameMode(v){setGameModeState(v);savePref("niuniu_mode",v);}
   var s11=useState({}),alerts=s11[0],setAlerts=s11[1];
@@ -2784,6 +2857,7 @@ function NiuNiu(){
       var ev=evaluateHand(hand);
       var bv=ev.bullRank;
       var isNiuNiu=bv>=10;
+      var isLowOrNone=bv<=1; // 役なし(0) または 牛1(1)
       var roll=Math.random();
       if(gameMode==="simple"){
         if(isNiuNiu){
@@ -2794,6 +2868,29 @@ function NiuNiu(){
           else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
           else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
         }
+      }else if(gameMode==="undei"){
+        // Undei: premier alerts (≥10), or whiteblack (50/50 reliability — niuniu vs ≤1)
+        // 牛確定時は必ず予告 (プレミア5% + whiteblack 95%)、無予告なし
+        if(isNiuNiu){
+          if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.01667){newAlerts[pi]={type:"cow",timing:"four"};}
+          else if(roll<0.025){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
+          else if(roll<0.03333){newAlerts[pi]={type:"growBull",timing:"three"};}
+          else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
+          else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
+          else {newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};} // 残り95%全てwhiteblack
+        }else if(isLowOrNone){
+          // Q=35%: ハズレ whiteblack。「4枚目を絞った時点で牛確定の可能性が消える手札」は対象外。
+          // 信頼度50/50維持のためQは大幅増 (牛確定時95%発火に対応)
+          if(roll<0.35){
+            var canFourEligible=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[3]]);
+            if(canFourEligible){
+              newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};
+            }
+            // 4枚見えた時点で牛可能性が消える手札 → whiteblack 出さない (無予告として処理)
+          }
+        }
+        // bullRank 2-9: 出現なし (無予告)
       }else{
         if(isNiuNiu){
           if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
@@ -2822,6 +2919,7 @@ function NiuNiu(){
     else if(type==="growBull")SFX.alertGrowBull();
     else if(type==="cowPip"){}
     else if(type==="bullEmoji"){}
+    else if(type==="whiteblack")SFX.alertWhiteblack();
     else SFX.alertRed();
   }
 
@@ -3019,28 +3117,30 @@ function NiuNiu(){
     });
   }
 
+  // Event mode: open all 5 cards for ALL players at once (single button)
+  function openAllForEvent(){
+    if(appMode!=="event")return;
+    if(soundOn)SFX.deal();
+    setRevealedCards(function(prev){
+      var ns2=prev.map(function(s){return new Set(s);});
+      for(var pi=0;pi<pc;pi++){
+        ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);ns2[pi].add(3);ns2[pi].add(4);
+      }
+      // Transition to hurricane phase
+      setTimeout(function(){
+        if(getCurrentEvent()==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
+          var firstChooser=(dealer+1)%pc;
+          setHurricaneTurn(firstChooser);
+          setPhase("hurricane");
+          if(soundOn)SFX.deal();
+        }
+      },500);
+      return ns2;
+    });
+  }
+
   function openThree(pi){
     if(soundOn)SFX.deal();
-    // Event mode: reveal all 5 cards at once (no alerts/bull sounds — those come after hurricane refill)
-    if(appMode==="event"){
-      setRevealedCards(function(prev){
-        var ns2=prev.map(function(s){return new Set(s);});
-        ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);ns2[pi].add(3);ns2[pi].add(4);
-        // Trigger hurricane phase if all players have opened (no alert/bull sound calls)
-        if(ns2.every(function(s){return s.size===5;})){
-          setTimeout(function(){
-            if(getCurrentEvent()==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
-              var firstChooser=(dealer+1)%pc;
-              setHurricaneTurn(firstChooser);
-              setPhase("hurricane");
-              if(soundOn)SFX.deal();
-            }
-          },400);
-        }
-        return ns2;
-      });
-      return;
-    }
     var alert=alerts[pi];
     // Check if alert would be suppressed (niuniu impossible with 3 cards revealed)
     var willSuppress=false;
@@ -3405,7 +3505,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.3.2 · © 2026 KTR (",
+            "v1.4.6 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -3739,21 +3839,28 @@ function NiuNiu(){
       e("div",{style:{padding:"12px 0 4px",borderBottom:"1px solid var(--card-border)"}},
         e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:4}},t("settings.alert_style")),
         e("div",{style:{fontSize:9,color:"var(--text-muted)",marginBottom:10}},t("settings.alert_style_desc")),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}},
           e("button",{onClick:function(){setGameMode("simple");if(soundOn)SFX.buttonClick();},style:{
-            padding:"10px 8px",borderRadius:10,fontSize:11,fontWeight:gameMode==="simple"?800:400,cursor:"pointer",fontFamily:"inherit",
+            padding:"10px 6px",borderRadius:10,fontSize:10,fontWeight:gameMode==="simple"?800:400,cursor:"pointer",fontFamily:"inherit",
             background:gameMode==="simple"?"var(--tab-active)":"rgba(0,0,0,0.2)",
             border:gameMode==="simple"?"1.5px solid var(--accent)":"1px solid var(--card-border)",
             color:gameMode==="simple"?"var(--accent)":"var(--text-muted)"}},
             e("div",{style:{fontSize:16,marginBottom:2}},"🃏"),t("settings.mode_simple"),
             e("div",{style:{fontSize:8,marginTop:2,opacity:0.7}},t("settings.mode_simple_desc"))),
           e("button",{onClick:function(){setGameMode("spoiler");if(soundOn)SFX.buttonClick();},style:{
-            padding:"10px 8px",borderRadius:10,fontSize:11,fontWeight:gameMode==="spoiler"?800:400,cursor:"pointer",fontFamily:"inherit",
+            padding:"10px 6px",borderRadius:10,fontSize:10,fontWeight:gameMode==="spoiler"?800:400,cursor:"pointer",fontFamily:"inherit",
             background:gameMode==="spoiler"?"var(--tab-active)":"rgba(0,0,0,0.2)",
             border:gameMode==="spoiler"?"1.5px solid var(--accent)":"1px solid var(--card-border)",
             color:gameMode==="spoiler"?"var(--accent)":"var(--text-muted)"}},
             e("div",{style:{fontSize:16,marginBottom:2}},"🔮"),t("settings.mode_spoiler"),
-            e("div",{style:{fontSize:8,marginTop:2,opacity:0.7}},t("settings.mode_spoiler_desc"))))),
+            e("div",{style:{fontSize:8,marginTop:2,opacity:0.7}},t("settings.mode_spoiler_desc"))),
+          e("button",{onClick:function(){setGameMode("undei");if(soundOn)SFX.buttonClick();},style:{
+            padding:"10px 6px",borderRadius:10,fontSize:10,fontWeight:gameMode==="undei"?800:400,cursor:"pointer",fontFamily:"inherit",
+            background:gameMode==="undei"?"var(--tab-active)":"rgba(0,0,0,0.2)",
+            border:gameMode==="undei"?"1.5px solid var(--accent)":"1px solid var(--card-border)",
+            color:gameMode==="undei"?"var(--accent)":"var(--text-muted)"}},
+            e("div",{style:{fontSize:16,marginBottom:2}},"☯️"),t("settings.mode_undei"),
+            e("div",{style:{fontSize:8,marginTop:2,opacity:0.7}},t("settings.mode_undei_desc"))))),
       // Language switcher
       e("div",{style:{padding:"12px 0 4px"}},
         e("div",{style:{fontSize:12,color:"var(--text)",fontWeight:600,marginBottom:10}},t("settings.language")),
@@ -4056,6 +4163,17 @@ function NiuNiu(){
           t("rb.spoiler_level.lv4"),e("br"),
           t("rb.spoiler_level.lv5"))));
 
+      // 雲泥モード（NEW）
+      rbKids.push(e("div",{key:"m2und",style:Object.assign({},rbCard,{border:"1px solid rgba(255,255,255,0.25)",background:"linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(0,0,0,0.5) 100%)"})},
+        e("div",{style:Object.assign({},rbTitle,{color:"#e0e0e8"})},t("rb.undei_mode")),
+        e("div",{style:rbText},t("rb.undei_mode.desc")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8,marginTop:8}},
+          t("rb.undei_mode.s1"),e("br"),
+          t("rb.undei_mode.s2"),e("br"),
+          t("rb.undei_mode.s3"),e("br"),
+          t("rb.undei_mode.s4"),e("br"),
+          t("rb.undei_mode.s5"))));
+
       // チップの動き アニメーションデモ
       rbKids.push(e("div",{key:"m2a",style:rbCard},
         e("div",{style:rbTitle},t("rb.chip_flow")),
@@ -4141,19 +4259,19 @@ function NiuNiu(){
     // Alert mode
     setupKids.push(e("div",{key:"alert",style:cardStyle},
       e("label",{style:labelStyle},t("setup.alert_mode")),
-      e("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
-        [{id:"simple",icon:"🃏",nameKey:"settings.mode_simple"},{id:"sakibare",icon:"🔮",nameKey:"settings.mode_spoiler"}].map(function(m){
+      e("div",{style:{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}},
+        [{id:"simple",icon:"🃏",nameKey:"settings.mode_simple"},{id:"spoiler",icon:"🔮",nameKey:"settings.mode_spoiler"},{id:"undei",icon:"☯️",nameKey:"settings.mode_undei"}].map(function(m){
           var sel=gameMode===m.id;
           return e("button",{key:m.id,onClick:function(){setGameMode(m.id);if(soundOn)SFX.buttonClick();},style:{
-            display:"flex",alignItems:"center",gap:6,padding:"10px 18px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",
+            display:"flex",alignItems:"center",gap:6,padding:"10px 14px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",
             background:sel?"rgba(212,175,55,0.12)":"rgba(0,0,0,0.2)",
             border:sel?"1.5px solid #d4af37":"1.5px solid rgba(212,175,55,0.08)",
             color:sel?"#d4af37":"#8faa8f",fontSize:13,fontWeight:sel?700:400,
             boxShadow:sel?"0 0 12px rgba(212,175,55,0.1)":"none"}},
             e("span",{style:{fontSize:18}},m.icon),t(m.nameKey));}))));
 
-    // Spoiler intensity slider (only visible in sakibare mode)
-    if(gameMode==="sakibare"){
+    // Spoiler intensity slider (only visible in spoiler mode, NOT in undei or simple)
+    if(gameMode==="spoiler"){
       var SPOILER_LABEL_KEYS=["spoiler.lv1","spoiler.lv2","spoiler.lv3","spoiler.lv4","spoiler.lv5"];
       setupKids.push(e("div",{key:"spoilerLv",style:cardStyle},
         e("label",{style:labelStyle},t("setup.spoiler_intensity")),
@@ -4495,6 +4613,18 @@ function NiuNiu(){
               e("span",null,rank));
           });
         }).reduce(function(a,b){return a.concat(b);},[]))));
+  }
+
+  // Event mode: centralized "open all 5 cards" button (before any card has been revealed)
+  if(appMode==="event"&&phase==="reveal"&&hands&&hands.length>0&&revealedCards&&revealedCards.every(function(s){return s.size===0;})){
+    gameChildren.push(e("div",{key:"open-all-event",style:{textAlign:"center",margin:"10px 0 14px"}},
+      e("button",{onClick:function(){openAllForEvent();},style:{
+        padding:"14px 28px",borderRadius:12,border:"none",
+        background:"linear-gradient(135deg,#b080f0,#7050c0)",
+        color:"#fff",fontSize:14,fontWeight:800,fontFamily:"inherit",
+        cursor:"pointer",letterSpacing:1.5,
+        boxShadow:"0 4px 18px rgba(140,100,220,0.6),inset 0 1px 0 rgba(255,255,255,0.2)",
+        animation:"squeezePulse 1.8s ease-in-out infinite"}},t("game.open_five"))));
   }
 
   // Compute peek override from peekActive state
