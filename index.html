@@ -451,6 +451,72 @@ function canStillBeNiuNiu(known){
   return true;
 }
 
+// Check if bullRank>=14 (五小牛+) is still possible given `known` revealed cards (1-4 cards).
+// Used by undei mode to determine if a no-bull hand was "close to special-role" and should
+// be eligible for whiteblack losing alert (preserving "雲泥" tension for five-small-reach etc).
+function canStillBeRank14(known){
+  if(!known||known.length>=5)return false;
+  if(known.length===0)return true;
+  var knownKeys={};
+  known.forEach(function(c){knownKeys[c.rank+c.suit]=true;});
+  var needed=5-known.length;
+  if(needed===1){
+    for(var si=0;si<SUITS.length;si++){
+      for(var ri=0;ri<RANKS.length;ri++){
+        var key=RANKS[ri]+SUITS[si];
+        if(knownKeys[key])continue;
+        var testHand=known.concat([{rank:RANKS[ri],suit:SUITS[si],flipped:false}]);
+        var ev=evaluateHand(testHand);
+        if(ev.bullRank>=14)return true;
+      }
+    }
+    return false;
+  }
+  if(needed===2){
+    for(var si1=0;si1<SUITS.length;si1++){
+      for(var ri1=0;ri1<RANKS.length;ri1++){
+        var key1=RANKS[ri1]+SUITS[si1];
+        if(knownKeys[key1])continue;
+        for(var si2=0;si2<SUITS.length;si2++){
+          for(var ri2=0;ri2<RANKS.length;ri2++){
+            var key2=RANKS[ri2]+SUITS[si2];
+            if(knownKeys[key2]||key1===key2)continue;
+            var testHand2=known.concat([
+              {rank:RANKS[ri1],suit:SUITS[si1],flipped:false},
+              {rank:RANKS[ri2],suit:SUITS[si2],flipped:false}
+            ]);
+            var ev2=evaluateHand(testHand2);
+            if(ev2.bullRank>=14)return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
+// Count rank14+ vs no-bull cards possible from 4 known cards (1 unknown card remaining).
+// Used by undei mode for dynamic whiteblack lottery rate (50/50 per case).
+// Returns {n14, n0}: how many remaining cards complete rank14+ vs result in no-bull.
+function countRank14AndNone(known4){
+  var n14=0,n0=0;
+  if(!known4||known4.length!==4)return {n14:0,n0:0};
+  var knownKeys={};
+  known4.forEach(function(c){knownKeys[c.rank+c.suit]=true;});
+  for(var si=0;si<SUITS.length;si++){
+    for(var ri=0;ri<RANKS.length;ri++){
+      var key=RANKS[ri]+SUITS[si];
+      if(knownKeys[key])continue;
+      var testHand=known4.concat([{rank:RANKS[ri],suit:SUITS[si],flipped:false}]);
+      var ev=evaluateHand(testHand);
+      if(ev.bullRank>=14)n14++;
+      else if(ev.bullRank===0)n0++;
+    }
+  }
+  return {n14:n14,n0:n0};
+}
+
 // Hurricane-specific: given 4 known cards from a player and the explicit pool of cards
 // remaining in the deck (cards not held by anyone and not discarded), check if any
 // single card from that pool could complete a niuniu (bullRank >= 10).
@@ -1346,12 +1412,13 @@ var I18N={
     "rb.spoiler_level.lv4":"・Lv4 やや信頼高: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 信頼高: red 65% / glitch 87%",
     "rb.undei_mode":"☯️ 雲泥モード",
-    "rb.undei_mode.desc":"白黒の予兆「whiteblack」が出現する特殊先バレモード。信頼度はちょうど 50/50。",
-    "rb.undei_mode.s1":"・whiteblack が出たら、その手札は「牛牛以上」または「役なし・牛1（最低クラス）」のどちらか",
-    "rb.undei_mode.s2":"・つまり当たれば大きいが、ハズレも極端 → 文字通り「雲泥の差」",
-    "rb.undei_mode.s3":"・牛牛以上の手札は必ず予告される（プレミア演出 または whiteblack のどちらかが出る、無予告なし）",
-    "rb.undei_mode.s4":"・red/glitch などの先バレは雲泥モードでは出ない",
-    "rb.undei_mode.s5":"・先バレ強度スライダーは雲泥モードでは無効（信頼度50%固定）",
+    "rb.undei_mode.desc":"白黒の予兆「whiteblack」が出現する特殊先バレモード。最高役と最低役の対極で「雲泥の差」。",
+    "rb.undei_mode.s1":"・whiteblack 当たり = 牛牛以上（牛牛・五小牛・五花牛・Bomb・SF・RF）",
+    "rb.undei_mode.s2":"・whiteblack ハズレ = 牛1、または「特殊役以上が成立しえた役なし手札」（五小牛リーチなど）",
+    "rb.undei_mode.s3":"・各リーチケースで信頼度はちょうど50/50（ケース別動的抽選）",
+    "rb.undei_mode.s4":"・牛牛以上の手札は必ず予告される（プレミア演出 または whiteblack のどちらかが出る、無予告なし）",
+    "rb.undei_mode.s5":"・red/glitch などの先バレは雲泥モードでは出ない",
+    "rb.undei_mode.s6":"・先バレ強度スライダーは雲泥モードでは無効",
     "rb.battle_flow":"基本の流れ",
     "rb.battle_flow.step1":"1. 人数・名前・倍率ルール・演出モードを設定",
     "rb.battle_flow.step2":"2. 毎ラウンド「親」を1人選ぶ",
@@ -1738,12 +1805,13 @@ var I18N={
     "rb.spoiler_level.lv4":"• Lv4 Highish: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"• Lv5 High trust: red 65% / glitch 87%",
     "rb.undei_mode":"☯️ Undei Mode",
-    "rb.undei_mode.desc":"A special spoiler mode where the 'whiteblack' omen appears. Reliability is exactly 50/50.",
-    "rb.undei_mode.s1":"• When whiteblack appears, the hand is either niuniu+ OR no-bull/niu-1 (the lowest tier)",
-    "rb.undei_mode.s2":"• Hits are big, misses are extreme — literally a 'cloud-and-mud' (worlds apart) gap",
-    "rb.undei_mode.s3":"• Any niuniu+ hand is always announced (either a premier effect OR whiteblack — never silent)",
-    "rb.undei_mode.s4":"• red/glitch spoilers do NOT appear in undei mode",
-    "rb.undei_mode.s5":"• The spoiler intensity slider is disabled in undei (fixed at 50% reliability)",
+    "rb.undei_mode.desc":"A special spoiler mode where the 'whiteblack' omen appears. The highest hand vs the lowest — a 'worlds-apart' contrast.",
+    "rb.undei_mode.s1":"• Whiteblack hit = niuniu+ (niuniu, five-small, five-flower, Bomb, SF, RF)",
+    "rb.undei_mode.s2":"• Whiteblack miss = niu-1, or 'no-bull hand where a special role was reachable' (five-small reach, etc)",
+    "rb.undei_mode.s3":"• Per-reach-case reliability is exactly 50/50 (dynamic per-case lottery)",
+    "rb.undei_mode.s4":"• Any niuniu+ hand is always announced (either a premier effect OR whiteblack — never silent)",
+    "rb.undei_mode.s5":"• red/glitch spoilers do NOT appear in undei mode",
+    "rb.undei_mode.s6":"• The spoiler intensity slider is disabled in undei mode",
     "rb.battle_flow":"Flow",
     "rb.battle_flow.step1":"1. Set players, names, multiplier rule, and alert mode",
     "rb.battle_flow.step2":"2. Each round, pick one \"Dealer\"",
@@ -2127,12 +2195,13 @@ var I18N={
     "rb.spoiler_level.lv4":"・Lv4 较高:red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 高可信:red 65% / glitch 87%",
     "rb.undei_mode":"☯️ 云泥模式",
-    "rb.undei_mode.desc":"出现「黑白」预兆 whiteblack 的特殊剧透模式。可信度刚好 50/50。",
-    "rb.undei_mode.s1":"・whiteblack 出现时,该手牌要么「牛牛以上」,要么「无役·牛1」(最低档)",
-    "rb.undei_mode.s2":"・命中很大,落空也极端 → 名副其实的「云泥之差」",
-    "rb.undei_mode.s3":"・牛牛以上的手牌必定有预告(高级预告 或 whiteblack 之一出现,绝无无预告)",
-    "rb.undei_mode.s4":"・red/glitch 等剧透在云泥模式中不会出现",
-    "rb.undei_mode.s5":"・剧透强度滑块在云泥模式下无效(固定 50% 可信度)",
+    "rb.undei_mode.desc":"出现「黑白」预兆 whiteblack 的特殊剧透模式。最高役与最低役的对极,名副其实的「云泥之差」。",
+    "rb.undei_mode.s1":"・whiteblack 命中 = 牛牛以上(牛牛·五小牛·五花牛·Bomb·SF·RF)",
+    "rb.undei_mode.s2":"・whiteblack 落空 = 牛1,或「能达成特殊役的无役手牌」(五小牛进听等)",
+    "rb.undei_mode.s3":"・各听牌情境下可信度刚好50/50(情境别动态抽签)",
+    "rb.undei_mode.s4":"・牛牛以上的手牌必定有预告(高级预告 或 whiteblack 之一出现,绝无无预告)",
+    "rb.undei_mode.s5":"・red/glitch 等剧透在云泥模式中不会出现",
+    "rb.undei_mode.s6":"・剧透强度滑块在云泥模式下无效",
     "rb.battle_flow":"基本流程",
     "rb.battle_flow.step1":"1. 设置人数·名字·倍率规则·演出模式",
     "rb.battle_flow.step2":"2. 每轮选1位「庄家」",
@@ -2857,7 +2926,6 @@ function NiuNiu(){
       var ev=evaluateHand(hand);
       var bv=ev.bullRank;
       var isNiuNiu=bv>=10;
-      var isLowOrNone=bv<=1; // 役なし(0) または 牛1(1)
       var roll=Math.random();
       if(gameMode==="simple"){
         if(isNiuNiu){
@@ -2869,7 +2937,9 @@ function NiuNiu(){
           else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
         }
       }else if(gameMode==="undei"){
-        // Undei: premier alerts (≥10), or whiteblack (50/50 reliability — niuniu vs ≤1)
+        // Undei: premier alerts (≥10), or whiteblack (niuniu+ vs losing)
+        // 当たり: bullRank≥10 (牛牛、五小牛、五花牛、Bomb、SF、RF)
+        // ハズレ: 牛1 + (五小牛以上が可能だった役なし手札)
         // 牛確定時は必ず予告 (プレミア5% + whiteblack 95%)、無予告なし
         if(isNiuNiu){
           if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
@@ -2879,18 +2949,52 @@ function NiuNiu(){
           else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
           else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
           else {newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};} // 残り95%全てwhiteblack
-        }else if(isLowOrNone){
-          // Q=35%: ハズレ whiteblack。「4枚目を絞った時点で牛確定の可能性が消える手札」は対象外。
-          // 信頼度50/50維持のためQは大幅増 (牛確定時95%発火に対応)
-          if(roll<0.35){
-            var canFourEligible=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[3]]);
-            if(canFourEligible){
+        }else{
+          // ハズレ手札の判定: 牛1または(役なし＋特殊役以上が可能だった)
+          var isLosingTarget=false;
+          var hazureLotteryRate=1.0; // 牛1の場合は100%、役なしの場合はケース別動的計算
+          if(bv===1){
+            isLosingTarget=true;
+            hazureLotteryRate=1.0;
+          }else if(bv===0){
+            // 役なし: 4枚見えた時点で bullRank≥14 が成立しえた手札なら対象
+            // (五小牛リーチや五花牛リーチなど、当たりへの「もう一歩」だった手札)
+            var canRank14A=canStillBeRank14([hand[0],hand[1],hand[2],hand[3]]);
+            var canRank14B=canStillBeRank14([hand[0],hand[1],hand[2],hand[4]]);
+            if(canRank14A||canRank14B){
+              isLosingTarget=true;
+              // ケース別動的抽選率: rank14+の枚数 / 役なしの枚数 で 50/50 を狙う
+              // 両方の絞り順序の比率のうち、より厳しい方(小さい方)を採用
+              var countA=countRank14AndNone([hand[0],hand[1],hand[2],hand[3]]);
+              var countB=countRank14AndNone([hand[0],hand[1],hand[2],hand[4]]);
+              var ratioA=countA.n0>0?countA.n14/countA.n0:0;
+              var ratioB=countB.n0>0?countB.n14/countB.n0:0;
+              // 0 になるケースは「他方の絞り順では役なしが0で当たり側」なので、両方の絞り順を考慮
+              // 両方の比率が定義されている場合は小さい方、片方のみなら定義されている方を採用
+              if(countA.n0>0&&countB.n0>0){
+                hazureLotteryRate=Math.min(ratioA,ratioB);
+              }else if(countA.n0>0){
+                hazureLotteryRate=ratioA;
+              }else if(countB.n0>0){
+                hazureLotteryRate=ratioB;
+              }else{
+                hazureLotteryRate=0; // 両方とも役なし手札不可 → 発火しない
+              }
+              // 上限は1.0
+              if(hazureLotteryRate>1.0)hazureLotteryRate=1.0;
+            }
+          }
+          if(isLosingTarget){
+            // 既存ロジック: 両方の絞り順序で牛牛役以上が可能 → whiteblack 発火
+            var canFourA=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[3]]);
+            var canFourB=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[4]]);
+            if(canFourA&&canFourB&&Math.random()<hazureLotteryRate){
               newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};
             }
-            // 4枚見えた時点で牛可能性が消える手札 → whiteblack 出さない (無予告として処理)
+            // いずれかの絞り順序で牛牛役以上が不可能、または動的抽選で外れ → 無予告
           }
         }
-        // bullRank 2-9: 出現なし (無予告)
+        // 中間役 (bullRank 2-13): 無予告
       }else{
         if(isNiuNiu){
           if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
@@ -3035,23 +3139,28 @@ function NiuNiu(){
       }
     }
     // Suppress fake alerts (red/glitch) when no remaining deck card can complete niuniu+
-    // This applies even though refill already gave one of those cards — the alert may have been
-    // assigned to a card that can't reach niuniu+. Use the 4 NON-refilled cards as fixed context
-    // and check the pool: if no pool card yields niuniu+, suppress.
+    // ALSO suppress undei whiteblack hazure if the 4 NON-refill cards can't reach niuniu (the refill card itself is the unknown)
     for(var spi=0;spi<pc;spi++){
       if(discards[spi]===undefined)continue;
       var sa=newAlerts[spi];
       if(!sa)continue;
-      if(sa.type!=="red"&&sa.type!=="glitch")continue;
+      // Build the 4 cards that are visible BEFORE the refill is squeezed
       var fourKnown=[];
       for(var fki=0;fki<5;fki++){if(fki!==discards[spi])fourKnown.push(newHands[spi][fki]);}
-      // For suppression, we ask: from the entire remaining deck pool, could ANY card complete niuniu?
-      // (We include the refill card itself in the pool so this matches "what could have happened".)
-      var poolWithRefill=deckPool.slice();
-      var refillCard=newHands[spi]&&newHands[spi][discards[spi]];
-      if(refillCard)poolWithRefill.push(refillCard);
-      if(!canHurricaneStillBeNiuNiu(fourKnown,poolWithRefill)){
-        delete newAlerts[spi];
+      if(sa.type==="red"||sa.type==="glitch"){
+        // existing: red/glitch suppression with deck pool check
+        var poolWithRefill=deckPool.slice();
+        var refillCard=newHands[spi]&&newHands[spi][discards[spi]];
+        if(refillCard)poolWithRefill.push(refillCard);
+        if(!canHurricaneStillBeNiuNiu(fourKnown,poolWithRefill)){
+          delete newAlerts[spi];
+        }
+      }else if(sa.type==="whiteblack"){
+        // Undei whiteblack: ensure the 4 visible cards (excluding refill) can still complete niuniu+.
+        // Otherwise the player sees "no niuniu possible" before squeezing the refill → broken drama.
+        if(!canStillBeNiuNiu(fourKnown)){
+          delete newAlerts[spi];
+        }
       }
     }
     setAlerts(newAlerts);
@@ -3505,7 +3614,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.6 · © 2026 KTR (",
+            "v1.4.10 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -4172,7 +4281,8 @@ function NiuNiu(){
           t("rb.undei_mode.s2"),e("br"),
           t("rb.undei_mode.s3"),e("br"),
           t("rb.undei_mode.s4"),e("br"),
-          t("rb.undei_mode.s5"))));
+          t("rb.undei_mode.s5"),e("br"),
+          t("rb.undei_mode.s6"))));
 
       // チップの動き アニメーションデモ
       rbKids.push(e("div",{key:"m2a",style:rbCard},
