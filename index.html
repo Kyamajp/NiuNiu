@@ -1412,12 +1412,12 @@ var I18N={
     "rb.spoiler_level.lv4":"・Lv4 やや信頼高: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 信頼高: red 65% / glitch 87%",
     "rb.undei_mode":"☯️ 雲泥モード",
-    "rb.undei_mode.desc":"白黒の予兆「whiteblack」が出現する特殊先バレモード。最高役と最低役の対極で「雲泥の差」。",
-    "rb.undei_mode.s1":"・whiteblack 当たり = 牛牛以上（牛牛・五小牛・五花牛・Bomb・SF・RF）",
-    "rb.undei_mode.s2":"・whiteblack ハズレ = 牛1、または「特殊役以上が成立しえた役なし手札」（五小牛リーチなど）",
-    "rb.undei_mode.s3":"・各リーチケースで信頼度はちょうど50/50（ケース別動的抽選）",
-    "rb.undei_mode.s4":"・牛牛以上の手札は必ず予告される（プレミア演出 または whiteblack のどちらかが出る、無予告なし）",
-    "rb.undei_mode.s5":"・red/glitch などの先バレは雲泥モードでは出ない",
+    "rb.undei_mode.desc":"5枚目を絞る瞬間に「whiteblack」が出現する特殊先バレモード。当たり50% / ハズレ50%の極端な対比。",
+    "rb.undei_mode.s1":"・whiteblack 当たり = 5枚目で牛牛 (bullRank=10) の手札",
+    "rb.undei_mode.s2":"・whiteblack ハズレ = 牛1 または 役なしの手札",
+    "rb.undei_mode.s3":"・5枚目絞り時に「アウツ」(残り山札のうち5枚目候補) を計算し、必ず 50/50 になる",
+    "rb.undei_mode.s4":"・特殊役 (五小牛・五花牛・Bomb・SF・RF) 可能な手札は対象外 (プレミアも出ない)",
+    "rb.undei_mode.s5":"・4枚見えた時点で既に役確定 (3枚和10) の手札も対象外",
     "rb.undei_mode.s6":"・先バレ強度スライダーは雲泥モードでは無効",
     "rb.battle_flow":"基本の流れ",
     "rb.battle_flow.step1":"1. 人数・名前・倍率ルール・演出モードを設定",
@@ -1805,12 +1805,12 @@ var I18N={
     "rb.spoiler_level.lv4":"• Lv4 Highish: red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"• Lv5 High trust: red 65% / glitch 87%",
     "rb.undei_mode":"☯️ Undei Mode",
-    "rb.undei_mode.desc":"A special spoiler mode where the 'whiteblack' omen appears. The highest hand vs the lowest — a 'worlds-apart' contrast.",
-    "rb.undei_mode.s1":"• Whiteblack hit = niuniu+ (niuniu, five-small, five-flower, Bomb, SF, RF)",
-    "rb.undei_mode.s2":"• Whiteblack miss = niu-1, or 'no-bull hand where a special role was reachable' (five-small reach, etc)",
-    "rb.undei_mode.s3":"• Per-reach-case reliability is exactly 50/50 (dynamic per-case lottery)",
-    "rb.undei_mode.s4":"• Any niuniu+ hand is always announced (either a premier effect OR whiteblack — never silent)",
-    "rb.undei_mode.s5":"• red/glitch spoilers do NOT appear in undei mode",
+    "rb.undei_mode.desc":"Whiteblack appears at the moment of squeezing the 5th card. Hits 50% / misses 50% — exactly balanced.",
+    "rb.undei_mode.s1":"• Whiteblack hit = the 5th card makes niuniu (bullRank=10)",
+    "rb.undei_mode.s2":"• Whiteblack miss = the 5th card makes niu-1 or no-bull",
+    "rb.undei_mode.s3":"• At 5th-card squeeze, 'outs' (remaining-deck candidates) are computed and guaranteed 50/50",
+    "rb.undei_mode.s4":"• Hands where a special role (5-small/5-flower/Bomb/SF/RF) is possible are excluded (no premier either)",
+    "rb.undei_mode.s5":"• Hands already determined at 4-card stage (3-sum-10 within 4 cards) are also excluded",
     "rb.undei_mode.s6":"• The spoiler intensity slider is disabled in undei mode",
     "rb.battle_flow":"Flow",
     "rb.battle_flow.step1":"1. Set players, names, multiplier rule, and alert mode",
@@ -2195,12 +2195,12 @@ var I18N={
     "rb.spoiler_level.lv4":"・Lv4 较高:red 45% / glitch 74%",
     "rb.spoiler_level.lv5":"・Lv5 高可信:red 65% / glitch 87%",
     "rb.undei_mode":"☯️ 云泥模式",
-    "rb.undei_mode.desc":"出现「黑白」预兆 whiteblack 的特殊剧透模式。最高役与最低役的对极,名副其实的「云泥之差」。",
-    "rb.undei_mode.s1":"・whiteblack 命中 = 牛牛以上(牛牛·五小牛·五花牛·Bomb·SF·RF)",
-    "rb.undei_mode.s2":"・whiteblack 落空 = 牛1,或「能达成特殊役的无役手牌」(五小牛进听等)",
-    "rb.undei_mode.s3":"・各听牌情境下可信度刚好50/50(情境别动态抽签)",
-    "rb.undei_mode.s4":"・牛牛以上的手牌必定有预告(高级预告 或 whiteblack 之一出现,绝无无预告)",
-    "rb.undei_mode.s5":"・red/glitch 等剧透在云泥模式中不会出现",
+    "rb.undei_mode.desc":"挤第5张时出现「whiteblack」的特殊剧透模式。命中50% / 落空50%,完美对极。",
+    "rb.undei_mode.s1":"・whiteblack 命中 = 第5张使手牌成为牛牛 (bullRank=10)",
+    "rb.undei_mode.s2":"・whiteblack 落空 = 第5张使手牌成为牛1 或 无役",
+    "rb.undei_mode.s3":"・挤第5张时计算「Outs」(剩余牌堆候选),保证50/50",
+    "rb.undei_mode.s4":"・能达成特殊役 (五小牛/五花牛/Bomb/SF/RF) 的手牌不在对象内 (高级预告也不出)",
+    "rb.undei_mode.s5":"・4张时已确定役 (3张和10已成立) 的手牌也不在对象内",
     "rb.undei_mode.s6":"・剧透强度滑块在云泥模式下无效",
     "rb.battle_flow":"基本流程",
     "rb.battle_flow.step1":"1. 设置人数·名字·倍率规则·演出模式",
@@ -2920,6 +2920,143 @@ function NiuNiu(){
   // Sync sound pack
   // sound pack effect removed (all users use classic)
 
+  // Undei mode: dynamic whiteblack decision when 4 cards are revealed.
+  // Called when rc.size becomes 4 for a player in undei mode.
+  // Looks at the player's 5th card (hand[3] or hand[4], whichever is unrevealed),
+  // computes the deck pool (52 - all hands), determines outs (niuniu/niu1/none),
+  // and decides whether to fire whiteblack as hit or miss based on the 5th card.
+  // 
+  // Spec (v1.4.11):
+  // - Skip if hand was already determined at 4-card state (3-sum-10 within 4 cards)
+  // - Skip if any rank≥14 (5-small/5-flower/bomb/SF/RF) is possible with 5th card
+  // - Hit: 5th card makes bullRank=10. Fire whiteblack hit at 65% rate.
+  // - Miss: balance hit count using niu-1 outs first, then no-bull outs.
+  function computeUndeiWhiteblackAt4(pi, revealedCardIndices){
+    if(gameMode!=="undei")return null;
+    var hand=hands[pi];
+    if(!hand||hand.length!==5)return null;
+    if(revealedCardIndices.size!==4)return null;
+    // Find the unrevealed (5th) card index
+    var unrevealedIdx=-1;
+    for(var i=0;i<5;i++){if(!revealedCardIndices.has(i)){unrevealedIdx=i;break;}}
+    if(unrevealedIdx<0)return null;
+    var revealedHand=[];
+    for(var ri=0;ri<5;ri++){if(revealedCardIndices.has(ri))revealedHand.push(hand[ri]);}
+    if(revealedHand.length!==4)return null;
+    var fifthCard=hand[unrevealedIdx];
+    
+    // Check 1: 4枚で既に役確定? (3枚和10 が4枚の中で成立)
+    var pts=revealedHand.map(function(c){return rankPoints(c.rank);});
+    var alreadyDetermined=false;
+    for(var a=0;a<2;a++){
+      for(var b=a+1;b<3;b++){
+        for(var c=b+1;c<4;c++){
+          if((pts[a]+pts[b]+pts[c])%10===0){alreadyDetermined=true;break;}
+        }
+        if(alreadyDetermined)break;
+      }
+      if(alreadyDetermined)break;
+    }
+    if(alreadyDetermined)return null; // 対象外
+    
+    // Check 2: 特殊役 (bullRank≥14) が5枚目で可能?
+    // 残り全48枚を試行 (この時点では deckPool 計算前で全候補を見る)
+    // ただし「自分の手札5枚以外」のカードプールから判定
+    var ownKeys={};
+    hand.forEach(function(card){ownKeys[card.rank+card.suit]=true;});
+    var anyRank14Possible=false;
+    for(var si=0;si<SUITS.length;si++){
+      for(var ri=0;ri<RANKS.length;ri++){
+        var key=RANKS[ri]+SUITS[si];
+        if(ownKeys[key])continue;
+        var testHand=revealedHand.concat([{rank:RANKS[ri],suit:SUITS[si],flipped:false}]);
+        var evTest=evaluateHand(testHand);
+        if(evTest.bullRank>=14){anyRank14Possible=true;break;}
+      }
+      if(anyRank14Possible)break;
+    }
+    if(anyRank14Possible)return null; // 対象外
+    
+    // Step 3: アウツプール構築 (52 - 「公開・予定済みカード」)
+    // - 自分の4枚 (revealedHand) は除外
+    // - 他プレイヤーの5枚すべて (内部的にカード位置が確定しているので除外)
+    // - 自分の5枚目 (fifthCard) は『山札から引かれる1枚』として deckPool に含める
+    var usedKeys={};
+    // 自分の revealed4 (4枚) は使用済み
+    revealedHand.forEach(function(card){usedKeys[card.rank+card.suit]=true;});
+    // 他プレイヤーの手札5枚全部
+    for(var hpi=0;hpi<hands.length;hpi++){
+      if(hpi===pi)continue; // 自分はスキップ (hand[4] を含めるため)
+      var h=hands[hpi];
+      if(!h)continue;
+      h.forEach(function(card){usedKeys[card.rank+card.suit]=true;});
+    }
+    var deckPool=[];
+    for(var spi=0;spi<SUITS.length;spi++){
+      for(var rpi=0;rpi<RANKS.length;rpi++){
+        var pkey=RANKS[rpi]+SUITS[spi];
+        if(usedKeys[pkey])continue;
+        deckPool.push({rank:RANKS[rpi],suit:SUITS[spi],flipped:false});
+      }
+    }
+    
+    // アウツ集計: 5枚目になりうる各カードについて、最終 bullRank を分類
+    var niuOuts=[]; // bullRank=10
+    var niu1Outs=[];
+    var noneOuts=[];
+    deckPool.forEach(function(poolCard){
+      var testHand=revealedHand.concat([poolCard]);
+      var evP=evaluateHand(testHand);
+      if(evP.bullRank===10)niuOuts.push(poolCard);
+      else if(evP.bullRank===1)niu1Outs.push(poolCard);
+      else if(evP.bullRank===0)noneOuts.push(poolCard);
+      // 2-9 や ≥14 は除外 (whiteblack 対象外、無予告として処理)
+    });
+    
+    // 当たり発火枚数 = 牛牛アウツ × 65%
+    var hitTargetCount=Math.floor(niuOuts.length*0.65 + 0.5); // 四捨五入
+    // 当たりは「実際の5枚目がアウツに含まれ、かつ抽選通過」だが、
+    // ここでは「どのアウツカードが当たりwhiteblackを発火させるか」をランダム選定
+    // 5枚目が当たりアウツ かつ それが選定された ならhit
+    var selectedHitOuts=shuffleArray(niuOuts.slice()).slice(0,hitTargetCount);
+    
+    // ハズレ目標 = 当たり発火枚数 (50/50)
+    var missTargetCount=hitTargetCount;
+    var selectedMissOuts=[];
+    // 優先: 牛1から
+    if(niu1Outs.length>=missTargetCount){
+      selectedMissOuts=shuffleArray(niu1Outs.slice()).slice(0,missTargetCount);
+    }else{
+      // 牛1全部 + 役なしから足りない分
+      selectedMissOuts=niu1Outs.slice();
+      var remainingNeed=missTargetCount-niu1Outs.length;
+      if(remainingNeed>0&&noneOuts.length>0){
+        var supplement=shuffleArray(noneOuts.slice()).slice(0,Math.min(remainingNeed,noneOuts.length));
+        selectedMissOuts=selectedMissOuts.concat(supplement);
+      }
+    }
+    
+    // 5枚目の実カードが当たり/ハズレ選定リストに含まれているか?
+    var fifthKey=fifthCard.rank+fifthCard.suit;
+    var isHit=selectedHitOuts.some(function(c){return c.rank+c.suit===fifthKey;});
+    var isMiss=selectedMissOuts.some(function(c){return c.rank+c.suit===fifthKey;});
+    
+    if(isHit||isMiss){
+      return {type:"whiteblack",timing:"four"};
+    }
+    return null;
+  }
+
+  // Fisher-Yates shuffle (immutable)
+  function shuffleArray(arr){
+    var a=arr.slice();
+    for(var i=a.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1));
+      var tmp=a[i];a[i]=a[j];a[j]=tmp;
+    }
+    return a;
+  }
+
   function computeAlerts(allHands){
     var newAlerts={};
     allHands.forEach(function(hand,pi){
@@ -2937,64 +3074,9 @@ function NiuNiu(){
           else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
         }
       }else if(gameMode==="undei"){
-        // Undei: premier alerts (≥10), or whiteblack (niuniu+ vs losing)
-        // 当たり: bullRank≥10 (牛牛、五小牛、五花牛、Bomb、SF、RF)
-        // ハズレ: 牛1 + (五小牛以上が可能だった役なし手札)
-        // 牛確定時は必ず予告 (プレミア5% + whiteblack 95%)、無予告なし
-        if(isNiuNiu){
-          if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.01667){newAlerts[pi]={type:"cow",timing:"four"};}
-          else if(roll<0.025){newAlerts[pi]={type:"quake",timing:Math.random()<0.5?"three":"four"};}
-          else if(roll<0.03333){newAlerts[pi]={type:"growBull",timing:"three"};}
-          else if(roll<0.04167){newAlerts[pi]={type:"cowPip",timing:"three",cowPipIdx:Math.floor(Math.random()*3)};}
-          else if(roll<0.05){newAlerts[pi]={type:"bullEmoji",timing:Math.random()<0.5?"three":"four"};}
-          else {newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};} // 残り95%全てwhiteblack
-        }else{
-          // ハズレ手札の判定: 牛1または(役なし＋特殊役以上が可能だった)
-          var isLosingTarget=false;
-          var hazureLotteryRate=1.0; // 牛1の場合は100%、役なしの場合はケース別動的計算
-          if(bv===1){
-            isLosingTarget=true;
-            hazureLotteryRate=1.0;
-          }else if(bv===0){
-            // 役なし: 4枚見えた時点で bullRank≥14 が成立しえた手札なら対象
-            // (五小牛リーチや五花牛リーチなど、当たりへの「もう一歩」だった手札)
-            var canRank14A=canStillBeRank14([hand[0],hand[1],hand[2],hand[3]]);
-            var canRank14B=canStillBeRank14([hand[0],hand[1],hand[2],hand[4]]);
-            if(canRank14A||canRank14B){
-              isLosingTarget=true;
-              // ケース別動的抽選率: rank14+の枚数 / 役なしの枚数 で 50/50 を狙う
-              // 両方の絞り順序の比率のうち、より厳しい方(小さい方)を採用
-              var countA=countRank14AndNone([hand[0],hand[1],hand[2],hand[3]]);
-              var countB=countRank14AndNone([hand[0],hand[1],hand[2],hand[4]]);
-              var ratioA=countA.n0>0?countA.n14/countA.n0:0;
-              var ratioB=countB.n0>0?countB.n14/countB.n0:0;
-              // 0 になるケースは「他方の絞り順では役なしが0で当たり側」なので、両方の絞り順を考慮
-              // 両方の比率が定義されている場合は小さい方、片方のみなら定義されている方を採用
-              if(countA.n0>0&&countB.n0>0){
-                hazureLotteryRate=Math.min(ratioA,ratioB);
-              }else if(countA.n0>0){
-                hazureLotteryRate=ratioA;
-              }else if(countB.n0>0){
-                hazureLotteryRate=ratioB;
-              }else{
-                hazureLotteryRate=0; // 両方とも役なし手札不可 → 発火しない
-              }
-              // 上限は1.0
-              if(hazureLotteryRate>1.0)hazureLotteryRate=1.0;
-            }
-          }
-          if(isLosingTarget){
-            // 既存ロジック: 両方の絞り順序で牛牛役以上が可能 → whiteblack 発火
-            var canFourA=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[3]]);
-            var canFourB=canStillBeNiuNiu([hand[0],hand[1],hand[2],hand[4]]);
-            if(canFourA&&canFourB&&Math.random()<hazureLotteryRate){
-              newAlerts[pi]={type:"whiteblack",timing:Math.random()<0.5?"three":"four"};
-            }
-            // いずれかの絞り順序で牛牛役以上が不可能、または動的抽選で外れ → 無予告
-          }
-        }
-        // 中間役 (bullRank 2-13): 無予告
+        // 雲泥モード: computeAlerts では何もしない (プレミアもwhiteblackも)
+        // 全ての判定は4枚絞り完了時に動的計算 (computeUndeiWhiteblackAt4 で処理)
+        // プレミアは雲泥モードでは出さない仕様変更 (v1.4.11)
       }else{
         if(isNiuNiu){
           if(roll<0.00833){newAlerts[pi]={type:"rainbow",timing:Math.random()<0.5?"three":"four"};}
@@ -3273,6 +3355,20 @@ function NiuNiu(){
       var ns2=prev.map(function(s){return new Set(s);});
       ns2[pi].add(ci);
       var alert=alerts[pi];
+      // Undei mode: dynamic whiteblack decision at 4-card squeeze (v1.4.11)
+      if(ns2[pi].size===4&&gameMode==="undei"&&!alert){
+        var undeiResult=computeUndeiWhiteblackAt4(pi,ns2[pi]);
+        if(undeiResult){
+          // Inject the dynamically-computed alert and trigger SFX
+          setAlerts(function(prevA){
+            var na={};for(var k in prevA)na[k]=prevA[k];
+            na[pi]=undeiResult;
+            return na;
+          });
+          alert=undeiResult; // also reflect locally for downstream sfx
+          if(soundOn)setTimeout(function(){playAlertSFX(undeiResult.type);},200);
+        }
+      }
       // Check suppression for 4-card alert
       var willSuppress4=false;
       if(ns2[pi].size===4&&alert&&(alert.type==="red"||alert.type==="glitch")&&hands[pi]){
@@ -3280,7 +3376,7 @@ function NiuNiu(){
         ns2[pi].forEach(function(idx){revealed4.push(hands[pi][idx]);});
         if(!canStillBeNiuNiu(revealed4))willSuppress4=true;
       }
-      if(ns2[pi].size===4&&alert&&alert.timing==="four"&&soundOn&&!willSuppress4){setTimeout(function(){playAlertSFX(alert.type);},200);}
+      if(ns2[pi].size===4&&alert&&alert.timing==="four"&&alert.type!=="whiteblack"&&soundOn&&!willSuppress4){setTimeout(function(){playAlertSFX(alert.type);},200);}
       if(ns2[pi].size===5&&soundOn){var ev2=evaluateHand(hands[pi]);setTimeout(function(){if(ev2.hasBull)SFX.bullFound();else SFX.noBull();},200);}
       if(ns2[pi].size===4&&soundOn&&!(alert&&alert.timing==="four"&&!willSuppress4)){
         var c=hands[pi],vi=Array.from(ns2[pi]);
@@ -3614,7 +3710,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.10 · © 2026 KTR (",
+            "v1.4.11 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
