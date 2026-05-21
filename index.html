@@ -69,6 +69,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',Georgia,
   50%{transform:scale(1.15);filter:brightness(1.6)}
   100%{transform:scale(1);filter:brightness(1)}
 }
+@keyframes blackoutFadeIn{
+  0%{opacity:0}
+  100%{opacity:1}
+}
+@keyframes blackoutTextPulse{
+  0%{opacity:0.4;transform:translateX(-50%) scale(1)}
+  100%{opacity:1;transform:translateX(-50%) scale(1.08)}
+}
 @keyframes whiteblackPulse{0%,100%{box-shadow:0 0 14px rgba(255,255,255,0.8),0 0 28px rgba(0,0,0,0.85),0 0 50px rgba(255,255,255,0.4);background:linear-gradient(135deg,rgba(255,255,255,0.32) 0%,rgba(0,0,0,0.7) 100%)}50%{box-shadow:0 0 24px rgba(0,0,0,0.95),0 0 50px rgba(255,255,255,0.85),0 0 80px rgba(0,0,0,0.6);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(255,255,255,0.32) 100%)}}
 @keyframes whiteblackBorder{0%{border-color:rgba(255,255,255,1)}25%{border-color:rgba(0,0,0,1)}50%{border-color:rgba(255,255,255,1)}75%{border-color:rgba(0,0,0,1)}100%{border-color:rgba(255,255,255,1)}}
 @keyframes whiteblackYin{0%{transform:rotate(0deg) scale(1);opacity:0.45}50%{transform:rotate(180deg) scale(1.15);opacity:0.7}100%{transform:rotate(360deg) scale(1);opacity:0.45}}
@@ -349,15 +357,16 @@ function getCurrentEventYM(){
 }
 
 // === Roulette event helpers ===
-// Roll the roulette: returns a delta from -9 to +9 with normal-distribution-like weights
-// (0 is highest, ±9 is rare).
-// Weight distribution (centered at 0):
-//   0: 18, ±1: 14, ±2: 10, ±3: 6, ±4: 4, ±5: 2, ±6: 1, ±7: 1, ±8: 1, ±9: 1
+// Roll the roulette: returns a delta from -5 to +5 with normal-distribution-like weights.
+// Note: ±6 to ±9 are mathematically equivalent to ±1 to ±4 (modulo 10 wrap), so the range
+// is naturally clamped at ±5 (the only self-symmetric point).
+// Weight distribution (centered at 0, 0 slightly boosted):
+//   0: 24, ±1: 14, ±2: 10, ±3: 6, ±4: 4, ±5: 2
 function rollRouletteDelta(){
   var deltas=[];
-  var weights={0:18, 1:14, 2:10, 3:6, 4:4, 5:2, 6:1, 7:1, 8:1, 9:1};
+  var weights={0:24, 1:14, 2:10, 3:6, 4:4, 5:2};
   // Build weighted pool
-  for(var d=-9;d<=9;d++){
+  for(var d=-5;d<=5;d++){
     var w=weights[Math.abs(d)]||0;
     for(var k=0;k<w;k++)deltas.push(d);
   }
@@ -1147,11 +1156,11 @@ var I18N={
     "event.hurricane.rule_note5":"先バレモードの強度（5段階）もそのまま反映されます",
     "event.roulette.name":"🎰 ルーレット",
     "event.roulette.tagline":"運命の輪",
-    "event.roulette.desc":"5枚すべて見えた後、全員共通の役変更ルーレットが回る。-9〜+9で運命が決まる。",
+    "event.roulette.desc":"5枚すべて見えた後、全員共通の役変更ルーレットが回る。-5〜+5で運命が決まる。",
     "event.roulette.rule_title":"🎰 ルーレット ルール",
     "event.roulette.rule_step1":"通常配布、各プレイヤーが3枚一括＋4・5枚目を絞る",
     "event.roulette.rule_step2":"全員5枚絞り終わると、各プレイヤーの役（牛1〜牛牛）が確定",
-    "event.roulette.rule_step3":"中央のルーレットが回転 → -9〜+9 のいずれかの数字に止まる",
+    "event.roulette.rule_step3":"中央のルーレットが回転 → -5〜+5 のいずれかの数字に止まる",
     "event.roulette.rule_step4":"全員の役にその変更量が適用される（牛1〜牛牛をぐるっと回る）",
     "event.roulette.rule_step5":"変更後の役で勝負判定 → 結果反映",
     "event.roulette.rule_step6":"",
@@ -1161,6 +1170,7 @@ var I18N={
     "event.roulette.rule_note4":"確率分布：0が高頻度、±1-2中位、±6以上は稀に出る神イベント",
     "event.roulette.rule_note5":"全員共通の変更量なので読み合いの余地あり",
     "event.roulette.spinning":"ルーレット回転中…",
+    "event.roulette.blackout_text":"運命の瞬間…",
     "event.roulette.prompt":"運命のルーレットを回せ！",
     "event.roulette.spin_button":"🎰 ルーレットを回す！",
     "event.roulette.result":"運命の数値: ",
@@ -1459,7 +1469,7 @@ var I18N={
     "rb.event_mode.roulette.desc":"運命の輪。全員5枚絞り終わると、全員共通の役変更ルーレットが回る。",
     "rb.event_mode.roulette.s1":"・通常配布、各プレイヤーが3枚一括＋4・5枚目を絞る",
     "rb.event_mode.roulette.s2":"・全員5枚絞り終わると、各プレイヤーの役（牛1〜牛牛）が確定",
-    "rb.event_mode.roulette.s3":"・中央のルーレットが -9〜+9 のいずれかに止まる（0が最頻、±9は稀）",
+    "rb.event_mode.roulette.s3":"・中央のルーレットが -5〜+5 のいずれかに止まる（0が最頻、±5は稀）",
     "rb.event_mode.roulette.s4":"・全員の役にその変更量が適用される（牛1〜牛牛をぐるっと回るモジュロ計算）",
     "rb.event_mode.roulette.s5":"・対象は牛1〜牛牛のみ。役なしと特殊役（五小牛・五花牛・Bomb・SF・RF）は不変",
     "rb.event_mode.roulette.s6":"・カウントアップアニメで「あと一歩で牛牛だったのに…」のドキドキ感",
@@ -1584,11 +1594,11 @@ var I18N={
     "event.hurricane.rule_note5":"The spoiler intensity setting (5 levels) applies here too",
     "event.roulette.name":"🎰 Roulette",
     "event.roulette.tagline":"Wheel of fate",
-    "event.roulette.desc":"After all 5 cards are revealed, a shared roulette spins. -9 to +9 decides everyone's fate.",
+    "event.roulette.desc":"After all 5 cards are revealed, a shared roulette spins. -5 to +5 decides everyone's fate.",
     "event.roulette.rule_title":"🎰 Roulette Rules",
     "event.roulette.rule_step1":"Normal deal: each player gets 3 cards open + squeezes cards 4-5",
     "event.roulette.rule_step2":"Once all players finish squeezing, each player's rank (niu-1 to niuniu) is determined",
-    "event.roulette.rule_step3":"The central roulette spins and lands on a number from -9 to +9",
+    "event.roulette.rule_step3":"The central roulette spins and lands on a number from -5 to +5",
     "event.roulette.rule_step4":"All players' ranks are shifted by that amount (wrapping around niu-1 to niuniu)",
     "event.roulette.rule_step5":"Win/loss is determined using the new ranks",
     "event.roulette.rule_step6":"",
@@ -1598,6 +1608,7 @@ var I18N={
     "event.roulette.rule_note4":"Probability: 0 most common, ±1-2 moderate, ±6+ rare 'divine event'",
     "event.roulette.rule_note5":"Everyone gets the same shift — room for reading the table",
     "event.roulette.spinning":"Roulette spinning...",
+    "event.roulette.blackout_text":"Moment of fate...",
     "event.roulette.prompt":"Spin the wheel of fate!",
     "event.roulette.spin_button":"🎰 Spin Roulette!",
     "event.roulette.result":"Fate number: ",
@@ -1881,7 +1892,7 @@ var I18N={
     "rb.event_mode.roulette.desc":"Wheel of fate. After everyone finishes squeezing 5 cards, a shared rank-change roulette spins.",
     "rb.event_mode.roulette.s1":"• Normal deal: each player gets 3 open cards + squeezes cards 4-5",
     "rb.event_mode.roulette.s2":"• Once all 5 cards are squeezed, each player's rank (niu-1 to niuniu) is set",
-    "rb.event_mode.roulette.s3":"• The center roulette lands on -9 to +9 (0 most common, ±9 rare)",
+    "rb.event_mode.roulette.s3":"• The center roulette lands on -5 to +5 (0 most common, ±5 rare)",
     "rb.event_mode.roulette.s4":"• Everyone's rank shifts by that amount (1-10 wraps around modulo)",
     "rb.event_mode.roulette.s5":"• Affects only niu-1 to niuniu. No-bull and special roles (5-small/Bomb/SF/RF) stay",
     "rb.event_mode.roulette.s6":"• Count-up animation: 'so close to niuniu!' thrill in every round",
@@ -2003,11 +2014,11 @@ var I18N={
     "event.hurricane.rule_note5":"剧透强度设定(5档)同样适用",
     "event.roulette.name":"🎰 轮盘",
     "event.roulette.tagline":"命运之轮",
-    "event.roulette.desc":"全部5张翻开后,全员共通的役变更轮盘转动。-9〜+9决定所有人的命运。",
+    "event.roulette.desc":"全部5张翻开后,全员共通的役变更轮盘转动。-5〜+5决定所有人的命运。",
     "event.roulette.rule_title":"🎰 轮盘 规则",
     "event.roulette.rule_step1":"正常发牌:各玩家先开3张,然后挤第4、5张",
     "event.roulette.rule_step2":"全员挤完5张后,各玩家的役 (牛1〜牛牛) 确定",
-    "event.roulette.rule_step3":"中央轮盘转动 → 停在 -9〜+9 中的某个数字",
+    "event.roulette.rule_step3":"中央轮盘转动 → 停在 -5〜+5 中的某个数字",
     "event.roulette.rule_step4":"全员的役按该数值变化 (牛1〜牛牛环绕)",
     "event.roulette.rule_step5":"用变更后的役进行胜负判定",
     "event.roulette.rule_step6":"",
@@ -2017,6 +2028,7 @@ var I18N={
     "event.roulette.rule_note4":"概率分布:0最常出,±1-2中等,±6以上罕见「神事件」",
     "event.roulette.rule_note5":"全员共通的变化量,可以读心",
     "event.roulette.spinning":"轮盘转动中…",
+    "event.roulette.blackout_text":"命运的瞬间…",
     "event.roulette.prompt":"转动命运之轮！",
     "event.roulette.spin_button":"🎰 转动轮盘！",
     "event.roulette.result":"命运数值:",
@@ -2300,7 +2312,7 @@ var I18N={
     "rb.event_mode.roulette.desc":"命运之轮。全员挤完5张后,全员共通的役变更轮盘转动。",
     "rb.event_mode.roulette.s1":"・正常发牌:各玩家先开3张,然后挤第4、5张",
     "rb.event_mode.roulette.s2":"・全员挤完5张后,各玩家的役 (牛1〜牛牛) 确定",
-    "rb.event_mode.roulette.s3":"・中央轮盘停在 -9〜+9 (0最常见,±9罕见)",
+    "rb.event_mode.roulette.s3":"・中央轮盘停在 -5〜+5 (0最常见,±5罕见)",
     "rb.event_mode.roulette.s4":"・全员的役按该值变化 (1-10环绕模数)",
     "rb.event_mode.roulette.s5":"・对象只限牛1〜牛牛。无役和特殊役 (五小牛/五花牛/Bomb/SF/RF) 不变",
     "rb.event_mode.roulette.s6":"・计数动画:「差一点就牛牛了…」的兴奋感",
@@ -2817,7 +2829,7 @@ function NiuNiu(){
   var sh6=useState(null),hurricaneAnimatingDiscard=sh6[0],setHurricaneAnimatingDiscard=sh6[1]; // {pi:N, ci:N} during spiral-out animation
   var sh7=useState(new Set()),hurricaneAnimatingRefill=sh7[0],setHurricaneAnimatingRefill=sh7[1]; // Set of pi currently showing spawn animation
   // Roulette event states
-  var sr1=useState(null),rouletteDelta=sr1[0],setRouletteDelta=sr1[1]; // -9 to +9, null = not rolled yet
+  var sr1=useState(null),rouletteDelta=sr1[0],setRouletteDelta=sr1[1]; // -5 to +5, null = not rolled yet
   var sr2=useState(false),rouletteSpinning=sr2[0],setRouletteSpinning=sr2[1];
   var sr3=useState({}),rouletteOriginalRanks=sr3[0],setRouletteOriginalRanks=sr3[1]; // {pi: original bullRank} before delta applied
   var sr4=useState(false),rouletteApplied=sr4[0],setRouletteApplied=sr4[1]; // true after delta is applied to hands
@@ -2827,6 +2839,8 @@ function NiuNiu(){
   // null/undefined = not animating; use the actual results
   var sr6=useState(null),rouletteAnimRanks=sr6[0],setRouletteAnimRanks=sr6[1]; // {pi: currentRank} or null
   var sr7=useState(false),rouletteAnimFlash=sr7[0],setRouletteAnimFlash=sr7[1]; // pulse the final rank on land
+  // Roulette blackout: dramatic dimming with spotlight on wheel, when dealer hits niuniu or niu-1 (50%)
+  var sr8=useState(false),rouletteBlackout=sr8[0],setRouletteBlackout=sr8[1];
   var sm6=useState(null),peekActive=sm6[0],setPeekActive=sm6[1]; // null | {dir: "h"|"v", phase: "open"|"hold"|"close"}
   var sm7=useState(false),copyFeedback=sm7[0],setCopyFeedback=sm7[1];
   // Battle config: inactive (left) players and dialogs
@@ -3302,6 +3316,7 @@ function NiuNiu(){
     setRouletteSpinAnim(null);
     setRouletteAnimRanks(null);
     setRouletteAnimFlash(false);
+    setRouletteBlackout(false);
     if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
   }
@@ -3491,19 +3506,39 @@ function NiuNiu(){
     setRouletteSpinning(true);
     if(soundOn)SFX.alertGrowBull(); // reuse for spin start
     var landedDelta=rollRouletteDelta();
-    var nNumbers=19;
+    var nNumbers=11; // -5 to +5
     var deltaAngle=landedDelta*(360/nNumbers);
     var finalRotation=-deltaAngle+1440; // 4 full spins + landing
     
+    // === BLACKOUT 判定 ===
+    // 親(dealer)の最終 bullRank が 牛牛(10) or 牛1(1) になる場合、50%で blackout 発動
+    // - dealer の元 bullRank が 1-10 (ルーレット対象) であること
+    // - delta 適用後に 1 or 10 になること
+    var dealerBlackout=false;
+    if(hands[dealer]){
+      var dealerEvOrig=evaluateHand(hands[dealer]);
+      if(dealerEvOrig.bullRank>=1&&dealerEvOrig.bullRank<=10){
+        var dealerFinalRank=applyRouletteDelta(dealerEvOrig.bullRank, landedDelta);
+        if((dealerFinalRank===10||dealerFinalRank===1)&&Math.random()<0.5){
+          dealerBlackout=true;
+        }
+      }
+    }
+    var blackoutDurationMs=2700; // 「来るぞ来るぞ...」感
+    
     // === ドキドキ演出パターンランダム選択 ===
-    // 5パターン: A短め, B中, C長, D短フェイク, E長フェイク
+    // 7パターン: A短め, B中, C長, D短フェイク手前, E長フェイク手前, F短通り過ぎ, G長通り過ぎ
+    // - normal: 普通に減速して着地
+    // - fake: 手前で一旦止まりかけ → さらに進んで着地 (進行方向に伸びる)
+    // - overshoot: 行き過ぎて止まりかけ → 戻って着地 (逆方向に戻る、振り子型)
     var patterns=[
-      // [weight, type, duration1, curve1, duration2?, curve2?, fakeAdvance?]
-      {w:25,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
-      {w:25,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
-      {w:20,type:"normal",dur:18000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
-      {w:15,type:"fake",dur1:9600,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:1000,dur2:3400,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
-      {w:15,type:"fake",dur1:15600,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:1200,dur2:4200,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1} // 1マス手前で止まりかける
+      {w:22,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
+      {w:22,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
+      {w:18,type:"normal",dur:18000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
+      {w:11,type:"fake",dur1:9600,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:1000,dur2:3400,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
+      {w:11,type:"fake",dur1:15600,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:1200,dur2:4200,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1}, // 1マス手前で止まりかける
+      {w:8,type:"overshoot",dur1:9800,curve1:"cubic-bezier(0.1, 0.85, 0.18, 1.0)",pauseMs:900,dur2:1800,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2}, // 2マス行き過ぎて戻る (短め)
+      {w:8,type:"overshoot",dur1:16000,curve1:"cubic-bezier(0.08, 0.85, 0.12, 1.0)",pauseMs:1100,dur2:2400,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2} // 2マス行き過ぎて戻る (長め)
     ];
     // 重み付き選択
     var totalW=0;patterns.forEach(function(p){totalW+=p.w;});
@@ -3517,37 +3552,61 @@ function NiuNiu(){
     // ±10% の時間揺らぎ
     var jitter=function(v){return Math.round(v*(0.9+Math.random()*0.2));};
     
-    if(chosen.type==="normal"){
-      var dur=jitter(chosen.dur);
-      setRouletteSpinAnim({rotation:finalRotation,duration:dur,curve:chosen.curve});
-      setTimeout(function(){
+    // 共通着地処理: blackout 発動するならスピン完了直前に被せ、その後デルタを公開
+    // - blackout なし: アニメ完了 → デルタ公開 → 余韻3秒 → applyRouletteToHands
+    // - blackout あり: アニメは継続（裏で着地済）、画面に blackout 2.7秒 → 解除 → デルタ公開 → 余韻3秒
+    function landRoulette(){
+      if(dealerBlackout){
+        // blackout 開始（スピン完了タイミングと同時）
+        setRouletteBlackout(true);
+        if(soundOn)SFX.alertGrowBull(); // tension sound
+        setTimeout(function(){
+          // blackout 終了 → デルタ公開（盛り上がりMAX）
+          setRouletteBlackout(false);
+          setRouletteDelta(landedDelta);
+          setRouletteSpinning(false);
+          if(soundOn)SFX.bullFound();
+          setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
+        },blackoutDurationMs);
+      }else{
+        // 通常: デルタを即公開、余韻3秒
         setRouletteDelta(landedDelta);
         setRouletteSpinning(false);
         if(soundOn)SFX.bullFound();
         setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
-      },dur);
-    }else{
+      }
+    }
+    
+    if(chosen.type==="normal"){
+      var dur=jitter(chosen.dur);
+      setRouletteSpinAnim({rotation:finalRotation,duration:dur,curve:chosen.curve});
+      setTimeout(landRoulette,dur);
+    }else if(chosen.type==="fake"){
       // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ
       var fakeOffsetAngle=chosen.fakeOffset*(360/nNumbers);
-      // 「手前」の意味は方向に依存: 正の方向(時計回り)に回ってきた場合は手前 = 角度的に少し減らす
-      // finalRotation < 0 → 反時計回り基準。-deltaAngle+1440 で、deltaが正だと値が小さい(手前)
-      // 「もう少しで止まる」を表現するには、最終位置の数マス手前で減速完了させる
-      var fakeRotation=finalRotation-fakeOffsetAngle*(landedDelta>=0?1:-1); // 進行方向に依存
+      var fakeRotation=finalRotation-fakeOffsetAngle*(landedDelta>=0?1:-1);
       var d1=jitter(chosen.dur1),d2=jitter(chosen.dur2);
       setRouletteSpinAnim({rotation:fakeRotation,duration:d1,curve:chosen.curve1});
       setTimeout(function(){
-        // 一拍休止後、最終位置へ伸びる
         setTimeout(function(){
           if(soundOn)SFX.buttonClick();
           setRouletteSpinAnim({rotation:finalRotation,duration:d2,curve:chosen.curve2});
-          setTimeout(function(){
-            setRouletteDelta(landedDelta);
-            setRouletteSpinning(false);
-            if(soundOn)SFX.bullFound();
-            setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
-          },d2);
+          setTimeout(landRoulette,d2);
         },chosen.pauseMs);
       },d1);
+    }else if(chosen.type==="overshoot"){
+      // 通り過ぎ型: 最終位置を 2マス通り越して止まりかけ → 戻って着地 (振り子型)
+      var overshootAngle=chosen.overshootOffset*(360/nNumbers);
+      var overshootRotation=finalRotation+overshootAngle*(landedDelta>=0?1:-1);
+      var od1=jitter(chosen.dur1),od2=jitter(chosen.dur2);
+      setRouletteSpinAnim({rotation:overshootRotation,duration:od1,curve:chosen.curve1});
+      setTimeout(function(){
+        setTimeout(function(){
+          if(soundOn)SFX.buttonClick();
+          setRouletteSpinAnim({rotation:finalRotation,duration:od2,curve:chosen.curve2});
+          setTimeout(landRoulette,od2);
+        },chosen.pauseMs);
+      },od1);
     }
   }
 
@@ -4087,7 +4146,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.14 · © 2026 KTR (",
+            "v1.4.17 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5262,7 +5321,7 @@ function NiuNiu(){
   // Roulette UI: shown during phase="roulette" in roulette event
   if(appMode==="event"&&phase==="roulette"&&getCurrentEvent()==="roulette"){
     var rouletteSize=180;
-    var nNumbers=19; // -9 to +9
+    var nNumbers=11; // -5 to +5 (±6 to ±5 are mathematically equivalent to ±1 to ±4 via modulo 10)
     // rouletteSpinAnim drives the wheel: {rotation, duration(ms), curve}
     // - null + delta null = idle (before spin starts, briefly)
     // - non-null while spinning = current animation target
@@ -5276,11 +5335,11 @@ function NiuNiu(){
     // Build wheel sectors
     var sectors=[];
     for(var ni=0;ni<nNumbers;ni++){
-      var d=ni-9; // -9 to +9
+      var d=ni-5; // -5 to +5
       var angle=(d*(360/nNumbers));
       var bgColor;
       if(d===0)bgColor="#d4af37"; // gold for center
-      else if(Math.abs(d)>=7)bgColor=d>0?"#e63946":"#1d3557"; // extreme colors
+      else if(Math.abs(d)>=4)bgColor=d>0?"#e63946":"#1d3557"; // extreme colors (±4, ±5)
       else if(d>0)bgColor="#7050c0"; // purple for +
       else bgColor="#3a4a8a"; // dark blue for -
       sectors.push(e("div",{key:"sect"+d,style:{
@@ -5293,7 +5352,7 @@ function NiuNiu(){
         opacity:0.7
       }}));
       // Number label
-      var labelRadius=rouletteSize/2-22;
+      var labelRadius=rouletteSize/2-26;
       var rad=angle*Math.PI/180;
       var lx=labelRadius*Math.sin(rad);
       var ly=-labelRadius*Math.cos(rad);
@@ -5301,10 +5360,34 @@ function NiuNiu(){
         position:"absolute",
         left:"50%",top:"50%",
         transform:"translate(-50%,-50%) translate("+lx+"px,"+ly+"px) rotate("+angle+"deg)",
-        fontSize:11,fontWeight:800,color:"#fff",
-        textShadow:"0 0 4px rgba(0,0,0,0.8)",
-        pointerEvents:"none"
+        fontSize:15,fontWeight:900,color:"#fff",
+        textShadow:"0 0 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.7)",
+        pointerEvents:"none",
+        letterSpacing:0.5
       }},(d>0?"+":"")+d));
+    }
+    // Blackout overlay: full-screen dim with spotlight on wheel
+    if(rouletteBlackout){
+      gameChildren.push(e("div",{key:"blackout",style:{
+        position:"fixed",
+        top:0,left:0,right:0,bottom:0,
+        zIndex:9000,
+        background:"radial-gradient(circle at 50% 50%, transparent 0%, transparent 130px, rgba(0,0,0,0.78) 200px, rgba(0,0,0,0.95) 100%)",
+        pointerEvents:"none",
+        animation:"blackoutFadeIn 0.35s ease-out forwards"
+      }},
+        // Centered tension text: "来るぞ来るぞ..."
+        e("div",{style:{
+          position:"absolute",
+          top:"calc(50% + 180px)",left:"50%",
+          transform:"translateX(-50%)",
+          fontSize:18,fontWeight:900,letterSpacing:3,
+          color:"#f0d070",
+          textShadow:"0 0 14px rgba(240,208,112,0.9), 0 0 30px rgba(240,208,112,0.4)",
+          animation:"blackoutTextPulse 0.7s ease-in-out infinite alternate",
+          fontFamily:"serif"
+        }},t("event.roulette.blackout_text"))
+      ));
     }
     gameChildren.push(e("div",{key:"roulette",style:{
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
