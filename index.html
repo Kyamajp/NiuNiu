@@ -62,6 +62,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',Georgia,
 @keyframes hurricaneTurnPulse{0%,100%{box-shadow:0 0 12px rgba(140,100,220,0.4),0 0 24px rgba(140,100,220,0.2)}50%{box-shadow:0 0 24px rgba(176,128,240,0.9),0 0 48px rgba(140,100,220,0.5),0 0 80px rgba(120,80,200,0.3)}}
 @keyframes hurricaneTurnBadge{0%,100%{transform:scale(1);opacity:0.9}50%{transform:scale(1.08);opacity:1}}
 @keyframes hurricaneDim{0%{opacity:1}100%{opacity:0.32}}
+@keyframes spinRoulette{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes rouletteFlash{
+  0%{transform:scale(1);filter:brightness(1)}
+  25%{transform:scale(1.4);filter:brightness(2.2)}
+  50%{transform:scale(1.15);filter:brightness(1.6)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
 @keyframes whiteblackPulse{0%,100%{box-shadow:0 0 14px rgba(255,255,255,0.8),0 0 28px rgba(0,0,0,0.85),0 0 50px rgba(255,255,255,0.4);background:linear-gradient(135deg,rgba(255,255,255,0.32) 0%,rgba(0,0,0,0.7) 100%)}50%{box-shadow:0 0 24px rgba(0,0,0,0.95),0 0 50px rgba(255,255,255,0.85),0 0 80px rgba(0,0,0,0.6);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(255,255,255,0.32) 100%)}}
 @keyframes whiteblackBorder{0%{border-color:rgba(255,255,255,1)}25%{border-color:rgba(0,0,0,1)}50%{border-color:rgba(255,255,255,1)}75%{border-color:rgba(0,0,0,1)}100%{border-color:rgba(255,255,255,1)}}
 @keyframes whiteblackYin{0%{transform:rotate(0deg) scale(1);opacity:0.45}50%{transform:rotate(180deg) scale(1.15);opacity:0.7}100%{transform:rotate(360deg) scale(1);opacity:0.45}}
@@ -327,21 +334,44 @@ function drawConfetti(){
 }
 
 // ─── Card & Game Logic ───────────────────────────────────────────
-// 月替りイベント定義: YYYY-MM → イベントID
-// PWAなのでハードコード（オフライン対応）、月跨ぐ前に新バージョンをリリース運用
-var EVENTS={
-  "2026-05":"hurricane",
-  "2026-06":"hurricane", // TBD、当面はハリケーンにフォールバック
-  "2026-07":"hurricane"  // TBD
-};
+// Event registry: list of all available events. Add new events here when introducing them.
+var EVENT_LIST=[
+  {id:"hurricane",icon:"🌪️",color:"#b080f0"},
+  {id:"roulette", icon:"🎰",color:"#d4af37"}
+];
 function getCurrentEvent(){
-  var d=new Date();
-  var ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-  return EVENTS[ym]||"hurricane"; // 未定義の月はハリケーンにフォールバック
+  // Legacy stub. Real value comes from React state `selectedEvent` (component-scoped override).
+  return null;
 }
 function getCurrentEventYM(){
   var d=new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+
+// === Roulette event helpers ===
+// Roll the roulette: returns a delta from -9 to +9 with normal-distribution-like weights
+// (0 is highest, ±9 is rare).
+// Weight distribution (centered at 0):
+//   0: 18, ±1: 14, ±2: 10, ±3: 6, ±4: 4, ±5: 2, ±6: 1, ±7: 1, ±8: 1, ±9: 1
+function rollRouletteDelta(){
+  var deltas=[];
+  var weights={0:18, 1:14, 2:10, 3:6, 4:4, 5:2, 6:1, 7:1, 8:1, 9:1};
+  // Build weighted pool
+  for(var d=-9;d<=9;d++){
+    var w=weights[Math.abs(d)]||0;
+    for(var k=0;k<w;k++)deltas.push(d);
+  }
+  return deltas[Math.floor(Math.random()*deltas.length)];
+}
+
+// Apply roulette delta to a bullRank, with modulo wrap-around in 1-10.
+// Only bullRanks 1-10 are affected. 0 (no-bull) and ≥14 (special roles) are returned unchanged.
+function applyRouletteDelta(bullRank, delta){
+  if(bullRank<1||bullRank>10)return bullRank; // out of scope
+  // Map 1-10 to 0-9 for modulo, then back
+  var v=(bullRank-1+delta);
+  var modded=((v%10)+10)%10;
+  return modded+1;
 }
 
 var SUITS=["♠","♥","♦","♣"];
@@ -1097,7 +1127,7 @@ var I18N={
     "home.battle":"対戦",
     "home.battle_desc":"親子＋チップ計算",
     "home.event":"イベント",
-    "home.event_desc":"月替り特別ルール",
+    "home.event_desc":"パーティールール",
     "event.title":"イベントモード",
     "event.this_month":"今月のイベント",
     "event.hurricane.name":"🌪️ ハリケーン",
@@ -1115,7 +1145,26 @@ var I18N={
     "event.hurricane.rule_note3":"スコアバー下に「使用済み / 残り山札」が4色で可視化",
     "event.hurricane.rule_note4":"残り山札に牛確定カードが1枚もなければ、先バレ（red/glitch）は出ない",
     "event.hurricane.rule_note5":"先バレモードの強度（5段階）もそのまま反映されます",
+    "event.roulette.name":"🎰 ルーレット",
+    "event.roulette.tagline":"運命の輪",
+    "event.roulette.desc":"5枚すべて見えた後、全員共通の役変更ルーレットが回る。-9〜+9で運命が決まる。",
+    "event.roulette.rule_title":"🎰 ルーレット ルール",
+    "event.roulette.rule_step1":"通常配布、各プレイヤーが3枚一括＋4・5枚目を絞る",
+    "event.roulette.rule_step2":"全員5枚絞り終わると、各プレイヤーの役（牛1〜牛牛）が確定",
+    "event.roulette.rule_step3":"中央のルーレットが回転 → -9〜+9 のいずれかの数字に止まる",
+    "event.roulette.rule_step4":"全員の役にその変更量が適用される（牛1〜牛牛をぐるっと回る）",
+    "event.roulette.rule_step5":"変更後の役で勝負判定 → 結果反映",
+    "event.roulette.rule_step6":"",
+    "event.roulette.rule_note1":"対象は牛1〜牛牛（bullRank 1〜10）の手札のみ",
+    "event.roulette.rule_note2":"役なしと特殊役（五小牛・五花牛・Bomb・SF・RF）はルーレット対象外、そのまま",
+    "event.roulette.rule_note3":"モジュロ計算：牛8+5=牛3、牛2-5=牛7 のように1〜10の輪っかで回る",
+    "event.roulette.rule_note4":"確率分布：0が高頻度、±1-2中位、±6以上は稀に出る神イベント",
+    "event.roulette.rule_note5":"全員共通の変更量なので読み合いの余地あり",
+    "event.roulette.spinning":"ルーレット回転中…",
+    "event.roulette.result":"運命の数値: ",
+    "event.roulette.applying":"全員の役を更新中…",
     "event.start":"このイベントで始める",
+    "event.start_short":"遊ぶ",
     "event.discard_prompt":"捨てる札を選んでください",
     "event.discard_turn":"の番",
     "event.discard_waiting":"待機中…",
@@ -1391,19 +1440,27 @@ var I18N={
     "rb.battle_mode":"⚔️ 対戦モード",
     "rb.battle_mode.desc":"親子対戦＋チップ計算で本格的に遊ぶモードです。",
     "rb.event_mode":"🎉 イベントモード",
-    "rb.event_mode.desc":"月替りで特別ルールが切り替わる新モード。今月は「🌪️ ハリケーン」を実施中。",
-    "rb.event_mode.flow":"進行の流れ",
-    "rb.event_mode.flow.s1":"1. 通常通り配布、各プレイヤーが「📂 5枚オープン」で5枚一気にめくる",
-    "rb.event_mode.flow.s2":"2. 全員5枚オープンしたら、親の左隣のプレイヤーから順に「捨て札」を選ぶ",
-    "rb.event_mode.flow.s3":"3. 全員選び終わると、山札から自動で1枚補充（フェイスダウン）",
-    "rb.event_mode.flow.s4":"4. 各自が補充カードを「絞り」で開け、最終的な5枚で役判定",
-    "rb.event_mode.feat":"ハリケーンの特徴",
-    "rb.event_mode.feat.s1":"・捨て札は山札に戻ります（補充で同じカードが来ることや、他プレイヤーに配られることもあります）",
-    "rb.event_mode.feat.s2":"・最初の5枚は静かに表示（先バレ・プレミア演出なし）",
-    "rb.event_mode.feat.s3":"・先バレ・プレミア演出は補充カード出現時にのみ発生",
-    "rb.event_mode.feat.s4":"・必ず1枚捨てる必要あり（パス不可）",
-    "rb.event_mode.feat.s5":"・スコアバー下に「使用済み/残り山札」が可視化される",
-    "rb.event_mode.feat.s6":"・残り山札に牛確定カードが1枚もなければ先バレは出ない",
+    "rb.event_mode.desc":"特別ルールを楽しめる新モード。イベント一覧から好きなものを選んで遊べる。",
+    "rb.event_mode.howto":"遊び方",
+    "rb.event_mode.howto.s1":"1. ホーム画面の「イベント」を開く",
+    "rb.event_mode.howto.s2":"2. イベント一覧から好きなものを選び「遊ぶ」をタップ",
+    "rb.event_mode.howto.s3":"3. プレイヤー設定後、配布スタート",
+    "rb.event_mode.hurricane":"🌪️ ハリケーン",
+    "rb.event_mode.hurricane.desc":"嵐の手札交換。5枚一気にオープン後、1枚を捨てて山から1枚補充。判断力と運の両方が試される。",
+    "rb.event_mode.hurricane.s1":"・「📂 5枚オープン」で全員のカードを開示",
+    "rb.event_mode.hurricane.s2":"・親の左隣のプレイヤーから順に「捨て札」を選ぶ（パス不可）",
+    "rb.event_mode.hurricane.s3":"・捨て札は山に戻る（補充で同じカードが来ることや、他プレイヤーに配られる可能性もあり）",
+    "rb.event_mode.hurricane.s4":"・山札から1枚補充 → 各自「絞り」で開ける",
+    "rb.event_mode.hurricane.s5":"・先バレ・プレミア演出は補充カード出現時のみ（最初の5枚は静か）",
+    "rb.event_mode.hurricane.s6":"・スコアバー下に「使用済み/残り山札」が可視化",
+    "rb.event_mode.roulette":"🎰 ルーレット",
+    "rb.event_mode.roulette.desc":"運命の輪。全員5枚絞り終わると、全員共通の役変更ルーレットが回る。",
+    "rb.event_mode.roulette.s1":"・通常配布、各プレイヤーが3枚一括＋4・5枚目を絞る",
+    "rb.event_mode.roulette.s2":"・全員5枚絞り終わると、各プレイヤーの役（牛1〜牛牛）が確定",
+    "rb.event_mode.roulette.s3":"・中央のルーレットが -9〜+9 のいずれかに止まる（0が最頻、±9は稀）",
+    "rb.event_mode.roulette.s4":"・全員の役にその変更量が適用される（牛1〜牛牛をぐるっと回るモジュロ計算）",
+    "rb.event_mode.roulette.s5":"・対象は牛1〜牛牛のみ。役なしと特殊役（五小牛・五花牛・Bomb・SF・RF）は不変",
+    "rb.event_mode.roulette.s6":"・カウントアップアニメで「あと一歩で牛牛だったのに…」のドキドキ感",
     "rb.spoiler_level":"🔮 先バレ強度（5段階）",
     "rb.spoiler_level.desc":"先バレモード時、セットアップで「red の的中率」を5段階から選べます。割合（red:glitch = 2:1）は固定で、的中率のみ変動します。",
     "rb.spoiler_level.lv1":"・Lv1 信頼薄: red 15% / glitch 38%",
@@ -1505,7 +1562,7 @@ var I18N={
     "home.battle":"Battle",
     "home.battle_desc":"Dealer + chips",
     "home.event":"Event",
-    "home.event_desc":"Monthly special rule",
+    "home.event_desc":"Party rules",
     "event.title":"Event Mode",
     "event.this_month":"This Month's Event",
     "event.hurricane.name":"🌪️ Hurricane",
@@ -1523,7 +1580,26 @@ var I18N={
     "event.hurricane.rule_note3":"A 4-color used/remaining deck tracker appears under the score bar",
     "event.hurricane.rule_note4":"If no remaining deck card can complete niuniu, spoilers (red/glitch) are suppressed",
     "event.hurricane.rule_note5":"The spoiler intensity setting (5 levels) applies here too",
+    "event.roulette.name":"🎰 Roulette",
+    "event.roulette.tagline":"Wheel of fate",
+    "event.roulette.desc":"After all 5 cards are revealed, a shared roulette spins. -9 to +9 decides everyone's fate.",
+    "event.roulette.rule_title":"🎰 Roulette Rules",
+    "event.roulette.rule_step1":"Normal deal: each player gets 3 cards open + squeezes cards 4-5",
+    "event.roulette.rule_step2":"Once all players finish squeezing, each player's rank (niu-1 to niuniu) is determined",
+    "event.roulette.rule_step3":"The central roulette spins and lands on a number from -9 to +9",
+    "event.roulette.rule_step4":"All players' ranks are shifted by that amount (wrapping around niu-1 to niuniu)",
+    "event.roulette.rule_step5":"Win/loss is determined using the new ranks",
+    "event.roulette.rule_step6":"",
+    "event.roulette.rule_note1":"Only niu-1 to niuniu (bullRank 1-10) hands are affected",
+    "event.roulette.rule_note2":"No-bull and special roles (5-small/5-flower/Bomb/SF/RF) are excluded",
+    "event.roulette.rule_note3":"Modulo math: niu-8 + 5 = niu-3, niu-2 - 5 = niu-7 (wrap around 1-10)",
+    "event.roulette.rule_note4":"Probability: 0 most common, ±1-2 moderate, ±6+ rare 'divine event'",
+    "event.roulette.rule_note5":"Everyone gets the same shift — room for reading the table",
+    "event.roulette.spinning":"Roulette spinning...",
+    "event.roulette.result":"Fate number: ",
+    "event.roulette.applying":"Updating everyone's hands...",
     "event.start":"Start This Event",
+    "event.start_short":"Play",
     "event.discard_prompt":"Choose a card to discard",
     "event.discard_turn":"'s turn",
     "event.discard_waiting":"Waiting…",
@@ -1784,19 +1860,27 @@ var I18N={
     "rb.battle_mode":"⚔️ Battle Mode",
     "rb.battle_mode.desc":"Dealer vs players with chip calculations — for a real gambling feel.",
     "rb.event_mode":"🎉 Event Mode",
-    "rb.event_mode.desc":"A monthly rotating special-rule mode. This month: 🌪️ Hurricane.",
-    "rb.event_mode.flow":"How It Flows",
-    "rb.event_mode.flow.s1":"1. Cards are dealt; each player taps '📂 Open All 5' to reveal all 5 at once",
-    "rb.event_mode.flow.s2":"2. After all reveal, starting left of the dealer, each picks one card to discard",
-    "rb.event_mode.flow.s3":"3. When all have chosen, a card is auto-drawn from the deck (face-down)",
-    "rb.event_mode.flow.s4":"4. Each player squeezes the refill card; final 5 cards determine the hand",
-    "rb.event_mode.feat":"Hurricane Features",
-    "rb.event_mode.feat.s1":"• Discarded cards return to the deck (the same card may be drawn as a refill, or dealt to another player)",
-    "rb.event_mode.feat.s2":"• Initial 5 cards are quiet (no spoiler/premier effects)",
-    "rb.event_mode.feat.s3":"• Spoilers and premier effects only fire on the refill card",
-    "rb.event_mode.feat.s4":"• You must discard one card (no pass allowed)",
-    "rb.event_mode.feat.s5":"• Used vs. remaining deck is shown below the score bar",
-    "rb.event_mode.feat.s6":"• No spoiler appears if no remaining card can complete niuniu",
+    "rb.event_mode.desc":"A special-rule mode. Pick any event from the list and play.",
+    "rb.event_mode.howto":"How to Play",
+    "rb.event_mode.howto.s1":"1. Open 'Event' from the home screen",
+    "rb.event_mode.howto.s2":"2. Pick an event from the list and tap 'Play'",
+    "rb.event_mode.howto.s3":"3. Set up players and start dealing",
+    "rb.event_mode.hurricane":"🌪️ Hurricane",
+    "rb.event_mode.hurricane.desc":"Stormy hand swap. After all 5 cards are revealed, discard 1 and draw 1 from the deck. Tests judgment AND luck.",
+    "rb.event_mode.hurricane.s1":"• 'Open All 5' reveals all players' cards at once",
+    "rb.event_mode.hurricane.s2":"• Starting left of the dealer, each picks one card to discard (no pass)",
+    "rb.event_mode.hurricane.s3":"• Discarded cards return to the deck (may come back as refill or go to another player)",
+    "rb.event_mode.hurricane.s4":"• One card is auto-drawn from the deck → each squeezes the refill",
+    "rb.event_mode.hurricane.s5":"• Spoilers/premier effects ONLY on the refill (initial 5 are silent)",
+    "rb.event_mode.hurricane.s6":"• Used vs. remaining deck visualized below the score bar",
+    "rb.event_mode.roulette":"🎰 Roulette",
+    "rb.event_mode.roulette.desc":"Wheel of fate. After everyone finishes squeezing 5 cards, a shared rank-change roulette spins.",
+    "rb.event_mode.roulette.s1":"• Normal deal: each player gets 3 open cards + squeezes cards 4-5",
+    "rb.event_mode.roulette.s2":"• Once all 5 cards are squeezed, each player's rank (niu-1 to niuniu) is set",
+    "rb.event_mode.roulette.s3":"• The center roulette lands on -9 to +9 (0 most common, ±9 rare)",
+    "rb.event_mode.roulette.s4":"• Everyone's rank shifts by that amount (1-10 wraps around modulo)",
+    "rb.event_mode.roulette.s5":"• Affects only niu-1 to niuniu. No-bull and special roles (5-small/Bomb/SF/RF) stay",
+    "rb.event_mode.roulette.s6":"• Count-up animation: 'so close to niuniu!' thrill in every round",
     "rb.spoiler_level":"🔮 Spoiler Intensity (5 levels)",
     "rb.spoiler_level.desc":"In spoiler mode, setup lets you pick from 5 reliability levels for red alerts. The ratio (red:glitch = 2:1) is fixed; only the reliability shifts.",
     "rb.spoiler_level.lv1":"• Lv1 Low trust: red 15% / glitch 38%",
@@ -1895,7 +1979,7 @@ var I18N={
     "home.battle":"对战",
     "home.battle_desc":"庄家+筹码",
     "home.event":"活动",
-    "home.event_desc":"每月特别规则",
+    "home.event_desc":"派对规则",
     "event.title":"活动模式",
     "event.this_month":"本月活动",
     "event.hurricane.name":"🌪️ 飓风",
@@ -1913,7 +1997,26 @@ var I18N={
     "event.hurricane.rule_note3":"分数栏下显示4色「已用/剩余牌堆」",
     "event.hurricane.rule_note4":"剩余牌堆中无可成牛牛的牌时,剧透(red/glitch)被抑制",
     "event.hurricane.rule_note5":"剧透强度设定(5档)同样适用",
+    "event.roulette.name":"🎰 轮盘",
+    "event.roulette.tagline":"命运之轮",
+    "event.roulette.desc":"全部5张翻开后,全员共通的役变更轮盘转动。-9〜+9决定所有人的命运。",
+    "event.roulette.rule_title":"🎰 轮盘 规则",
+    "event.roulette.rule_step1":"正常发牌:各玩家先开3张,然后挤第4、5张",
+    "event.roulette.rule_step2":"全员挤完5张后,各玩家的役 (牛1〜牛牛) 确定",
+    "event.roulette.rule_step3":"中央轮盘转动 → 停在 -9〜+9 中的某个数字",
+    "event.roulette.rule_step4":"全员的役按该数值变化 (牛1〜牛牛环绕)",
+    "event.roulette.rule_step5":"用变更后的役进行胜负判定",
+    "event.roulette.rule_step6":"",
+    "event.roulette.rule_note1":"对象只限牛1〜牛牛(bullRank 1-10)",
+    "event.roulette.rule_note2":"无役和特殊役(五小牛/五花牛/Bomb/SF/RF)不在对象内",
+    "event.roulette.rule_note3":"模数计算:牛8+5=牛3,牛2-5=牛7(1-10环绕)",
+    "event.roulette.rule_note4":"概率分布:0最常出,±1-2中等,±6以上罕见「神事件」",
+    "event.roulette.rule_note5":"全员共通的变化量,可以读心",
+    "event.roulette.spinning":"轮盘转动中…",
+    "event.roulette.result":"命运数值:",
+    "event.roulette.applying":"更新全员手牌中…",
     "event.start":"开始本活动",
+    "event.start_short":"玩",
     "event.discard_prompt":"请选择要弃掉的牌",
     "event.discard_turn":"的回合",
     "event.discard_waiting":"等待中…",
@@ -2174,19 +2277,27 @@ var I18N={
     "rb.battle_mode":"⚔️ 对战模式",
     "rb.battle_mode.desc":"庄闲对战＋筹码计算的正式模式。",
     "rb.event_mode":"🎉 活动模式",
-    "rb.event_mode.desc":"每月轮换的特别规则模式。本月活动:🌪️ 飓风。",
-    "rb.event_mode.flow":"流程",
-    "rb.event_mode.flow.s1":"1. 正常发牌,每位玩家点「📂 开5张」一次性翻开5张",
-    "rb.event_mode.flow.s2":"2. 全员翻开后,从庄家左侧玩家开始依次选「弃牌」",
-    "rb.event_mode.flow.s3":"3. 全员选完后,从牌堆自动补1张(背面)",
-    "rb.event_mode.flow.s4":"4. 各自挤补充的牌,最终5张定胜负",
-    "rb.event_mode.feat":"飓风的特点",
-    "rb.event_mode.feat.s1":"・弃掉的牌会回到牌堆(同一张牌可能再次作为补充牌出现,或被发给其他玩家)",
-    "rb.event_mode.feat.s2":"・最初5张静默显示(无剧透/高级预告)",
-    "rb.event_mode.feat.s3":"・剧透/高级预告仅在补充牌出现时触发",
-    "rb.event_mode.feat.s4":"・必须弃1张(不可跳过)",
-    "rb.event_mode.feat.s5":"・分数栏下显示「已用/剩余牌堆」",
-    "rb.event_mode.feat.s6":"・剩余牌堆中无可成牛牛的牌时不出剧透",
+    "rb.event_mode.desc":"享受特殊规则的模式。从活动列表中选择喜欢的玩。",
+    "rb.event_mode.howto":"玩法",
+    "rb.event_mode.howto.s1":"1. 从主页打开「活动」",
+    "rb.event_mode.howto.s2":"2. 从列表中选择活动并点「玩」",
+    "rb.event_mode.howto.s3":"3. 设置玩家后开始发牌",
+    "rb.event_mode.hurricane":"🌪️ 飓风",
+    "rb.event_mode.hurricane.desc":"暴风换牌。5张全开后,弃1张并从牌堆补1张。考验判断和运气。",
+    "rb.event_mode.hurricane.s1":"・「📂 开5张」翻开全员牌",
+    "rb.event_mode.hurricane.s2":"・从庄家左侧玩家开始依次选「弃牌」(不可跳过)",
+    "rb.event_mode.hurricane.s3":"・弃掉的牌回到牌堆(可能再次作为补充牌或发给其他玩家)",
+    "rb.event_mode.hurricane.s4":"・牌堆自动补1张 → 各自挤补充牌",
+    "rb.event_mode.hurricane.s5":"・剧透/高级预告仅在补充牌出现时(最初5张静默)",
+    "rb.event_mode.hurricane.s6":"・分数栏下显示「已用/剩余牌堆」",
+    "rb.event_mode.roulette":"🎰 轮盘",
+    "rb.event_mode.roulette.desc":"命运之轮。全员挤完5张后,全员共通的役变更轮盘转动。",
+    "rb.event_mode.roulette.s1":"・正常发牌:各玩家先开3张,然后挤第4、5张",
+    "rb.event_mode.roulette.s2":"・全员挤完5张后,各玩家的役 (牛1〜牛牛) 确定",
+    "rb.event_mode.roulette.s3":"・中央轮盘停在 -9〜+9 (0最常见,±9罕见)",
+    "rb.event_mode.roulette.s4":"・全员的役按该值变化 (1-10环绕模数)",
+    "rb.event_mode.roulette.s5":"・对象只限牛1〜牛牛。无役和特殊役 (五小牛/五花牛/Bomb/SF/RF) 不变",
+    "rb.event_mode.roulette.s6":"・计数动画:「差一点就牛牛了…」的兴奋感",
     "rb.spoiler_level":"🔮 剧透强度(5档)",
     "rb.spoiler_level.desc":"剧透模式时,可在设置中从5档选择红光的可信度。比例(red:glitch = 2:1)固定,仅可信度变化。",
     "rb.spoiler_level.lv1":"・Lv1 低可信:red 15% / glitch 38%",
@@ -2588,7 +2699,27 @@ function PlayerCards(props){
       actionContent=e("div",{style:{fontSize:compactMode?8:10,color:"#5a5a6a"}},t("event.discard_waiting"));
     }
   }else if(full){var indResult=res||evaluateHand(hands[i]);
-    actionContent=e("div",{style:{fontSize:indResult.hasBull?(compactMode?14:19):(compactMode?10:13),fontWeight:800,color:indResult.hasBull?"#d4af37":"#555",fontFamily:"serif",animation:"fadeUp .4s ease"}},indResult.label);
+    // Roulette animation override: if a count-up rank is active for this player, show it instead
+    var displayLabel=indResult.label;
+    var isRouletteAnimating=false;
+    if(props.rouletteAnimRanks&&typeof props.rouletteAnimRanks[i]!=="undefined"){
+      var animRank=props.rouletteAnimRanks[i];
+      // Only show animated rank for bullRank in 1-10 (actually animated). Otherwise use real label.
+      if(animRank>=1&&animRank<=10){
+        displayLabel=animRank===10?t("hand.niuniu"):t("hand.bull")+animRank;
+        isRouletteAnimating=true;
+      }
+    }
+    var flashAnim=isRouletteAnimating&&props.rouletteAnimFlash?"rouletteFlash 0.6s ease-out":"fadeUp .4s ease";
+    actionContent=e("div",{style:{
+      fontSize:indResult.hasBull?(compactMode?14:19):(compactMode?10:13),
+      fontWeight:800,
+      color:isRouletteAnimating?"#f0d070":(indResult.hasBull?"#d4af37":"#555"),
+      fontFamily:"serif",
+      animation:flashAnim,
+      textShadow:isRouletteAnimating&&props.rouletteAnimFlash?"0 0 12px rgba(240,208,112,0.9), 0 0 24px rgba(240,208,112,0.5)":"none",
+      transition:"text-shadow 0.2s ease"
+    }},displayLabel);
   }else if(phase==="reveal"&&rc.size===0&&!props.eventMode){
     // Normal modes: per-player open button
     actionContent=e("button",{onClick:function(){openThree(i);},style:{padding:compactMode?"3px 14px":"5px 20px",fontSize:compactMode?10:12,fontWeight:700,fontFamily:"inherit",borderRadius:7,border:"1.5px solid var(--accent)",background:"transparent",color:"var(--accent)",cursor:"pointer",letterSpacing:1}},t("game.open_three"));
@@ -2671,8 +2802,25 @@ function NiuNiu(){
   var sh3=useState({}),hurricaneRefills=sh3[0],setHurricaneRefills=sh3[1]; // {pi: card} the new card
   var sh4=useState(new Set()),hurricaneRefilledRevealed=sh4[0],setHurricaneRefilledRevealed=sh4[1]; // pi set of revealed refills
   var sh5=useState(false),eventRulesExpanded=sh5[0],setEventRulesExpanded=sh5[1]; // toggle rule details on event card
+  // Currently selected event id (e.g. "hurricane", "roulette"). Null = not in an event.
+  var se1=useState(null),selectedEvent=se1[0],setSelectedEvent=se1[1];
+  // Track which event card has its rules expanded (id string or null)
+  var se2=useState(null),expandedEventRules=se2[0],setExpandedEventRules=se2[1];
+  // Component-scoped override of getCurrentEvent: reads from state instead of date
+  function getCurrentEvent(){return selectedEvent;}
   var sh6=useState(null),hurricaneAnimatingDiscard=sh6[0],setHurricaneAnimatingDiscard=sh6[1]; // {pi:N, ci:N} during spiral-out animation
   var sh7=useState(new Set()),hurricaneAnimatingRefill=sh7[0],setHurricaneAnimatingRefill=sh7[1]; // Set of pi currently showing spawn animation
+  // Roulette event states
+  var sr1=useState(null),rouletteDelta=sr1[0],setRouletteDelta=sr1[1]; // -9 to +9, null = not rolled yet
+  var sr2=useState(false),rouletteSpinning=sr2[0],setRouletteSpinning=sr2[1];
+  var sr3=useState({}),rouletteOriginalRanks=sr3[0],setRouletteOriginalRanks=sr3[1]; // {pi: original bullRank} before delta applied
+  var sr4=useState(false),rouletteApplied=sr4[0],setRouletteApplied=sr4[1]; // true after delta is applied to hands
+  // Roulette spin animation state: controls the rotation angle and CSS transition
+  var sr5=useState(null),rouletteSpinAnim=sr5[0],setRouletteSpinAnim=sr5[1]; // {rotation, duration, curve} or null
+  // Per-player rank counter during apply animation: {pi: currentBullRank}
+  // null/undefined = not animating; use the actual results
+  var sr6=useState(null),rouletteAnimRanks=sr6[0],setRouletteAnimRanks=sr6[1]; // {pi: currentRank} or null
+  var sr7=useState(false),rouletteAnimFlash=sr7[0],setRouletteAnimFlash=sr7[1]; // pulse the final rank on land
   var sm6=useState(null),peekActive=sm6[0],setPeekActive=sm6[1]; // null | {dir: "h"|"v", phase: "open"|"hold"|"close"}
   var sm7=useState(false),copyFeedback=sm7[0],setCopyFeedback=sm7[1];
   // Battle config: inactive (left) players and dialogs
@@ -3057,6 +3205,18 @@ function NiuNiu(){
     return a;
   }
 
+  // Apply roulette delta to an evaluateHand result.
+  // - bullRank 1-10: shift by delta with modulo wrap (1-10 ring)
+  // - bullRank 0 (no-bull) and ≥14 (special roles): unchanged
+  // bullValue is also updated to match the new bullRank (for payout calc).
+  function applyRouletteToEv(ev, delta){
+    if(!ev||delta===0)return ev;
+    if(ev.bullRank<1||ev.bullRank>10)return ev; // out of scope
+    var newRank=applyRouletteDelta(ev.bullRank, delta);
+    var newLabel=newRank===10?t("hand.niuniu"):t("hand.bull")+newRank;
+    return Object.assign({},ev,{bullRank:newRank,bullValue:newRank,label:newLabel});
+  }
+
   function computeAlerts(allHands){
     var newAlerts={};
     allHands.forEach(function(hand,pi){
@@ -3128,6 +3288,14 @@ function NiuNiu(){
     setHurricaneRefilledRevealed(new Set());
     setHurricaneAnimatingDiscard(null);
     setHurricaneAnimatingRefill(new Set());
+    // Roulette state reset
+    setRouletteDelta(null);
+    setRouletteSpinning(false);
+    setRouletteOriginalRanks({});
+    setRouletteApplied(false);
+    setRouletteSpinAnim(null);
+    setRouletteAnimRanks(null);
+    setRouletteAnimFlash(false);
     if(soundOn)SFX.deal();
     setTimeout(function(){setPhase("reveal");},600);
   }
@@ -3309,6 +3477,194 @@ function NiuNiu(){
   }
 
   // Event mode: open all 5 cards for ALL players at once (single button)
+  // ─── ROULETTE EVENT ACTIONS ─────────────────────────────────
+  // Spin the roulette, animate, land on a delta, then apply to all hands
+  function startRouletteSpin(){
+    if(getCurrentEvent()!=="roulette")return;
+    if(rouletteSpinning||rouletteDelta!==null)return;
+    setRouletteSpinning(true);
+    if(soundOn)SFX.alertGrowBull(); // reuse for spin start
+    var landedDelta=rollRouletteDelta();
+    var nNumbers=19;
+    var deltaAngle=landedDelta*(360/nNumbers);
+    var finalRotation=-deltaAngle+1440; // 4 full spins + landing
+    
+    // === ドキドキ演出パターンランダム選択 ===
+    // 5パターン: A短め, B中, C長, D短フェイク, E長フェイク
+    var patterns=[
+      // [weight, type, duration1, curve1, duration2?, curve2?, fakeAdvance?]
+      {w:25,type:"normal",dur:4500,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
+      {w:25,type:"normal",dur:6500,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
+      {w:20,type:"normal",dur:9000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
+      {w:15,type:"fake",dur1:4800,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:500,dur2:1700,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
+      {w:15,type:"fake",dur1:7800,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:600,dur2:2100,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1} // 1マス手前で止まりかける
+    ];
+    // 重み付き選択
+    var totalW=0;patterns.forEach(function(p){totalW+=p.w;});
+    var roll=Math.random()*totalW;
+    var chosen=patterns[0];
+    var acc=0;
+    for(var pi=0;pi<patterns.length;pi++){
+      acc+=patterns[pi].w;
+      if(roll<acc){chosen=patterns[pi];break;}
+    }
+    // ±10% の時間揺らぎ
+    var jitter=function(v){return Math.round(v*(0.9+Math.random()*0.2));};
+    
+    if(chosen.type==="normal"){
+      var dur=jitter(chosen.dur);
+      setRouletteSpinAnim({rotation:finalRotation,duration:dur,curve:chosen.curve});
+      setTimeout(function(){
+        setRouletteDelta(landedDelta);
+        setRouletteSpinning(false);
+        if(soundOn)SFX.bullFound();
+        setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
+      },dur);
+    }else{
+      // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ
+      var fakeOffsetAngle=chosen.fakeOffset*(360/nNumbers);
+      // 「手前」の意味は方向に依存: 正の方向(時計回り)に回ってきた場合は手前 = 角度的に少し減らす
+      // finalRotation < 0 → 反時計回り基準。-deltaAngle+1440 で、deltaが正だと値が小さい(手前)
+      // 「もう少しで止まる」を表現するには、最終位置の数マス手前で減速完了させる
+      var fakeRotation=finalRotation-fakeOffsetAngle*(landedDelta>=0?1:-1); // 進行方向に依存
+      var d1=jitter(chosen.dur1),d2=jitter(chosen.dur2);
+      setRouletteSpinAnim({rotation:fakeRotation,duration:d1,curve:chosen.curve1});
+      setTimeout(function(){
+        // 一拍休止後、最終位置へ伸びる
+        setTimeout(function(){
+          if(soundOn)SFX.buttonClick();
+          setRouletteSpinAnim({rotation:finalRotation,duration:d2,curve:chosen.curve2});
+          setTimeout(function(){
+            setRouletteDelta(landedDelta);
+            setRouletteSpinning(false);
+            if(soundOn)SFX.bullFound();
+            setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
+          },d2);
+        },chosen.pauseMs);
+      },d1);
+    }
+  }
+
+  // Apply the roulette delta to all hands and update results
+  function applyRouletteToHands(delta){
+    setRouletteApplied(true);
+    if(soundOn)SFX.alertCow();
+    
+    // === Phase 1: Set results immediately (so cards reflect final ranks behind the scenes) ===
+    // But the displayed "label" comes from rouletteAnimRanks during the count-up.
+    var evFinal=hands.map(function(h){return applyRouletteToEv(evaluateHand(h), delta);});
+    setResults(evFinal);
+    
+    // === Phase 2: Count-up animation (2.5s total, all players sync) ===
+    // For each player with bullRank in 1-10, animate from original to final rank.
+    // Players with bullRank 0 or >=14 don't animate (unaffected by roulette).
+    var originalEvs=hands.map(function(h){return evaluateHand(h);});
+    var animatablePIs=[];
+    for(var ai=0;ai<originalEvs.length;ai++){
+      var origBR=originalEvs[ai].bullRank;
+      if(origBR>=1&&origBR<=10&&delta!==0)animatablePIs.push(ai);
+    }
+    
+    var animDurationMs=1500;
+    var totalSteps=Math.abs(delta);
+    
+    if(animatablePIs.length===0||totalSteps===0){
+      // No animation needed (delta=0 or no affected players) — skip directly to results
+      setTimeout(function(){finalizeRouletteRound(delta,evFinal);},500);
+      return;
+    }
+    
+    // Initialize anim ranks at original values
+    var initialAnim={};
+    for(var ipi=0;ipi<originalEvs.length;ipi++){
+      initialAnim[ipi]=originalEvs[ipi].bullRank;
+    }
+    setRouletteAnimRanks(initialAnim);
+    
+    // Each step advances all animatable players by 1 step (towards their target rank)
+    // Direction: delta>0 → +1 per step, delta<0 → -1 per step (with modulo wrap)
+    var stepDir=delta>0?1:-1;
+    var stepInterval=Math.floor(animDurationMs/totalSteps);
+    var currentStep=0;
+    
+    function advanceOneStep(){
+      currentStep++;
+      setRouletteAnimRanks(function(prev){
+        var next=Object.assign({},prev);
+        animatablePIs.forEach(function(pi){
+          var cur=next[pi];
+          // Move 1 step in stepDir, with 1-10 wrap
+          var raw=cur-1+stepDir; // map 1-10 to 0-9
+          var modded=((raw%10)+10)%10;
+          next[pi]=modded+1;
+        });
+        return next;
+      });
+      if(soundOn)SFX.buttonClick(); // tick sound per step
+      if(currentStep<totalSteps){
+        setTimeout(advanceOneStep,stepInterval);
+      }else{
+        // Final step done. Trigger flash effect and finalize after a beat.
+        setRouletteAnimFlash(true);
+        if(soundOn)SFX.bullFound(); // confirmation sound
+        setTimeout(function(){
+          setRouletteAnimFlash(false);
+          finalizeRouletteRound(delta,evFinal);
+        },600);
+      }
+    }
+    setTimeout(advanceOneStep,stepInterval);
+  }
+
+  // Finalize the round after roulette animation completes
+  function finalizeRouletteRound(delta,evFinal){
+    var ev=evFinal;
+    var winnerForHistory=null;
+    if(appMode==="flip"){
+      var bb=-1,bh=-1,bi=0;
+      ev.forEach(function(x,i){if(x.bullRank>bb||(x.bullRank===bb&&x.highCard>bh)){bb=x.bullRank;bh=x.highCard;bi=i;}});
+      setScores(function(p){var n=Object.assign({},p);n[bi]=(n[bi]||0)+1;return n;});
+      setWinner(bi);
+      winnerForHistory=bi;
+    }else{
+      var dealerEv=ev[dealer];
+      var deltas={};for(var ii=0;ii<pc;ii++)deltas[ii]=0;
+      for(var ci2=0;ci2<pc;ci2++){
+        if(ci2===dealer)continue;
+        var childEv=ev[ci2];
+        var dealerWins=dealerEv.bullRank>childEv.bullRank||(dealerEv.bullRank===childEv.bullRank&&dealerEv.highCard>childEv.highCard);
+        var bet=bets[ci2]||1;
+        var mult;
+        if(betRule==="offset"){mult=calcMultiplierOffset(dealerEv.bullValue,childEv.bullValue);}
+        else{mult=dealerWins?calcMultiplierNoOffset(dealerEv.bullValue):calcMultiplierNoOffset(childEv.bullValue);}
+        var amount=Math.round(bet*mult);
+        if(dealerWins){deltas[dealer]+=amount;deltas[ci2]-=amount;}
+        else{deltas[dealer]-=amount;deltas[ci2]+=amount;}
+      }
+      setRoundDeltas(deltas);
+      setChips(function(prev){var n=Object.assign({},prev);for(var k in deltas)n[k]=(n[k]||0)+deltas[k];return n;});
+      var bestDelta=-Infinity,bestIdx=0;
+      for(var k2 in deltas){if(deltas[k2]>bestDelta){bestDelta=deltas[k2];bestIdx=parseInt(k2);}}
+      setWinner(bestIdx);
+      winnerForHistory=bestIdx;
+      setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice(),event:"roulette",rouletteDelta:delta}]);});
+    }
+    pushHistory("niuniu_history_event",{
+      date:new Date().toISOString(),
+      rounds:roundNum+1,
+      playerCount:pc,
+      names:names,
+      winner:winnerForHistory,
+      results:ev,
+      event:"roulette",
+      rouletteDelta:delta
+    });
+    setPhase("result");
+    if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
+    // Clear anim state so result screen uses results normally
+    setRouletteAnimRanks(null);
+  }
+
   function openAllForEvent(){
     if(appMode!=="event")return;
     if(soundOn)SFX.deal();
@@ -3317,9 +3673,10 @@ function NiuNiu(){
       for(var pi=0;pi<pc;pi++){
         ns2[pi].add(0);ns2[pi].add(1);ns2[pi].add(2);ns2[pi].add(3);ns2[pi].add(4);
       }
-      // Transition to hurricane phase
+      var currentEvent=getCurrentEvent();
+      // Transition to the event's specific phase (currently only hurricane uses this)
       setTimeout(function(){
-        if(getCurrentEvent()==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
+        if(currentEvent==="hurricane"&&hurricaneTurn===null&&Object.keys(hurricaneDiscards).length===0){
           var firstChooser=(dealer+1)%pc;
           setHurricaneTurn(firstChooser);
           setPhase("hurricane");
@@ -3393,6 +3750,21 @@ function NiuNiu(){
             setHurricaneTurn(firstChooser);
             setPhase("hurricane");
             if(soundOn)SFX.deal();
+            return; // skip result calculation
+          }
+          // EVENT MODE: Roulette — if event mode and roulette not yet rolled, enter roulette phase
+          if(appMode==="event"&&getCurrentEvent()==="roulette"&&rouletteDelta===null){
+            // Capture original bullRanks for displaying the before→after transition
+            var orig={};
+            for(var ropi=0;ropi<hands.length;ropi++){
+              if(!hands[ropi])continue;
+              var evOrig=evaluateHand(hands[ropi]);
+              orig[ropi]=evOrig.bullRank;
+            }
+            setRouletteOriginalRanks(orig);
+            setPhase("roulette");
+            // Trigger spin after a short delay
+            setTimeout(function(){startRouletteSpin();},700);
             return; // skip result calculation
           }
           var ev=hands.map(function(h){return evaluateHand(h);});
@@ -3710,76 +4082,89 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.11 · © 2026 KTR (",
+            "v1.4.13 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
       resumeOverlay,tutorialOverlay);
   }
 
-  // ─── EVENT Screen (selection / intro) ────────────────────────
+  // ─── EVENT Screen (event list selection) ──────────────────────
   if(appMode==="event"&&phase==="event_select"){
-    var evCard={padding:"14px 16px",borderRadius:12,background:"var(--card)",border:"1px solid var(--card-border)",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.2)"};
     var evKids=[];
-    var curEvent=getCurrentEvent();
-    var curYM=getCurrentEventYM();
 
     // Header
     evKids.push(e("div",{key:"hdr",style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}},
-      e("button",{onClick:function(){setAppMode("home");if(soundOn)SFX.buttonClick();},style:{padding:"5px 12px",borderRadius:6,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("common.back")),
+      e("button",{onClick:function(){setAppMode("home");setSelectedEvent(null);setExpandedEventRules(null);if(soundOn)SFX.buttonClick();},
+        style:{padding:"5px 12px",borderRadius:6,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("common.back")),
       e("div",{style:{fontSize:16,fontWeight:900,color:"#a070e8"}},t("event.title")),
       e("div",{style:{width:60}})));
 
-    // This month's event card
-    evKids.push(e("div",{key:"month",style:{textAlign:"center",marginBottom:10,fontSize:10,color:"var(--text-muted)",letterSpacing:2}},t("event.this_month")+" · "+curYM));
-
-    if(curEvent==="hurricane"){
-      var ruleSteps=[1,2,3,4,5].map(function(n){return t("event.hurricane.rule_step"+n);});
-      var ruleNotes=[1,2,3,4,5].map(function(n){return t("event.hurricane.rule_note"+n);});
-      evKids.push(e("div",{key:"hcard",style:{
-        padding:"24px 18px",borderRadius:16,position:"relative",
-        background:"linear-gradient(165deg,rgba(120,80,200,0.22) 0%,rgba(60,40,100,0.4) 100%)",
-        border:"1.5px solid rgba(140,100,220,0.5)",
-        marginBottom:18,textAlign:"center",
-        boxShadow:"0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1)"}},
-        // Rule book icon (top-right)
-        e("button",{onClick:function(){setEventRulesExpanded(!eventRulesExpanded);if(soundOn)SFX.buttonClick();},
-          title:t("event.hurricane.rule_title"),
-          style:{position:"absolute",top:10,right:10,width:36,height:36,borderRadius:18,
-            border:eventRulesExpanded?"1.5px solid #d0b0ff":"1.5px solid rgba(176,128,240,0.4)",
-            background:eventRulesExpanded?"rgba(176,128,240,0.2)":"rgba(0,0,0,0.25)",
-            color:"#d0b0ff",fontSize:16,cursor:"pointer",fontFamily:"inherit",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            transition:"all 0.2s",zIndex:2}},"📖"),
-        e("div",{style:{fontSize:48,marginBottom:8}},"🌪️"),
-        e("div",{style:{fontSize:22,fontWeight:800,color:"#fff",letterSpacing:1.5,marginBottom:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}},t("event.hurricane.name")),
-        e("div",{style:{fontSize:11,color:"#d0b0ff",letterSpacing:2,marginBottom:14,fontStyle:"italic"}},t("event.hurricane.tagline")),
-        e("div",{style:{fontSize:11,color:"rgba(255,255,255,0.78)",lineHeight:1.7,maxWidth:300,margin:"0 auto 18px",textAlign:"left",padding:"0 8px"}},t("event.hurricane.desc")),
-        // Expanded rules section
-        eventRulesExpanded?e("div",{style:{
-          marginTop:0,marginBottom:18,padding:"14px 14px",borderRadius:10,
-          background:"rgba(0,0,0,0.3)",border:"1px solid rgba(176,128,240,0.3)",
-          textAlign:"left",animation:"fadeUp 0.3s ease"}},
-          e("div",{style:{fontSize:12,fontWeight:800,color:"#d0b0ff",marginBottom:10,letterSpacing:1,textAlign:"center"}},t("event.hurricane.rule_title")),
-          // Numbered steps
-          e("ol",{style:{margin:0,paddingLeft:20,fontSize:10.5,color:"rgba(255,255,255,0.82)",lineHeight:1.7}},
-            ruleSteps.map(function(step,idx){return e("li",{key:idx,style:{marginBottom:5}},step);})),
-          // Notes divider
-          e("div",{style:{height:1,background:"rgba(176,128,240,0.2)",margin:"10px 0"}}),
-          // Notes
-          e("div",{style:{fontSize:9.5,color:"#b8a8d0",lineHeight:1.6,paddingLeft:2}},
-            ruleNotes.map(function(note,idx){return e("div",{key:idx,style:{marginBottom:3}},"※ "+note);}))):null,
-        e("button",{onClick:function(){setPhase("setup");if(soundOn)SFX.buttonClick();},style:{
-          padding:"12px 32px",borderRadius:10,border:"none",
-          background:"linear-gradient(135deg,#b080f0,#7050c0)",
-          color:"#fff",fontSize:14,fontWeight:800,fontFamily:"inherit",
-          cursor:"pointer",letterSpacing:1.2,
-          boxShadow:"0 4px 14px rgba(140,100,220,0.6)"}},t("event.start"))));
-    }
+    // Render each event as a compact card
+    EVENT_LIST.forEach(function(ev){
+      var isExpanded=expandedEventRules===ev.id;
+      var color=ev.color;
+      var bgGrad=ev.id==="hurricane"?
+        "linear-gradient(135deg,rgba(120,80,200,0.18) 0%,rgba(60,40,100,0.32) 100%)":
+        ev.id==="roulette"?
+        "linear-gradient(135deg,rgba(212,175,55,0.14) 0%,rgba(80,40,20,0.36) 100%)":
+        "linear-gradient(135deg,rgba(120,120,160,0.18) 0%,rgba(60,60,80,0.32) 100%)";
+      // Rule lines (steps + notes), only built when expanded
+      var ruleContent=null;
+      if(isExpanded){
+        var ruleSteps=[1,2,3,4,5].map(function(n){return t("event."+ev.id+".rule_step"+n);}).filter(function(s){return s&&s.trim();});
+        var ruleNotes=[1,2,3,4,5].map(function(n){return t("event."+ev.id+".rule_note"+n);}).filter(function(s){return s&&s.trim();});
+        ruleContent=e("div",{style:{background:"rgba(0,0,0,0.35)",borderRadius:8,padding:"10px 12px",marginTop:10,textAlign:"left"}},
+          e("div",{style:{fontSize:10,fontWeight:800,color:color,marginBottom:6,letterSpacing:0.5}},t("event."+ev.id+".rule_title")),
+          e("ol",{style:{fontSize:10,color:"rgba(255,255,255,0.78)",lineHeight:1.6,paddingLeft:18,margin:0}},
+            ruleSteps.map(function(step,idx){return e("li",{key:idx,style:{marginBottom:4}},step);})),
+          ruleNotes.length>0?[
+            e("div",{key:"div",style:{height:1,background:"rgba(255,255,255,0.1)",margin:"8px 0"}}),
+            e("div",{key:"notes",style:{fontSize:9,color:"rgba(255,255,255,0.55)",lineHeight:1.5}},
+              ruleNotes.map(function(note,idx){return e("div",{key:idx,style:{marginBottom:2}},"※ "+note);}))
+          ]:null);
+      }
+      evKids.push(e("div",{key:ev.id,style:{
+        padding:"12px 14px",borderRadius:12,position:"relative",
+        background:bgGrad,
+        border:"1px solid "+color+"55",
+        marginBottom:10,
+        boxShadow:"0 2px 10px rgba(0,0,0,0.3)",
+        transition:"all 0.2s ease"
+      }},
+        // Main row: icon + name + tagline + actions
+        e("div",{style:{display:"flex",alignItems:"center",gap:10}},
+          e("div",{style:{fontSize:26,lineHeight:1}},ev.icon),
+          e("div",{style:{flex:1,minWidth:0}},
+            e("div",{style:{fontSize:14,fontWeight:800,color:"#fff",letterSpacing:0.5,marginBottom:2}},
+              t("event."+ev.id+".name").replace(/^[^a-zA-Zぁ-んァ-ヶー一-龯]+\s*/,"")),
+            e("div",{style:{fontSize:10,color:color,fontStyle:"italic",letterSpacing:0.5}},
+              t("event."+ev.id+".tagline"))),
+          // Rules toggle
+          e("button",{onClick:function(){setExpandedEventRules(isExpanded?null:ev.id);if(soundOn)SFX.buttonClick();},
+            title:t("event."+ev.id+".rule_title"),
+            style:{width:30,height:30,borderRadius:15,
+              border:"1px solid "+color+"66",
+              background:isExpanded?color+"22":"rgba(0,0,0,0.25)",
+              color:color,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              display:"flex",alignItems:"center",justifyContent:"center",padding:0}},"📖"),
+          // Play button
+          e("button",{onClick:function(){setSelectedEvent(ev.id);setPhase("setup");setExpandedEventRules(null);if(soundOn)SFX.buttonClick();},
+            style:{padding:"7px 14px",borderRadius:8,border:"none",
+              background:"linear-gradient(135deg,"+color+","+color+"99)",
+              color:"#fff",fontSize:11,fontWeight:800,fontFamily:"inherit",cursor:"pointer",letterSpacing:1,
+              boxShadow:"0 2px 8px "+color+"66"}},
+            t("event.start_short"))),
+        // Description (always visible, short)
+        e("div",{style:{fontSize:10.5,color:"rgba(255,255,255,0.7)",marginTop:8,lineHeight:1.5,paddingLeft:36}},
+          t("event."+ev.id+".desc")),
+        ruleContent));
+    });
 
     return e("div",{style:{minHeight:"100vh",padding:12,maxWidth:860,margin:"0 auto"}},
       e("div",{style:{maxWidth:440,margin:"0 auto",padding:"12px 0"}},evKids));
   }
+
 
   // ─── SHOP Screen ──────────────────────────────────────────
   if(appMode==="shop"){
@@ -3869,13 +4254,15 @@ function NiuNiu(){
       hsKids.push(e("div",{key:"label",style:{fontSize:10,color:"var(--text-muted)",marginBottom:8,textAlign:"center"}},recentLabel));
       curHist.forEach(function(entry,ei){
         var kids=[];
-        // Detect hurricane event from any round in this entry
+        // Detect events from any round in this entry
         var isHurricane=entry.roundHistory&&entry.roundHistory.length>0&&entry.roundHistory.some(function(r){return r&&r.event==="hurricane";});
-        // Header row: date + (hurricane badge) + players count
+        var isRoulette=entry.roundHistory&&entry.roundHistory.length>0&&entry.roundHistory.some(function(r){return r&&r.event==="roulette";});
+        // Header row: date + (event badge) + players count
         kids.push(e("div",{key:"h",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,fontSize:10,color:"var(--text-muted)"}},
           e("div",{style:{display:"flex",alignItems:"center",gap:6}},
             e("span",null,fmtDate(entry.ts)),
-            isHurricane?e("span",{style:{fontSize:9,padding:"1px 6px",borderRadius:4,background:"rgba(140,100,220,0.15)",border:"1px solid rgba(140,100,220,0.4)",color:"#d0b0ff",fontWeight:700,letterSpacing:0.5}},"🌪️ "+t("event.hurricane.name").replace("🌪️ ","").replace("🌪️","").trim()):null),
+            isHurricane?e("span",{style:{fontSize:9,padding:"1px 6px",borderRadius:4,background:"rgba(140,100,220,0.15)",border:"1px solid rgba(140,100,220,0.4)",color:"#d0b0ff",fontWeight:700,letterSpacing:0.5}},"🌪️ "+t("event.hurricane.name").replace("🌪️ ","").replace("🌪️","").trim()):null,
+            isRoulette?e("span",{style:{fontSize:9,padding:"1px 6px",borderRadius:4,background:"rgba(212,175,55,0.15)",border:"1px solid rgba(212,175,55,0.4)",color:"#f0d070",fontWeight:700,letterSpacing:0.5}},"🎰 "+t("event.roulette.name").replace("🎰 ","").replace("🎰","").trim()):null),
           e("span",null,entry.pc+(currentLang==="en"?"P":t("setup.people")+" · "+entry.rounds+t("game.round")))));
         // Winner highlight
         var winnerNames=(entry.winners||[]).map(function(idx){
@@ -4342,20 +4729,32 @@ function NiuNiu(){
       rbKids.push(e("div",{key:"m2evt",style:Object.assign({},rbCard,{border:"1px solid rgba(140,100,220,0.4)",background:"linear-gradient(135deg,rgba(140,100,220,0.06) 0%,var(--card) 100%)"})},
         e("div",{style:Object.assign({},rbTitle,{color:"#b080f0"})},t("rb.event_mode")),
         e("div",{style:rbText},t("rb.event_mode.desc")),
-        e("div",{style:rbSub},t("rb.event_mode.flow")),
+        // How to access
+        e("div",{style:rbSub},t("rb.event_mode.howto")),
         e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8}},
-          t("rb.event_mode.flow.s1"),e("br"),
-          t("rb.event_mode.flow.s2"),e("br"),
-          t("rb.event_mode.flow.s3"),e("br"),
-          t("rb.event_mode.flow.s4")),
-        e("div",{style:rbSub},t("rb.event_mode.feat")),
-        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8}},
-          t("rb.event_mode.feat.s1"),e("br"),
-          t("rb.event_mode.feat.s2"),e("br"),
-          t("rb.event_mode.feat.s3"),e("br"),
-          t("rb.event_mode.feat.s4"),e("br"),
-          t("rb.event_mode.feat.s5"),e("br"),
-          t("rb.event_mode.feat.s6"))));
+          t("rb.event_mode.howto.s1"),e("br"),
+          t("rb.event_mode.howto.s2"),e("br"),
+          t("rb.event_mode.howto.s3")),
+        // Hurricane sub-section
+        e("div",{style:Object.assign({},rbSub,{color:"#b080f0",marginTop:14})},t("rb.event_mode.hurricane")),
+        e("div",{style:Object.assign({},rbText,{fontSize:10.5})},t("rb.event_mode.hurricane.desc")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8,marginTop:6}},
+          t("rb.event_mode.hurricane.s1"),e("br"),
+          t("rb.event_mode.hurricane.s2"),e("br"),
+          t("rb.event_mode.hurricane.s3"),e("br"),
+          t("rb.event_mode.hurricane.s4"),e("br"),
+          t("rb.event_mode.hurricane.s5"),e("br"),
+          t("rb.event_mode.hurricane.s6")),
+        // Roulette sub-section
+        e("div",{style:Object.assign({},rbSub,{color:"#d4af37",marginTop:14})},t("rb.event_mode.roulette")),
+        e("div",{style:Object.assign({},rbText,{fontSize:10.5})},t("rb.event_mode.roulette.desc")),
+        e("div",{style:{fontSize:10,color:"var(--text-muted)",lineHeight:1.8,marginTop:6}},
+          t("rb.event_mode.roulette.s1"),e("br"),
+          t("rb.event_mode.roulette.s2"),e("br"),
+          t("rb.event_mode.roulette.s3"),e("br"),
+          t("rb.event_mode.roulette.s4"),e("br"),
+          t("rb.event_mode.roulette.s5"),e("br"),
+          t("rb.event_mode.roulette.s6"))));
 
       // 先バレ強度
       rbKids.push(e("div",{key:"m2spo",style:rbCard},
@@ -4776,8 +5175,8 @@ function NiuNiu(){
           e("span",{style:{color:"var(--accent)",fontWeight:800,fontSize:12}},chipVal));
     })));
 
-  // Deck tracker (event mode only): 4 suits × 13 ranks grid, used cards greyed out
-  if(appMode==="event"&&hands&&hands.length>0&&phase!=="setup"&&phase!=="summary"){
+  // Deck tracker (hurricane event only): 4 suits × 13 ranks grid, used cards greyed out
+  if(appMode==="event"&&getCurrentEvent()==="hurricane"&&hands&&hands.length>0&&phase!=="setup"&&phase!=="summary"){
     // Build set of REVEALED cards (only what the players have actually seen).
     // Discarded cards return to the pool (per hurricaneRefill logic), so they're NOT counted as used here.
     var usedSet={};
@@ -4822,7 +5221,7 @@ function NiuNiu(){
   }
 
   // Event mode: centralized "open all 5 cards" button (before any card has been revealed)
-  if(appMode==="event"&&phase==="reveal"&&hands&&hands.length>0&&revealedCards&&revealedCards.every(function(s){return s.size===0;})){
+  if(appMode==="event"&&getCurrentEvent()==="hurricane"&&phase==="reveal"&&hands&&hands.length>0&&revealedCards&&revealedCards.every(function(s){return s.size===0;})){
     gameChildren.push(e("div",{key:"open-all-event",style:{textAlign:"center",margin:"10px 0 14px"}},
       e("button",{onClick:function(){openAllForEvent();},style:{
         padding:"14px 28px",borderRadius:12,border:"none",
@@ -4831,6 +5230,138 @@ function NiuNiu(){
         cursor:"pointer",letterSpacing:1.5,
         boxShadow:"0 4px 18px rgba(140,100,220,0.6),inset 0 1px 0 rgba(255,255,255,0.2)",
         animation:"squeezePulse 1.8s ease-in-out infinite"}},t("game.open_five"))));
+  }
+
+  // Roulette result badge: shown in result phase to keep the delta visible
+  if(appMode==="event"&&phase==="result"&&getCurrentEvent()==="roulette"&&rouletteDelta!==null){
+    var badgeColor=rouletteDelta===0?"#d4af37":(rouletteDelta>0?"#b080f0":"#5a6dba");
+    var badgeBg=rouletteDelta===0?"rgba(212,175,55,0.15)":(rouletteDelta>0?"rgba(112,80,192,0.18)":"rgba(58,74,138,0.18)");
+    gameChildren.push(e("div",{key:"roulette-badge",style:{
+      display:"flex",justifyContent:"center",alignItems:"center",gap:10,
+      margin:"6px 0 10px",padding:"8px 14px",
+      background:badgeBg,
+      border:"1.5px solid "+badgeColor,
+      borderRadius:10,
+      maxWidth:240,marginLeft:"auto",marginRight:"auto"
+    }},
+      e("span",{style:{fontSize:18}},"🎰"),
+      e("span",{style:{fontSize:11,color:"var(--text-muted)",fontWeight:600,letterSpacing:0.5}},t("event.roulette.result")),
+      e("span",{style:{
+        fontSize:22,fontWeight:900,
+        color:rouletteDelta===0?"#d4af37":"#fff",
+        letterSpacing:1.5,
+        textShadow:rouletteDelta===0?"0 0 8px rgba(212,175,55,0.5)":"none"
+      }},(rouletteDelta>0?"+":"")+rouletteDelta)));
+  }
+
+  // Roulette UI: shown during phase="roulette" in roulette event
+  if(appMode==="event"&&phase==="roulette"&&getCurrentEvent()==="roulette"){
+    var rouletteSize=180;
+    var nNumbers=19; // -9 to +9
+    // rouletteSpinAnim drives the wheel: {rotation, duration(ms), curve}
+    // - null + delta null = idle (before spin starts, briefly)
+    // - non-null while spinning = current animation target
+    // - delta set + non-null = landed (final position)
+    var wheelTransform="rotate(0deg)";
+    var wheelTransition="none";
+    if(rouletteSpinAnim){
+      wheelTransform="rotate("+rouletteSpinAnim.rotation+"deg)";
+      wheelTransition="transform "+rouletteSpinAnim.duration+"ms "+rouletteSpinAnim.curve;
+    }
+    // Build wheel sectors
+    var sectors=[];
+    for(var ni=0;ni<nNumbers;ni++){
+      var d=ni-9; // -9 to +9
+      var angle=(d*(360/nNumbers));
+      var bgColor;
+      if(d===0)bgColor="#d4af37"; // gold for center
+      else if(Math.abs(d)>=7)bgColor=d>0?"#e63946":"#1d3557"; // extreme colors
+      else if(d>0)bgColor="#7050c0"; // purple for +
+      else bgColor="#3a4a8a"; // dark blue for -
+      sectors.push(e("div",{key:"sect"+d,style:{
+        position:"absolute",
+        left:"50%",top:"50%",
+        width:"4px",height:rouletteSize/2+"px",
+        background:bgColor,
+        transformOrigin:"0 0",
+        transform:"rotate("+angle+"deg) translateX(-2px)",
+        opacity:0.7
+      }}));
+      // Number label
+      var labelRadius=rouletteSize/2-22;
+      var rad=angle*Math.PI/180;
+      var lx=labelRadius*Math.sin(rad);
+      var ly=-labelRadius*Math.cos(rad);
+      sectors.push(e("div",{key:"lbl"+d,style:{
+        position:"absolute",
+        left:"50%",top:"50%",
+        transform:"translate(-50%,-50%) translate("+lx+"px,"+ly+"px) rotate("+angle+"deg)",
+        fontSize:11,fontWeight:800,color:"#fff",
+        textShadow:"0 0 4px rgba(0,0,0,0.8)",
+        pointerEvents:"none"
+      }},(d>0?"+":"")+d));
+    }
+    gameChildren.push(e("div",{key:"roulette",style:{
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      margin:"20px 0",position:"relative"
+    }},
+      // Title text
+      e("div",{style:{fontSize:14,fontWeight:700,color:"var(--accent)",marginBottom:12,letterSpacing:1}},
+        rouletteDelta===null?t("event.roulette.spinning"):t("event.roulette.result")+(rouletteDelta>0?"+":"")+rouletteDelta),
+      // Wheel container
+      e("div",{style:{position:"relative",width:rouletteSize+"px",height:rouletteSize+"px"}},
+        // Pointer (top arrow)
+        e("div",{style:{
+          position:"absolute",top:"-10px",left:"50%",
+          transform:"translateX(-50%)",
+          width:0,height:0,
+          borderLeft:"10px solid transparent",borderRight:"10px solid transparent",
+          borderTop:"16px solid #d4af37",
+          zIndex:10,
+          filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.5))"
+        }}),
+        // Outer ring
+        e("div",{style:{
+          position:"absolute",inset:0,
+          borderRadius:"50%",
+          background:"radial-gradient(circle, #1a1a2a 0%, #0d0d1a 70%)",
+          border:"4px solid #d4af37",
+          boxShadow:"0 0 20px rgba(212,175,55,0.4),inset 0 0 30px rgba(0,0,0,0.6)"
+        }}),
+        // Rotating wheel
+        e("div",{style:{
+          position:"absolute",inset:0,
+          transformOrigin:"center center",
+          transform:wheelTransform,
+          transition:wheelTransition
+        }},sectors,
+        // Center hub
+        e("div",{style:{
+          position:"absolute",left:"50%",top:"50%",
+          width:"32px",height:"32px",
+          transform:"translate(-50%,-50%)",
+          borderRadius:"50%",
+          background:"radial-gradient(circle, #d4af37, #8a6f1f)",
+          border:"2px solid #2a1a0a",
+          boxShadow:"0 0 8px rgba(212,175,55,0.6)"
+        }}))
+      ),
+      // Result display when landed
+      rouletteDelta!==null?e("div",{style:{
+        marginTop:14,
+        padding:"8px 18px",
+        borderRadius:8,
+        background:rouletteDelta===0?"rgba(212,175,55,0.15)":(rouletteDelta>0?"rgba(112,80,192,0.2)":"rgba(58,74,138,0.2)"),
+        border:"1.5px solid "+(rouletteDelta===0?"#d4af37":(rouletteDelta>0?"#b080f0":"#5a6dba")),
+        fontSize:24,fontWeight:900,
+        color:rouletteDelta===0?"#d4af37":"#fff",
+        letterSpacing:2,
+        animation:"squeezePulse 1.4s ease-in-out 3"
+      }},(rouletteDelta>0?"+":"")+rouletteDelta):null,
+      // Applying message
+      rouletteApplied?e("div",{style:{marginTop:8,fontSize:11,color:"var(--text-muted)"}},
+        t("event.roulette.applying")):null
+    ));
   }
 
   // Compute peek override from peekActive state
@@ -4860,7 +5391,9 @@ function NiuNiu(){
       hurricaneRefilledRevealed:hurricaneRefilledRevealed,
       hurricaneAnimatingDiscard:hurricaneAnimatingDiscard,
       hurricaneAnimatingRefill:hurricaneAnimatingRefill,
-      eventMode:appMode==="event",
+      rouletteAnimRanks:rouletteAnimRanks,
+      rouletteAnimFlash:rouletteAnimFlash,
+      eventMode:appMode==="event"&&getCurrentEvent()==="hurricane",
       hurricaneDiscard:hurricaneDiscard,hurricaneRevealRefill:hurricaneRevealRefill,
       dealer:dealer});
   });
