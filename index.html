@@ -3524,21 +3524,24 @@ function NiuNiu(){
         }
       }
     }
-    var blackoutDurationMs=2700; // 「来るぞ来るぞ...」感
+    // (blackout duration is now per-pattern via blackoutMs field)
+    
     
     // === ドキドキ演出パターンランダム選択 ===
     // 7パターン: A短め, B中, C長, D短フェイク手前, E長フェイク手前, F短通り過ぎ, G長通り過ぎ
     // - normal: 普通に減速して着地
     // - fake: 手前で一旦止まりかけ → さらに進んで着地 (進行方向に伸びる)
     // - overshoot: 行き過ぎて止まりかけ → 戻って着地 (逆方向に戻る、振り子型)
+    // blackoutMs: 親が牛牛/牛1に到達かつ50%抽選成功した場合、最後のフェーズの何msを blackout で覆うか
+    // 8秒固定: 短いパターンでも長く溜める、blackout 発動時は強烈な「来るぞ来るぞ...」感
     var patterns=[
-      {w:22,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
-      {w:22,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
-      {w:18,type:"normal",dur:18000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
-      {w:11,type:"fake",dur1:9600,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:1000,dur2:3400,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
-      {w:11,type:"fake",dur1:15600,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:1200,dur2:4200,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1}, // 1マス手前で止まりかける
-      {w:8,type:"overshoot",dur1:9800,curve1:"cubic-bezier(0.1, 0.85, 0.18, 1.0)",pauseMs:900,dur2:1800,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2}, // 2マス行き過ぎて戻る (短め)
-      {w:8,type:"overshoot",dur1:16000,curve1:"cubic-bezier(0.08, 0.85, 0.12, 1.0)",pauseMs:1100,dur2:2400,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2} // 2マス行き過ぎて戻る (長め)
+      {w:22,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)",blackoutMs:8000},
+      {w:22,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)",blackoutMs:8000},
+      {w:18,type:"normal",dur:18000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)",blackoutMs:8000},
+      {w:11,type:"fake",dur1:9600,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:1000,dur2:3400,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2,blackoutMs:8000},
+      {w:11,type:"fake",dur1:15600,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:1200,dur2:4200,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1,blackoutMs:8000},
+      {w:8,type:"overshoot",dur1:9800,curve1:"cubic-bezier(0.1, 0.85, 0.18, 1.0)",pauseMs:900,dur2:1800,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2,blackoutMs:8000},
+      {w:8,type:"overshoot",dur1:16000,curve1:"cubic-bezier(0.08, 0.85, 0.12, 1.0)",pauseMs:1100,dur2:2400,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2,blackoutMs:8000}
     ];
     // 重み付き選択
     var totalW=0;patterns.forEach(function(p){totalW+=p.w;});
@@ -3552,41 +3555,47 @@ function NiuNiu(){
     // ±10% の時間揺らぎ
     var jitter=function(v){return Math.round(v*(0.9+Math.random()*0.2));};
     
-    // 共通着地処理: blackout 発動するならスピン完了直前に被せ、その後デルタを公開
-    // - blackout なし: アニメ完了 → デルタ公開 → 余韻3秒 → applyRouletteToHands
-    // - blackout あり: アニメは継続（裏で着地済）、画面に blackout 2.7秒 → 解除 → デルタ公開 → 余韻3秒
+    // 着地完了時の処理 (デルタ公開・余韻)
+    // blackout 中なら blackout を解除してからデルタを公開
     function landRoulette(){
-      if(dealerBlackout){
-        // blackout 開始（スピン完了タイミングと同時）
+      if(dealerBlackout&&rouletteBlackout){
+        // blackout 中: 解除してデルタ公開
+        setRouletteBlackout(false);
+      }
+      setRouletteDelta(landedDelta);
+      setRouletteSpinning(false);
+      if(soundOn)SFX.bullFound();
+      setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
+    }
+    
+    // 「最後の8秒間を blackout で覆う」 - スピン完了タイミングから 8秒巻き戻して発動
+    // - totalRemaining: スピン完了までの残り時間 (ms)
+    // - blackoutMs: 何ms前から blackout を発動するか
+    function scheduleBlackoutBeforeEnd(totalRemainingMs,blackoutMs){
+      if(!dealerBlackout)return;
+      // 全体的に短いパターン (totalRemaining < blackoutMs) は、可能な限り早めに発動
+      // 最低 200ms は回転を見せる
+      var triggerAt=Math.max(200,totalRemainingMs-blackoutMs);
+      setTimeout(function(){
         setRouletteBlackout(true);
         if(soundOn)SFX.alertGrowBull(); // tension sound
-        setTimeout(function(){
-          // blackout 終了 → デルタ公開（盛り上がりMAX）
-          setRouletteBlackout(false);
-          setRouletteDelta(landedDelta);
-          setRouletteSpinning(false);
-          if(soundOn)SFX.bullFound();
-          setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
-        },blackoutDurationMs);
-      }else{
-        // 通常: デルタを即公開、余韻3秒
-        setRouletteDelta(landedDelta);
-        setRouletteSpinning(false);
-        if(soundOn)SFX.bullFound();
-        setTimeout(function(){applyRouletteToHands(landedDelta);},3000);
-      }
+      },triggerAt);
     }
     
     if(chosen.type==="normal"){
       var dur=jitter(chosen.dur);
       setRouletteSpinAnim({rotation:finalRotation,duration:dur,curve:chosen.curve});
+      // 着地アニメ = スピン全体。スピン完了の8秒前から blackout
+      scheduleBlackoutBeforeEnd(dur,chosen.blackoutMs);
       setTimeout(landRoulette,dur);
     }else if(chosen.type==="fake"){
-      // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ
+      // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ (= 着地アニメ)
       var fakeOffsetAngle=chosen.fakeOffset*(360/nNumbers);
       var fakeRotation=finalRotation-fakeOffsetAngle*(landedDelta>=0?1:-1);
       var d1=jitter(chosen.dur1),d2=jitter(chosen.dur2);
       setRouletteSpinAnim({rotation:fakeRotation,duration:d1,curve:chosen.curve1});
+      // 全体の長さ: d1 + pauseMs + d2、ここから 8秒前で blackout
+      scheduleBlackoutBeforeEnd(d1+chosen.pauseMs+d2,chosen.blackoutMs);
       setTimeout(function(){
         setTimeout(function(){
           if(soundOn)SFX.buttonClick();
@@ -3595,11 +3604,13 @@ function NiuNiu(){
         },chosen.pauseMs);
       },d1);
     }else if(chosen.type==="overshoot"){
-      // 通り過ぎ型: 最終位置を 2マス通り越して止まりかけ → 戻って着地 (振り子型)
+      // 通り過ぎ型: 最終位置を 2マス通り越して止まりかけ → 戻って着地 (= 着地アニメ)
       var overshootAngle=chosen.overshootOffset*(360/nNumbers);
       var overshootRotation=finalRotation+overshootAngle*(landedDelta>=0?1:-1);
       var od1=jitter(chosen.dur1),od2=jitter(chosen.dur2);
       setRouletteSpinAnim({rotation:overshootRotation,duration:od1,curve:chosen.curve1});
+      // 全体の長さ: od1 + pauseMs + od2、ここから 8秒前で blackout
+      scheduleBlackoutBeforeEnd(od1+chosen.pauseMs+od2,chosen.blackoutMs);
       setTimeout(function(){
         setTimeout(function(){
           if(soundOn)SFX.buttonClick();
@@ -4146,7 +4157,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.17 · © 2026 KTR (",
+            "v1.4.18 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
