@@ -79,17 +79,22 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',Georgia,
 }
 @keyframes signFlipFlash{
   0%{background:rgba(255,255,255,0)}
-  12%{background:rgba(255,255,255,0.9)}
-  35%{background:rgba(255,255,255,0.7)}
+  4%{background:rgba(255,255,255,0.95)}
+  12%{background:rgba(255,255,255,0.75)}
+  35%{background:rgba(255,255,255,0.55)}
+  70%{background:rgba(255,255,255,0.35)}
   100%{background:rgba(255,255,255,0)}
 }
 @keyframes signFlipText{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(0.4) rotate(-15deg)}
-  12%{opacity:1;transform:translate(-50%,-50%) scale(1.4) rotate(10deg)}
-  28%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(-4deg)}
-  50%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(2deg)}
-  75%{opacity:1;transform:translate(-50%,-50%) scale(1.0) rotate(0deg)}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(0.9) rotate(0deg)}
+  0%{opacity:0;transform:translate(-50%,-50%) scale(0.3) rotate(-20deg)}
+  6%{opacity:1;transform:translate(-50%,-50%) scale(1.6) rotate(12deg)}
+  14%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(-6deg)}
+  22%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(4deg)}
+  35%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(-2deg)}
+  55%{opacity:1;transform:translate(-50%,-50%) scale(1.2) rotate(2deg)}
+  75%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(-1deg)}
+  90%{opacity:0.9;transform:translate(-50%,-50%) scale(1.0) rotate(0deg)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(0.85) rotate(0deg)}
 }
 @keyframes whiteblackPulse{0%,100%{box-shadow:0 0 14px rgba(255,255,255,0.8),0 0 28px rgba(0,0,0,0.85),0 0 50px rgba(255,255,255,0.4);background:linear-gradient(135deg,rgba(255,255,255,0.32) 0%,rgba(0,0,0,0.7) 100%)}50%{box-shadow:0 0 24px rgba(0,0,0,0.95),0 0 50px rgba(255,255,255,0.85),0 0 80px rgba(0,0,0,0.6);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(255,255,255,0.32) 100%)}}
 @keyframes whiteblackBorder{0%{border-color:rgba(255,255,255,1)}25%{border-color:rgba(0,0,0,1)}50%{border-color:rgba(255,255,255,1)}75%{border-color:rgba(0,0,0,1)}100%{border-color:rgba(255,255,255,1)}}
@@ -1312,6 +1317,8 @@ var I18N={
     "setup.people":"人",
     "setup.alert_mode":"演出モード",
     "setup.bet_rule":"倍率ルール",
+    "setup.match_max_cap":"試合内 MaxBet 上限",
+    "setup.match_max_cap_desc":"試合中、親はこの値までを毎ラウンドの MaxBet として設定できます",
     "setup.offset_desc":"役差で計算",
     "setup.no_offset_desc":"勝者の倍率",
     "setup.start":"ゲーム開始",
@@ -1743,6 +1750,8 @@ var I18N={
     "setup.people":"",
     "setup.alert_mode":"Alert Mode",
     "setup.bet_rule":"Multiplier Rule",
+    "setup.match_max_cap":"Match MaxBet Ceiling",
+    "setup.match_max_cap_desc":"During the match, the dealer can set each round's MaxBet up to this value",
     "setup.offset_desc":"By rank difference",
     "setup.no_offset_desc":"Winner's multiplier",
     "setup.start":"Start Game",
@@ -2164,6 +2173,8 @@ var I18N={
     "setup.people":"人",
     "setup.alert_mode":"演出模式",
     "setup.bet_rule":"倍率规则",
+    "setup.match_max_cap":"比赛 MaxBet 上限",
+    "setup.match_max_cap_desc":"比赛中,庄家可在此值内设定每局的 MaxBet",
     "setup.offset_desc":"按牌型差计算",
     "setup.no_offset_desc":"胜者的倍率",
     "setup.start":"开始游戏",
@@ -2881,6 +2892,8 @@ function NiuNiu(){
   var b4=useState({}),bets=b4[0],setBets=b4[1];
   var b5=useState([]),history=b5[0],setHistory=b5[1];
   var b6=useState(10),maxBet=b6[0],setMaxBet=b6[1];
+  // Match-wide cap on maxBet: set before the match starts, restricts the per-round maxBet ceiling
+  var b7=useState(30),matchMaxBetCap=b7[0],setMatchMaxBetCap=b7[1];
   var b7=useState(null),roundDeltas=b7[0],setRoundDeltas=b7[1];
   var b8=useState("rule"),rbTab=b8[0],setRbTab=b8[1];
   // Shortcut presets for bet screens (4 values each)
@@ -2942,6 +2955,14 @@ function NiuNiu(){
   // Sync global on mount
   useEffect(function(){currentLang=lang;},[lang]);
 
+  // Clamp maxBet to matchMaxBetCap (match-wide ceiling).
+  // When the cap is lowered (e.g. user changes cap before match), maxBet should not exceed it.
+  useEffect(function(){
+    if(maxBet>matchMaxBetCap){
+      setMaxBet(matchMaxBetCap);
+    }
+  },[matchMaxBetCap]);
+
   // Clamp all bets to current maxBet when maxBet changes or when entering betting phase.
   // Fixes: stale bets from a previous round can exceed new maxBet and silently get used.
   useEffect(function(){
@@ -2994,13 +3015,14 @@ function NiuNiu(){
       roundNum:roundNum,
       history:history,
       maxBet:maxBet,
+      matchMaxBetCap:matchMaxBetCap,
       dealer:dealer,
       bets:bets,
       phase:phase,
       inactivePlayers:inactivePlayers
     };
     saveBattleSession(session);
-  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,dealer,bets,inactivePlayers]);
+  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,matchMaxBetCap,dealer,bets,inactivePlayers]);
 
   function applyResume(session){
     setPc(session.pc||2);
@@ -3012,6 +3034,7 @@ function NiuNiu(){
     setRoundNum(session.roundNum||0);
     setHistory(session.history||[]);
     setMaxBet(session.maxBet||10);
+    setMatchMaxBetCap(session.matchMaxBetCap||30);
     setDealer(session.dealer||0);
     setBets(session.bets||{});
     setInactivePlayers(session.inactivePlayers||[]);
@@ -3534,11 +3557,11 @@ function NiuNiu(){
     var finalRotation=-deltaAngle+1440; // 4 full spins + landing
     
     // === 符号反転 判定 ===
-    // delta ≠ 0 のとき 10%で発動。発動時、最終 delta を反転する。
+    // delta ≠ 0 のとき 25%で発動。発動時、最終 delta を反転する。
     // blackout 発動中は反転演出が見えないため、ここでは独立判定（視覚効果は別途分岐）。
     var signFlipTriggered=false;
     var finalDelta=landedDelta; // 実際に適用される delta（反転後の値）
-    if(landedDelta!==0&&Math.random()<0.10){
+    if(landedDelta!==0&&Math.random()<0.25){
       signFlipTriggered=true;
       finalDelta=-landedDelta;
     }
@@ -3622,8 +3645,8 @@ function NiuNiu(){
     // 着地アニメ完了の signFlipTime ms 前に反転発動
     // - finalRotation を finalRotationAfterFlip に切り替え（CSS transition で完了）
     // - blackout 発動中は視覚効果スキップ（裏で値だけ反転）
-    var signFlipDurationMs=1600; // 反転アニメ自体の長さ (じっくり溜め)
-    var signFlipLeadMs=1800; // スピン完了の何ms前に発動するか
+    var signFlipDurationMs=4500; // 反転アニメ自体の長さ (じっくり溜め)
+    var signFlipLeadMs=4700; // スピン完了の何ms前に発動するか
     function scheduleSignFlipBeforeEnd(totalRemainingMs){
       if(!signFlipTriggered)return totalRemainingMs;
       // 着地までの残り時間が短すぎる場合は最低200msは反転アニメ
@@ -3637,8 +3660,8 @@ function NiuNiu(){
         if(!rouletteBlackout&&!dealerBlackout){
           setRouletteSignFlip(true);
           if(soundOn)SFX.alertGrowBull(); // surprise sound
-          // 1.4秒後にフラッシュ/テキスト解除（着地直前にクリア）
-          setTimeout(function(){setRouletteSignFlip(false);},1400);
+          // 4.5秒後にフラッシュ/テキスト解除（着地直前にクリア）
+          setTimeout(function(){setRouletteSignFlip(false);},4500);
         }
       },triggerAt);
       // 反転アニメ後の着地は finalRotationAfterFlip 位置（landRoulette ですでに正しい delta を公開）
@@ -4225,7 +4248,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.21 · © 2026 KTR (",
+            "v1.4.23 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5050,6 +5073,27 @@ function NiuNiu(){
               color:sel?"#c0392b":"#8faa8f",textAlign:"center"}},
               e("div",null,t(r.nameKey)),
               e("div",{style:{fontSize:8,color:sel?"rgba(192,57,43,0.7)":"#5a7a5a",marginTop:2}},t(r.descKey)));}))));
+      
+      // Match-wide MaxBet cap (1〜matchMaxBetCap で親が毎ラウンド設定する)
+      var capBtnS={width:34,height:34,borderRadius:7,border:"1px solid rgba(192,57,43,0.2)",background:"rgba(0,0,0,0.2)",color:"#c0392b",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:700};
+      var capShortcuts=[10,20,30,50,100,200];
+      setupKids.push(e("div",{key:"matchcap",style:cardStyle},
+        e("label",{style:labelStyle},t("setup.match_max_cap")),
+        e("div",{style:{fontSize:10,color:"var(--text-dim)",textAlign:"center",marginBottom:8,lineHeight:1.5}},
+          t("setup.match_max_cap_desc")),
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:8}},
+          e("button",{onClick:function(){setMatchMaxBetCap(function(v){return Math.max(1,v-10);});if(soundOn)SFX.buttonClick();},style:capBtnS},"-10"),
+          e("button",{onClick:function(){setMatchMaxBetCap(function(v){return Math.max(1,v-1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},capBtnS,{width:28})},"-"),
+          e("span",{style:{fontSize:24,fontWeight:900,color:"#c0392b",minWidth:60,textAlign:"center"}},matchMaxBetCap),
+          e("button",{onClick:function(){setMatchMaxBetCap(function(v){return Math.min(500,v+1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},capBtnS,{width:28})},"+"),
+          e("button",{onClick:function(){setMatchMaxBetCap(function(v){return Math.min(500,v+10);});if(soundOn)SFX.buttonClick();},style:capBtnS},"+10")),
+        e("div",{style:{display:"flex",gap:5,justifyContent:"center",flexWrap:"wrap"}},
+          capShortcuts.map(function(v){
+            var sel=matchMaxBetCap===v;
+            return e("button",{key:v,onClick:function(){setMatchMaxBetCap(v);if(soundOn)SFX.buttonClick();},style:{padding:"5px 12px",borderRadius:6,fontSize:11,cursor:"pointer",fontFamily:"inherit",
+              background:sel?"#c0392b":"rgba(212,175,55,0.06)",color:sel?"#fff":"#888",fontWeight:sel?700:400,
+              border:sel?"1px solid #c0392b":"1px solid rgba(255,255,255,0.07)"}},v);}))
+      ));
     }
 
     // Start button
@@ -5130,7 +5174,7 @@ function NiuNiu(){
       e("span",{style:{fontSize:9,color:"#c0392b",marginLeft:4,fontWeight:700,background:"rgba(192,57,43,0.1)",padding:"1px 5px",borderRadius:3}},t("battle.dealer_label")),
       e("span",{style:{fontSize:11,fontWeight:800,marginLeft:8,color:dealerChips>0?"#27ae60":dealerChips<0?"#e74c3c":"#888"}},dealerChips>0?"+"+dealerChips:dealerChips)));
 
-    // MaxBet setting
+    // MaxBet setting (capped by matchMaxBetCap for this match)
     var mbBtnS={width:30,height:30,borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"};
     betKids.push(e("div",{key:"maxbet",style:{padding:"8px 10px",borderRadius:8,background:"rgba(192,57,43,0.06)",border:"1px solid rgba(192,57,43,0.15)",marginBottom:14}},
       e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:6}},
@@ -5138,10 +5182,11 @@ function NiuNiu(){
         e("button",{onClick:function(){setMaxBet(function(v){return Math.max(1,v-10);});if(soundOn)SFX.buttonClick();},style:mbBtnS},"-10"),
         e("button",{onClick:function(){setMaxBet(function(v){return Math.max(1,v-1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},mbBtnS,{width:26})},"-"),
         e("span",{style:{fontSize:20,fontWeight:800,color:"var(--accent)",minWidth:44,textAlign:"center"}},maxBet),
-        e("button",{onClick:function(){setMaxBet(function(v){return Math.min(200,v+1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},mbBtnS,{width:26})},"+"),
-        e("button",{onClick:function(){setMaxBet(function(v){return Math.min(200,v+10);});if(soundOn)SFX.buttonClick();},style:mbBtnS},"+10")),
-      e("div",{style:{display:"flex",gap:5,justifyContent:"center"}},
-        maxShortcuts.map(function(v){
+        e("button",{onClick:function(){setMaxBet(function(v){return Math.min(matchMaxBetCap,v+1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},mbBtnS,{width:26})},"+"),
+        e("button",{onClick:function(){setMaxBet(function(v){return Math.min(matchMaxBetCap,v+10);});if(soundOn)SFX.buttonClick();},style:mbBtnS},"+10"),
+        e("span",{style:{fontSize:9,color:"var(--text-dim)",marginLeft:6}},"/"+matchMaxBetCap)),
+      e("div",{style:{display:"flex",gap:5,justifyContent:"center",flexWrap:"wrap"}},
+        maxShortcuts.filter(function(v){return v<=matchMaxBetCap;}).map(function(v){
           var sel=maxBet===v;
           return e("button",{key:v,onClick:function(){setMaxBet(v);if(soundOn)SFX.buttonClick();},style:{padding:"4px 10px",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"inherit",
             background:sel?"#c0392b":"rgba(212,175,55,0.06)",color:sel?"#fff":"#888",fontWeight:sel?700:400,
@@ -5493,7 +5538,7 @@ function NiuNiu(){
         zIndex:8800,
         pointerEvents:"none",
         background:"rgba(255,255,255,0.7)",
-        animation:"signFlipFlash 1.4s ease-out forwards"
+        animation:"signFlipFlash 4.5s ease-out forwards"
       }},
         e("div",{style:{
           position:"absolute",
@@ -5503,7 +5548,7 @@ function NiuNiu(){
           color:"#d4002a",
           textShadow:"0 0 18px rgba(255,80,80,0.9), 0 0 36px rgba(255,40,40,0.5), 0 3px 0 #780015",
           fontFamily:"serif",
-          animation:"signFlipText 1.4s ease-out forwards",
+          animation:"signFlipText 4.5s ease-out forwards",
           whiteSpace:"nowrap"
         }},t("event.roulette.sign_flip_text"))
       ));
