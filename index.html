@@ -1161,6 +1161,8 @@ var I18N={
     "event.roulette.rule_note4":"確率分布：0が高頻度、±1-2中位、±6以上は稀に出る神イベント",
     "event.roulette.rule_note5":"全員共通の変更量なので読み合いの余地あり",
     "event.roulette.spinning":"ルーレット回転中…",
+    "event.roulette.prompt":"運命のルーレットを回せ！",
+    "event.roulette.spin_button":"🎰 ルーレットを回す！",
     "event.roulette.result":"運命の数値: ",
     "event.roulette.applying":"全員の役を更新中…",
     "event.start":"このイベントで始める",
@@ -1596,6 +1598,8 @@ var I18N={
     "event.roulette.rule_note4":"Probability: 0 most common, ±1-2 moderate, ±6+ rare 'divine event'",
     "event.roulette.rule_note5":"Everyone gets the same shift — room for reading the table",
     "event.roulette.spinning":"Roulette spinning...",
+    "event.roulette.prompt":"Spin the wheel of fate!",
+    "event.roulette.spin_button":"🎰 Spin Roulette!",
     "event.roulette.result":"Fate number: ",
     "event.roulette.applying":"Updating everyone's hands...",
     "event.start":"Start This Event",
@@ -2013,6 +2017,8 @@ var I18N={
     "event.roulette.rule_note4":"概率分布:0最常出,±1-2中等,±6以上罕见「神事件」",
     "event.roulette.rule_note5":"全员共通的变化量,可以读心",
     "event.roulette.spinning":"轮盘转动中…",
+    "event.roulette.prompt":"转动命运之轮！",
+    "event.roulette.spin_button":"🎰 转动轮盘！",
     "event.roulette.result":"命运数值:",
     "event.roulette.applying":"更新全员手牌中…",
     "event.start":"开始本活动",
@@ -3493,11 +3499,11 @@ function NiuNiu(){
     // 5パターン: A短め, B中, C長, D短フェイク, E長フェイク
     var patterns=[
       // [weight, type, duration1, curve1, duration2?, curve2?, fakeAdvance?]
-      {w:25,type:"normal",dur:4500,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
-      {w:25,type:"normal",dur:6500,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
-      {w:20,type:"normal",dur:9000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
-      {w:15,type:"fake",dur1:4800,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:500,dur2:1700,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
-      {w:15,type:"fake",dur1:7800,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:600,dur2:2100,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1} // 1マス手前で止まりかける
+      {w:25,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)"},
+      {w:25,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)"},
+      {w:20,type:"normal",dur:18000,curve:"cubic-bezier(0.1, 0.8, 0.12, 1.0)"},
+      {w:15,type:"fake",dur1:9600,curve1:"cubic-bezier(0.1, 0.85, 0.15, 1.0)",pauseMs:1000,dur2:3400,curve2:"cubic-bezier(0.3, 0.7, 0.4, 1.0)",fakeOffset:2}, // 2マス手前で止まりかける
+      {w:15,type:"fake",dur1:15600,curve1:"cubic-bezier(0.08, 0.85, 0.1, 1.0)",pauseMs:1200,dur2:4200,curve2:"cubic-bezier(0.25, 0.7, 0.4, 1.0)",fakeOffset:1} // 1マス手前で止まりかける
     ];
     // 重み付き選択
     var totalW=0;patterns.forEach(function(p){totalW+=p.w;});
@@ -3763,8 +3769,7 @@ function NiuNiu(){
             }
             setRouletteOriginalRanks(orig);
             setPhase("roulette");
-            // Trigger spin after a short delay
-            setTimeout(function(){startRouletteSpin();},700);
+            // No auto-spin: player must press the "spin" button to start
             return; // skip result calculation
           }
           var ev=hands.map(function(h){return evaluateHand(h);});
@@ -4082,7 +4087,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.13 · © 2026 KTR (",
+            "v1.4.14 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5305,9 +5310,11 @@ function NiuNiu(){
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
       margin:"20px 0",position:"relative"
     }},
-      // Title text
-      e("div",{style:{fontSize:14,fontWeight:700,color:"var(--accent)",marginBottom:12,letterSpacing:1}},
-        rouletteDelta===null?t("event.roulette.spinning"):t("event.roulette.result")+(rouletteDelta>0?"+":"")+rouletteDelta),
+      // Dynamic title: prompt to spin / spinning / result
+      e("div",{style:{fontSize:14,fontWeight:700,color:"var(--accent)",marginBottom:12,letterSpacing:1,minHeight:18}},
+        rouletteSpinning?t("event.roulette.spinning"):
+          (rouletteDelta!==null?t("event.roulette.result")+(rouletteDelta>0?"+":"")+rouletteDelta:
+            t("event.roulette.prompt"))),
       // Wheel container
       e("div",{style:{position:"relative",width:rouletteSize+"px",height:rouletteSize+"px"}},
         // Pointer (top arrow)
@@ -5346,6 +5353,21 @@ function NiuNiu(){
           boxShadow:"0 0 8px rgba(212,175,55,0.6)"
         }}))
       ),
+      // Spin button (only shown before spin starts)
+      !rouletteSpinning&&rouletteDelta===null?e("button",{
+        onClick:function(){startRouletteSpin();},
+        style:{
+          marginTop:18,
+          padding:"14px 32px",
+          borderRadius:12,
+          border:"none",
+          background:"linear-gradient(135deg,#d4af37,#a8821a)",
+          color:"#fff",fontSize:14,fontWeight:900,fontFamily:"inherit",
+          cursor:"pointer",letterSpacing:1.5,
+          boxShadow:"0 4px 18px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.3)",
+          animation:"squeezePulse 1.6s ease-in-out infinite"
+        }
+      },t("event.roulette.spin_button")):null,
       // Result display when landed
       rouletteDelta!==null?e("div",{style:{
         marginTop:14,
