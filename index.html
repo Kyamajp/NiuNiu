@@ -3556,43 +3556,29 @@ function NiuNiu(){
     var deltaAngle=landedDelta*(360/nNumbers);
     var finalRotation=-deltaAngle+1440; // 4 full spins + landing
     
-    // === 符号反転 判定 ===
-    // delta ≠ 0 のとき 25%で発動。発動時、最終 delta を反転する。
-    // blackout 発動中は反転演出が見えないため、ここでは独立判定（視覚効果は別途分岐）。
-    var signFlipTriggered=false;
-    var finalDelta=landedDelta; // 実際に適用される delta（反転後の値）
-    if(landedDelta!==0&&Math.random()<0.25){
-      signFlipTriggered=true;
-      finalDelta=-landedDelta;
-    }
-    // 円盤回転角の再計算（符号反転発動時は最終的に -landedDelta の位置に止まる）
-    var finalDeltaAngle=finalDelta*(360/nNumbers);
-    var finalRotationAfterFlip=-finalDeltaAngle+1440;
+    // === 反転判定 (FIRST) ===
+    // delta ≠ 0 のとき 25%で発動。反転が起こる場合は blackout を一切発動させない。
+    var signFlipWillTrigger=(landedDelta!==0&&Math.random()<0.25);
     
     // === BLACKOUT 判定 ===
     // 親(dealer)の最終 bullRank が 牛牛(10) or 牛1(1) になる場合、50%で blackout 発動
-    // - dealer の元 bullRank が 1-10 (ルーレット対象) であること
-    // - 反転後の delta 適用後に 1 or 10 になること
+    // ただし反転が発動する場合は、両イベント同時発生を防ぐため blackout はキャンセル
     var dealerBlackout=false;
-    if(hands[dealer]){
+    if(!signFlipWillTrigger&&hands[dealer]){
       var dealerEvOrig=evaluateHand(hands[dealer]);
       if(dealerEvOrig.bullRank>=1&&dealerEvOrig.bullRank<=10){
-        var dealerFinalRank=applyRouletteDelta(dealerEvOrig.bullRank, finalDelta);
-        if((dealerFinalRank===10||dealerFinalRank===1)&&Math.random()<0.5){
+        var dealerLandedRank=applyRouletteDelta(dealerEvOrig.bullRank, landedDelta);
+        if((dealerLandedRank===10||dealerLandedRank===1)&&Math.random()<0.5){
           dealerBlackout=true;
         }
       }
     }
-    // (blackout duration is now per-pattern via blackoutMs field)
-    
     
     // === ドキドキ演出パターンランダム選択 ===
     // 7パターン: A短め, B中, C長, D短フェイク手前, E長フェイク手前, F短通り過ぎ, G長通り過ぎ
     // - normal: 普通に減速して着地
     // - fake: 手前で一旦止まりかけ → さらに進んで着地 (進行方向に伸びる)
     // - overshoot: 行き過ぎて止まりかけ → 戻って着地 (逆方向に戻る、振り子型)
-    // blackoutMs: 親が牛牛/牛1に到達かつ50%抽選成功した場合、最後のフェーズの何msを blackout で覆うか
-    // 8秒固定: 短いパターンでも長く溜める、blackout 発動時は強烈な「来るぞ来るぞ...」感
     var patterns=[
       {w:22,type:"normal",dur:9000,curve:"cubic-bezier(0.12, 0.7, 0.2, 1.0)",blackoutMs:8000},
       {w:22,type:"normal",dur:13000,curve:"cubic-bezier(0.15, 0.75, 0.18, 1.0)",blackoutMs:8000},
@@ -3602,7 +3588,6 @@ function NiuNiu(){
       {w:8,type:"overshoot",dur1:9800,curve1:"cubic-bezier(0.1, 0.85, 0.18, 1.0)",pauseMs:900,dur2:1800,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2,blackoutMs:8000},
       {w:8,type:"overshoot",dur1:16000,curve1:"cubic-bezier(0.08, 0.85, 0.12, 1.0)",pauseMs:1100,dur2:2400,curve2:"cubic-bezier(0.4, 0.0, 0.3, 1.0)",overshootOffset:2,blackoutMs:8000}
     ];
-    // 重み付き選択
     var totalW=0;patterns.forEach(function(p){totalW+=p.w;});
     var roll=Math.random()*totalW;
     var chosen=patterns[0];
@@ -3614,77 +3599,72 @@ function NiuNiu(){
     // ±10% の時間揺らぎ
     var jitter=function(v){return Math.round(v*(0.9+Math.random()*0.2));};
     
-    // 着地完了時の処理 (デルタ公開・余韻)
-    // blackout 中なら blackout を解除してからデルタを公開
-    function landRoulette(){
-      if(dealerBlackout&&rouletteBlackout){
-        // blackout 中: 解除してデルタ公開
-        setRouletteBlackout(false);
+    // === 反転フェーズ ===
+    // 着地後 500ms 結果を見せた後、事前決定された signFlipWillTrigger に従って反転フェーズに入る。
+    // 反転発動時: rouletteDelta を null に戻し、円盤を -landedDelta 位置へアニメ → 着地 → applyRouletteToHands
+    function maybeRunSignFlipThenFinish(){
+      if(!signFlipWillTrigger){
+        applyRouletteToHands(landedDelta);
+        return;
       }
-      setRouletteDelta(finalDelta);
-      setRouletteSpinning(false);
-      if(soundOn)SFX.bullFound();
-      setTimeout(function(){applyRouletteToHands(finalDelta);},3000);
+      var flippedDelta=-landedDelta;
+      var flippedAngle=flippedDelta*(360/nNumbers);
+      var flippedRotation=-flippedAngle+1440+360; // 1周追加して逆方向感
+      var flipDurationMs=4500;
+      // 1. 結果表示を一旦クリア (rouletteDelta = null) → ルーレット回転中表示に戻る
+      setRouletteDelta(null);
+      setRouletteSpinning(true);
+      // 2. フラッシュ + テキスト発動
+      setRouletteSignFlip(true);
+      if(soundOn)SFX.alertGrowBull();
+      // 3. 円盤を反転位置へアニメ
+      setRouletteSpinAnim({rotation:flippedRotation,duration:flipDurationMs,curve:"cubic-bezier(0.3, 0.0, 0.3, 1.0)"});
+      // 4. フラッシュ/テキスト解除
+      setTimeout(function(){setRouletteSignFlip(false);},flipDurationMs);
+      // 5. 反転アニメ完了後: 着地公開 → 余韻 → applyRouletteToHands
+      setTimeout(function(){
+        setRouletteDelta(flippedDelta);
+        setRouletteSpinning(false);
+        if(soundOn)SFX.bullFound();
+        setTimeout(function(){applyRouletteToHands(flippedDelta);},500);
+      },flipDurationMs);
     }
     
-    // 「最後の8秒間を blackout で覆う」 - スピン完了タイミングから 8秒巻き戻して発動
-    // - totalRemaining: スピン完了までの残り時間 (ms)
-    // - blackoutMs: 何ms前から blackout を発動するか
+    // 着地完了時の処理: 結果公開 → 500ms 結果見せ → 反転判定
+    function landRoulette(){
+      if(dealerBlackout&&rouletteBlackout){
+        setRouletteBlackout(false);
+      }
+      setRouletteDelta(landedDelta);
+      setRouletteSpinning(false);
+      if(soundOn)SFX.bullFound();
+      // 「結果ちょっと見せる」間 (500ms) を置いてから反転判定
+      setTimeout(maybeRunSignFlipThenFinish,500);
+    }
+    
+    // 「最後の8秒間を blackout で覆う」 - スピン完了タイミングから巻き戻して発動
     function scheduleBlackoutBeforeEnd(totalRemainingMs,blackoutMs){
       if(!dealerBlackout)return;
-      // 全体的に短いパターン (totalRemaining < blackoutMs) は、可能な限り早めに発動
-      // 最低 200ms は回転を見せる
       var triggerAt=Math.max(200,totalRemainingMs-blackoutMs);
       setTimeout(function(){
         setRouletteBlackout(true);
-        if(soundOn)SFX.alertGrowBull(); // tension sound
+        if(soundOn)SFX.alertGrowBull();
       },triggerAt);
-    }
-    
-    // === 符号反転スケジューラ ===
-    // 着地アニメ完了の signFlipTime ms 前に反転発動
-    // - finalRotation を finalRotationAfterFlip に切り替え（CSS transition で完了）
-    // - blackout 発動中は視覚効果スキップ（裏で値だけ反転）
-    var signFlipDurationMs=4500; // 反転アニメ自体の長さ (じっくり溜め)
-    var signFlipLeadMs=4700; // スピン完了の何ms前に発動するか
-    function scheduleSignFlipBeforeEnd(totalRemainingMs){
-      if(!signFlipTriggered)return totalRemainingMs;
-      // 着地までの残り時間が短すぎる場合は最低200msは反転アニメ
-      var lead=Math.min(signFlipLeadMs,totalRemainingMs-200);
-      if(lead<400)lead=Math.min(400,totalRemainingMs-100);
-      var triggerAt=totalRemainingMs-lead;
-      setTimeout(function(){
-        // 円盤を反転後の最終位置へ向けて再アニメ
-        setRouletteSpinAnim({rotation:finalRotationAfterFlip,duration:lead,curve:"cubic-bezier(0.3, 0.0, 0.3, 1.0)"});
-        // blackout 中ではない時のみ視覚エフェクト発動
-        if(!rouletteBlackout&&!dealerBlackout){
-          setRouletteSignFlip(true);
-          if(soundOn)SFX.alertGrowBull(); // surprise sound
-          // 4.5秒後にフラッシュ/テキスト解除（着地直前にクリア）
-          setTimeout(function(){setRouletteSignFlip(false);},4500);
-        }
-      },triggerAt);
-      // 反転アニメ後の着地は finalRotationAfterFlip 位置（landRoulette ですでに正しい delta を公開）
-      return totalRemainingMs;
     }
     
     if(chosen.type==="normal"){
       var dur=jitter(chosen.dur);
       setRouletteSpinAnim({rotation:finalRotation,duration:dur,curve:chosen.curve});
-      // 着地アニメ = スピン全体。スピン完了の8秒前から blackout
       scheduleBlackoutBeforeEnd(dur,chosen.blackoutMs);
-      scheduleSignFlipBeforeEnd(dur);
       setTimeout(landRoulette,dur);
     }else if(chosen.type==="fake"){
-      // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ (= 着地アニメ)
+      // フェイクストップ: まず手前で止まりかけ → 短く休止 → 最終マスへ
       var fakeOffsetAngle=chosen.fakeOffset*(360/nNumbers);
       var fakeRotation=finalRotation-fakeOffsetAngle*(landedDelta>=0?1:-1);
       var d1=jitter(chosen.dur1),d2=jitter(chosen.dur2);
       setRouletteSpinAnim({rotation:fakeRotation,duration:d1,curve:chosen.curve1});
-      // 全体の長さ: d1 + pauseMs + d2、ここから 8秒前で blackout
       var totalLen=d1+chosen.pauseMs+d2;
       scheduleBlackoutBeforeEnd(totalLen,chosen.blackoutMs);
-      scheduleSignFlipBeforeEnd(totalLen);
       setTimeout(function(){
         setTimeout(function(){
           if(soundOn)SFX.buttonClick();
@@ -3693,15 +3673,13 @@ function NiuNiu(){
         },chosen.pauseMs);
       },d1);
     }else if(chosen.type==="overshoot"){
-      // 通り過ぎ型: 最終位置を 2マス通り越して止まりかけ → 戻って着地 (= 着地アニメ)
+      // 通り過ぎ型: 最終位置を 2マス通り越して止まりかけ → 戻って着地 (振り子型)
       var overshootAngle=chosen.overshootOffset*(360/nNumbers);
       var overshootRotation=finalRotation+overshootAngle*(landedDelta>=0?1:-1);
       var od1=jitter(chosen.dur1),od2=jitter(chosen.dur2);
       setRouletteSpinAnim({rotation:overshootRotation,duration:od1,curve:chosen.curve1});
-      // 全体の長さ: od1 + pauseMs + od2、ここから 8秒前で blackout
       var totalLenOs=od1+chosen.pauseMs+od2;
       scheduleBlackoutBeforeEnd(totalLenOs,chosen.blackoutMs);
-      scheduleSignFlipBeforeEnd(totalLenOs);
       setTimeout(function(){
         setTimeout(function(){
           if(soundOn)SFX.buttonClick();
@@ -4248,7 +4226,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.23 · © 2026 KTR (",
+            "v1.4.25 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
