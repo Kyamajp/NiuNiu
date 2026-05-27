@@ -3899,17 +3899,23 @@ function NiuNiu(){
           }
           // EVENT MODE: Roulette — if event mode and roulette not yet rolled, enter roulette phase
           if(appMode==="event"&&getCurrentEvent()==="roulette"&&rouletteDelta===null){
-            // Capture original bullRanks for displaying the before→after transition
-            var orig={};
-            for(var ropi=0;ropi<hands.length;ropi++){
-              if(!hands[ropi])continue;
-              var evOrig=evaluateHand(hands[ropi]);
-              orig[ropi]=evOrig.bullRank;
+            // Skip check: if no player has bullRank 1-10, roulette has no effect → skip entirely
+            var anyPlayerInScope=false;
+            var origScope={};
+            for(var rspi=0;rspi<hands.length;rspi++){
+              if(!hands[rspi])continue;
+              var evScope=evaluateHand(hands[rspi]);
+              origScope[rspi]=evScope.bullRank;
+              if(evScope.bullRank>=1&&evScope.bullRank<=10)anyPlayerInScope=true;
             }
-            setRouletteOriginalRanks(orig);
-            setPhase("roulette");
-            // No auto-spin: player must press the "spin" button to start
-            return; // skip result calculation
+            if(anyPlayerInScope){
+              // 通常通り: ルーレットフェーズへ遷移
+              setRouletteOriginalRanks(origScope);
+              setPhase("roulette");
+              return; // skip result calculation
+            }
+            // 全員対象外 → ルーレットフェーズをスキップして通常 result 計算へフォールスルー
+            // (下記の通常 evaluateHand 経路がそのまま動く)
           }
           var ev=hands.map(function(h){return evaluateHand(h);});
           setResults(ev);
@@ -3942,8 +3948,10 @@ function NiuNiu(){
             var bestDelta=-Infinity,bestIdx=0;
             for(var k2 in deltas){if(deltas[k2]>bestDelta){bestDelta=deltas[k2];bestIdx=parseInt(k2);}}
             setWinner(bestIdx);
-            // Save history
-            setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice()}]);});
+            // Save history (include event marker when in roulette event mode)
+            var histEntry={round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice()};
+            if(appMode==="event"&&getCurrentEvent()==="roulette"){histEntry.event="roulette";histEntry.rouletteDelta=0;histEntry.rouletteSkipped=true;}
+            setHistory(function(prev){return prev.concat([histEntry]);});
           }
           setPhase("result");
           if(soundOn){SFX.win();setTimeout(launchConfetti,100);}
@@ -4226,7 +4234,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.25 · © 2026 KTR (",
+            "v1.4.26 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
