@@ -3967,9 +3967,15 @@ function NiuNiu(){
           setJackpotContrib({contribs:jpContribs,target:"pool",total:poolAdd,gross:grossDeltas,net:deltas});
           setTimeout(function(){setJackpotContrib(null);},2900);
         }
+        // Freeze the banner display at the PRE-round value during the gross-display
+        // window. jackpotPool is already newPool (set at L3910 for save integrity),
+        // so without this the banner would jump to the post-accumulation value the
+        // instant cards flip. pending:true keeps the resting look (no glow/bounce)
+        // while display:fromPool overrides the (already-updated) jackpotPool.
+        setJackpotAddAnim({add:poolAdd,from:fromPool,to:toPool,display:fromPool,pending:true});
         // 2) Banner pulses and counts up after coins arrive
         setTimeout(function(){
-          setJackpotAddAnim({add:poolAdd,from:fromPool,to:toPool});
+          setJackpotAddAnim(function(prev){return prev?Object.assign({},prev,{pending:false,display:fromPool}):{add:poolAdd,from:fromPool,to:toPool,display:fromPool,pending:false};});
           if(soundOn)SFX.alertCow();
           var cuSteps=Math.min(30,Math.max(8,poolAdd));
           var cuDur=1000;
@@ -4538,7 +4544,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.33 · © 2026 KTR (",
+            "v1.4.34 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5743,7 +5749,7 @@ function NiuNiu(){
     var jpDisplayVal=jackpotPool;
     if(jackpotDrain!==null)jpDisplayVal=jackpotDrain;
     else if(jackpotAddAnim&&typeof jackpotAddAnim.display==="number")jpDisplayVal=jackpotAddAnim.display;
-    var isAccumulating=jackpotAddAnim!==null;
+    var isAccumulating=(jackpotAddAnim!==null&&!jackpotAddAnim.pending);
     var isDraining=jackpotDrain!==null;
     var bannerGlow=isDraining?"0 0 30px rgba(255,90,30,0.7), 0 0 60px rgba(255,180,20,0.4)"
       :(isAccumulating?"0 0 26px rgba(255,210,60,0.7), 0 0 50px rgba(224,176,32,0.4)"
