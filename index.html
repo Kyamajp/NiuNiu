@@ -261,7 +261,9 @@ var SFX_CLASSIC={
     playNoise(0.3,0.06,0.1);
     // 低いため息
     playTone(110,0.4,"sine",0.04,0.3);
-  }
+  },
+  slotTick:function(){playTone(1600,0.025,"square",0.035);},
+  slotStop:function(){playSnap(0.32,0);playTone(784,0.12,"sine",0.13,0.02);playTone(1047,0.16,"sine",0.14,0.09);playTone(1568,0.2,"triangle",0.08,0.15);}
 };
 // ─── Alert Sound Packs (カスタマイズ可能) ─────────────────────
 // クラシック: 従来通りの不穏な音
@@ -312,7 +314,9 @@ var SFX={
   alertCow:function(){ALERT_CLASSIC.alertCow();},
   alertGrowBull:function(){ALERT_CLASSIC.alertGrowBull();},
   alertWhiteblack:function(){ALERT_CLASSIC.alertWhiteblack();},
-  alertFizzle:function(){SFX_CLASSIC.alertFizzle();}
+  alertFizzle:function(){SFX_CLASSIC.alertFizzle();},
+  slotTick:function(){SFX_CLASSIC.slotTick();},
+  slotStop:function(){SFX_CLASSIC.slotStop();}
 };
 
 // ─── Confetti Engine ─────────────────────────────────────────────
@@ -1223,6 +1227,12 @@ var I18N={
     "event.jackpot.rule_note1":"プールは誰かが獲得するまで累積し続ける",
     "event.jackpot.rule_note2":"親が牛牛以上でもJP獲得対象",
     "event.jackpot.pool":"プール",
+    "jackpot.cool_bet":"今回の賭け金（固定）",
+    "jackpot.slot_spin":"回す",
+    "jackpot.slot_stop":"ストップ",
+    "jackpot.tally_locked":"プール放出まで終了できません",
+    "setup.jp_bet_range":"賭け金レンジ（最低〜最高）",
+    "setup.jp_bet_range_desc":"JPが出るまでを1区切りとし、その範囲から固定betを自動で抽選します",
     "event.start":"このイベントで始める",
     "event.start_short":"遊ぶ",
     "event.discard_prompt":"捨てる札を選んでください",
@@ -1676,6 +1686,12 @@ var I18N={
     "event.jackpot.rule_note1":"The pool keeps growing until someone wins it",
     "event.jackpot.rule_note2":"A dealer with 牛牛+ can also win the jackpot",
     "event.jackpot.pool":"POOL",
+    "jackpot.cool_bet":"Current Bet (fixed)",
+    "jackpot.slot_spin":"SPIN",
+    "jackpot.slot_stop":"STOP",
+    "jackpot.tally_locked":"Can't end until the pool pays out",
+    "setup.jp_bet_range":"Bet Range (min–max)",
+    "setup.jp_bet_range_desc":"A fixed bet is auto-drawn from this range, locked until the jackpot is won",
     "event.start":"Start This Event",
     "event.start_short":"Play",
     "event.discard_prompt":"Choose a card to discard",
@@ -2111,6 +2127,12 @@ var I18N={
     "event.jackpot.rule_note1":"奖池在有人中奖前会一直累积",
     "event.jackpot.rule_note2":"庄家牛牛以上也可中奖",
     "event.jackpot.pool":"奖池",
+    "jackpot.cool_bet":"当前赌注（固定）",
+    "jackpot.slot_spin":"转动",
+    "jackpot.slot_stop":"停止",
+    "jackpot.tally_locked":"奖池清空前无法结束",
+    "setup.jp_bet_range":"赌注范围（最低〜最高）",
+    "setup.jp_bet_range_desc":"在中JP之前固定，从此范围自动抽取赌注",
     "event.start":"开始本活动",
     "event.start_short":"玩",
     "event.discard_prompt":"请选择要弃掉的牌",
@@ -3016,6 +3038,13 @@ function NiuNiu(){
   var b6=useState(10),maxBet=b6[0],setMaxBet=b6[1];
   // Match-wide cap on maxBet: set before the match starts, restricts the per-round maxBet ceiling
   var b7=useState(30),matchMaxBetCap=b7[0],setMatchMaxBetCap=b7[1];
+  // Jackpot "cool" betting: one fixed shared bet per cool (= until JP is won), auto-rolled from [min,max].
+  var jpb1=useState(5),jpBetMin=jpb1[0],setJpBetMin=jpb1[1];
+  var jpb2=useState(30),jpBetMax=jpb2[0],setJpBetMax=jpb2[1];
+  var jpb3=useState(0),jpCoolBet=jpb3[0],setJpCoolBet=jpb3[1];
+  var jpb4=useState(0),jpReelValue=jpb4[0],setJpReelValue=jpb4[1]; // slot reel display value (visual)
+  var jpb5=useState(false),jpReelSpinning=jpb5[0],setJpReelSpinning=jpb5[1];
+  var jpReelRef=useRef({id:null,decel:false}); // slot spin interval id + decel guard
   var b7=useState(null),roundDeltas=b7[0],setRoundDeltas=b7[1];
   var b8=useState("rule"),rbTab=b8[0],setRbTab=b8[1];
   // Shortcut presets for bet screens (4 values each)
@@ -3089,6 +3118,7 @@ function NiuNiu(){
   // Fixes: stale bets from a previous round can exceed new maxBet and silently get used.
   useEffect(function(){
     if(!isBattleLike(appMode))return;
+    if(appMode==="event"&&selectedEvent==="jackpot")return; // jackpot: bets are driven by jpCoolBet, not maxBet — never clamp to maxBet
     setBets(function(prev){
       var changed=false;
       var next=Object.assign({},prev);
@@ -3098,7 +3128,7 @@ function NiuNiu(){
       });
       return changed?next:prev;
     });
-  },[maxBet,phase,appMode]);
+  },[maxBet,phase,appMode,selectedEvent]);
 
   // Get current skin/table
   var curSkin=CARD_SKINS.find(function(s){return s.id===skinId;})||CARD_SKINS[0];
@@ -3138,6 +3168,7 @@ function NiuNiu(){
       history:history,
       maxBet:maxBet,
       matchMaxBetCap:matchMaxBetCap,
+      jpBetMin:jpBetMin,jpBetMax:jpBetMax,jpCoolBet:jpCoolBet,
       jackpotPool:jackpotPool,
       selectedEvent:selectedEvent,
       dealer:dealer,
@@ -3146,7 +3177,7 @@ function NiuNiu(){
       inactivePlayers:inactivePlayers
     };
     saveBattleSession(session);
-  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,matchMaxBetCap,jackpotPool,selectedEvent,dealer,bets,inactivePlayers]);
+  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,matchMaxBetCap,jpBetMin,jpBetMax,jpCoolBet,jackpotPool,selectedEvent,dealer,bets,inactivePlayers]);
 
   function applyResume(session){
     setPc(session.pc||2);
@@ -3159,6 +3190,9 @@ function NiuNiu(){
     setHistory(session.history||[]);
     setMaxBet(session.maxBet||10);
     setMatchMaxBetCap(session.matchMaxBetCap||30);
+    if(typeof session.jpBetMin==="number")setJpBetMin(session.jpBetMin);
+    if(typeof session.jpBetMax==="number")setJpBetMax(session.jpBetMax);
+    if(typeof session.jpCoolBet==="number")setJpCoolBet(session.jpCoolBet);
     if(typeof session.jackpotPool==="number")setJackpotPool(session.jackpotPool);
     setDealer(session.dealer||0);
     setBets(session.bets||{});
@@ -3459,7 +3493,46 @@ function NiuNiu(){
     else SFX.alertRed();
   }
 
+  // Jackpot: pure uniform-int roll in [min,max] (no setState).
+  function rollBetValue(){
+    var lo=Math.max(1,Math.min(jpBetMin,jpBetMax));
+    var hi=Math.max(lo,jpBetMax);
+    return lo+Math.floor(Math.random()*(hi-lo+1));
+  }
+  function rollCoolBet(){var b=rollBetValue();setJpCoolBet(b);return b;}
+  // Slot machine: SPIN starts the reel spinning; STOP decelerates and locks the cool's bet.
+  function startReel(){
+    if(jpReelSpinning)return;
+    setJpReelSpinning(true);
+    jpReelRef.current.decel=false;
+    if(jpReelRef.current.id)clearInterval(jpReelRef.current.id);
+    jpReelRef.current.id=setInterval(function(){setJpReelValue(rollBetValue());if(soundOn)SFX.slotTick();},60);
+  }
+  function stopReel(){
+    if(!jpReelSpinning||jpReelRef.current.decel)return;
+    jpReelRef.current.decel=true;
+    if(jpReelRef.current.id){clearInterval(jpReelRef.current.id);jpReelRef.current.id=null;}
+    var fin=rollBetValue(); // final value (uniform) — reel decelerates and lands on it
+    var delays=[90,130,190,270,380];var i=0;
+    (function step(){
+      if(i<delays.length-1){setJpReelValue(rollBetValue());if(soundOn)SFX.slotTick();var d=delays[i];i++;setTimeout(step,d);}
+      else{setJpReelValue(fin);setJpCoolBet(fin);setJpReelSpinning(false);jpReelRef.current.decel=false;if(soundOn)SFX.slotStop();}
+    })();
+  }
+  // Stop the reel (and its ticking sound) if we leave the betting screen mid-spin.
+  useEffect(function(){
+    if(phase!=="betting"&&jpReelRef.current.id){
+      clearInterval(jpReelRef.current.id);jpReelRef.current.id=null;jpReelRef.current.decel=false;setJpReelSpinning(false);
+    }
+  },[phase]);
   function dealRound(sc){
+    // Jackpot: every round of a cool uses one shared fixed bet (not player-chosen).
+    // Sync all children's bets to jpCoolBet here so payout/history/result-display work unchanged.
+    if(appMode==="event"&&selectedEvent==="jackpot"){
+      var _cb=jpCoolBet;
+      if(_cb<1){_cb=rollBetValue();setJpCoolBet(_cb);} // safety fallback (normally decided via slot)
+      setBets(function(){var nb={};for(var bi=0;bi<pc;bi++)nb[bi]=_cb;return nb;});
+    }
     var deck=createDeck();var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
     setHands(h);var rc=[];for(var i2=0;i2<pc;i2++)rc.push(new Set());setRevealedCards(rc);
     setResults([]);setWinner(null);setPhase("dealing");if(sc)setScores(sc);
@@ -3903,6 +3976,7 @@ function NiuNiu(){
       deltas[bestJp]+=currentPool;
       newPool=0; // reset after win
       jackpotWinInfo={winners:[bestJp],amount:currentPool,perWinner:currentPool};
+      setJpCoolBet(0); setJpReelSpinning(false); // JP claimed → next cool's bet is pending (slot spin)
     }
 
     setRoundDeltas(deltas);
@@ -4544,7 +4618,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.34 · © 2026 KTR (",
+            "v1.4.37 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5296,6 +5370,7 @@ function NiuNiu(){
   // ─── SETUP Screen ──────────────────────────────────────────
   if(phase==="setup"){
     var setupKids=[];
+    var isJackpotMode=(appMode==="event"&&selectedEvent==="jackpot");
     // Back button
     setupKids.push(e("div",{key:"back",style:{marginBottom:12}},
       e("button",{onClick:function(){setAppMode("home");},style:{padding:"5px 12px",borderRadius:6,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("game.home_back"))));
@@ -5372,6 +5447,27 @@ function NiuNiu(){
               e("div",null,t(r.nameKey)),
               e("div",{style:{fontSize:8,color:sel?"rgba(192,57,43,0.7)":"#5a7a5a",marginTop:2}},t(r.descKey)));}))));
       
+      if(isJackpotMode){
+        // Jackpot: per-cool fixed bet range (min/max), replaces the manual MaxBet cap.
+        var rngBtnS={width:30,height:30,borderRadius:7,border:"1px solid rgba(224,176,32,0.25)",background:"rgba(0,0,0,0.2)",color:"#e0b020",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:700};
+        setupKids.push(e("div",{key:"jprange",style:cardStyle},
+          e("label",{style:labelStyle},t("setup.jp_bet_range")),
+          e("div",{style:{fontSize:10,color:"var(--text-dim)",textAlign:"center",marginBottom:8,lineHeight:1.5}},t("setup.jp_bet_range_desc")),
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:6}},
+            e("span",{style:{fontSize:10,color:"#e0b020",fontWeight:700,minWidth:34,textAlign:"right"}},"MIN"),
+            e("button",{onClick:function(){setJpBetMin(function(v){return Math.max(1,v-10);});if(soundOn)SFX.buttonClick();},style:rngBtnS},"-10"),
+            e("button",{onClick:function(){setJpBetMin(function(v){return Math.max(1,v-1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},rngBtnS,{width:26})},"-"),
+            e("span",{style:{fontSize:22,fontWeight:900,color:"var(--accent)",minWidth:52,textAlign:"center"}},jpBetMin),
+            e("button",{onClick:function(){setJpBetMin(function(v){return Math.min(jpBetMax,v+1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},rngBtnS,{width:26})},"+"),
+            e("button",{onClick:function(){setJpBetMin(function(v){return Math.min(jpBetMax,v+10);});if(soundOn)SFX.buttonClick();},style:rngBtnS},"+10")),
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6}},
+            e("span",{style:{fontSize:10,color:"#e0b020",fontWeight:700,minWidth:34,textAlign:"right"}},"MAX"),
+            e("button",{onClick:function(){setJpBetMax(function(v){return Math.max(jpBetMin,v-10);});if(soundOn)SFX.buttonClick();},style:rngBtnS},"-10"),
+            e("button",{onClick:function(){setJpBetMax(function(v){return Math.max(jpBetMin,v-1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},rngBtnS,{width:26})},"-"),
+            e("span",{style:{fontSize:22,fontWeight:900,color:"var(--accent)",minWidth:52,textAlign:"center"}},jpBetMax),
+            e("button",{onClick:function(){setJpBetMax(function(v){return Math.min(500,v+1);});if(soundOn)SFX.buttonClick();},style:Object.assign({},rngBtnS,{width:26})},"+"),
+            e("button",{onClick:function(){setJpBetMax(function(v){return Math.min(500,v+10);});if(soundOn)SFX.buttonClick();},style:rngBtnS},"+10"))));
+      }else{
       // Match-wide MaxBet cap (1〜matchMaxBetCap で親が毎ラウンド設定する)
       var capBtnS={width:34,height:34,borderRadius:7,border:"1px solid rgba(192,57,43,0.2)",background:"rgba(0,0,0,0.2)",color:"#c0392b",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:700};
       var capShortcuts=[10,20,30,50,100,200];
@@ -5392,6 +5488,7 @@ function NiuNiu(){
               background:sel?"#c0392b":"rgba(212,175,55,0.06)",color:sel?"#fff":"#888",fontWeight:sel?700:400,
               border:sel?"1px solid #c0392b":"1px solid rgba(255,255,255,0.07)"}},v);}))
       ));
+      }
     }
 
     // Start button
@@ -5403,6 +5500,7 @@ function NiuNiu(){
         if(soundOn)SFX.buttonClick();
         if(isBattleLike(appMode)){
           setChips(sc);
+          if(appMode==="event"&&selectedEvent==="jackpot"){setJpCoolBet(0);setJpReelSpinning(false);}
           // Ask about random seat before starting
           setBattleConfigMode({mode:"randomSeatAtStart"});
         }
@@ -5455,12 +5553,13 @@ function NiuNiu(){
               e("span",{style:{fontSize:13,fontWeight:800,color:cv>0?"#27ae60":cv<0?"#e74c3c":"#6b8f6b"}},cv>0?"+"+cv:cv));
           })),
         e("div",{style:{marginTop:16}},
-          e("button",{onClick:function(){setPhase("summary");},style:{padding:"8px 20px",borderRadius:7,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}},t("battle.summary_end")))));
+          (function(){var _lk=(appMode==="event"&&selectedEvent==="jackpot"&&jackpotPool>0);return e("button",{onClick:function(){if(_lk)return;setPhase("summary");},disabled:_lk,style:{padding:"8px 20px",borderRadius:7,border:"1px solid var(--card-border)",background:"transparent",color:_lk?"#8a6a2a":"var(--text-muted)",fontSize:11,cursor:_lk?"not-allowed":"pointer",fontFamily:"inherit",opacity:_lk?0.55:1}},_lk?("🔒 "+t("jackpot.tally_locked")):t("battle.summary_end"));})())));
   }
 
   // ─── BETTING Screen (Battle mode) ──────────────────────────
   if(phase==="betting"){
     var betKids=[];
+    var isJackpotMode=(appMode==="event"&&selectedEvent==="jackpot");
     betKids.push(e("div",{key:"hdr",style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
       e("button",{onClick:function(){setPhase("pickDealer");},style:{padding:"5px 12px",borderRadius:6,border:"1px solid var(--card-border)",background:"transparent",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}},t("battle.bet_back")),
       e("div",{style:{fontSize:14,fontWeight:800,color:"var(--accent)"}},"Round "+(roundNum+1)),
@@ -5472,6 +5571,22 @@ function NiuNiu(){
       e("span",{style:{fontSize:9,color:"#c0392b",marginLeft:4,fontWeight:700,background:"rgba(192,57,43,0.1)",padding:"1px 5px",borderRadius:3}},t("battle.dealer_label")),
       e("span",{style:{fontSize:11,fontWeight:800,marginLeft:8,color:dealerChips>0?"#27ae60":dealerChips<0?"#e74c3c":"#888"}},dealerChips>0?"+"+dealerChips:dealerChips)));
 
+    if(isJackpotMode){
+      if(jpCoolBet>=1){
+        // Decided: show the locked fixed bet for this cool (read-only).
+        betKids.push(e("div",{key:"jpbet",style:{padding:"14px 12px",borderRadius:10,background:"rgba(224,176,32,0.08)",border:"1px solid rgba(224,176,32,0.25)",marginBottom:14,textAlign:"center"}},
+          e("div",{style:{fontSize:10,color:"#e0b020",fontWeight:700,letterSpacing:1,marginBottom:4}},"💰 "+t("jackpot.cool_bet")),
+          e("div",{style:{fontSize:38,fontWeight:900,color:"var(--accent)",lineHeight:1}},jpCoolBet),
+          e("div",{style:{fontSize:9,color:"var(--text-dim)",marginTop:6}},jpBetMin+" 〜 "+jpBetMax)));
+      }else{
+        // Pending: slot machine — SPIN to spin the reel, STOP to lock this cool's bet.
+        betKids.push(e("div",{key:"jpslot",style:{padding:"16px 12px",borderRadius:12,background:"rgba(224,176,32,0.08)",border:"2px solid rgba(224,176,32,0.35)",marginBottom:14,textAlign:"center",animation:jpReelSpinning?"winPulse 0.5s ease-in-out infinite":"none"}},
+          e("div",{style:{fontSize:11,color:"#e0b020",fontWeight:800,letterSpacing:2,marginBottom:6}},"🎰 "+t("jackpot.cool_bet")),
+          e("div",{style:{fontSize:52,fontWeight:900,color:jpReelSpinning?"var(--accent)":"#8a6a2a",lineHeight:1,letterSpacing:2,textShadow:jpReelSpinning?"0 0 18px rgba(212,175,55,0.6)":"none",fontVariantNumeric:"tabular-nums"}},jpReelSpinning?jpReelValue:"?"),
+          e("div",{style:{fontSize:9,color:"var(--text-dim)",margin:"6px 0 12px"}},jpBetMin+" 〜 "+jpBetMax),
+          e("button",{onClick:function(){if(jpReelSpinning)stopReel();else startReel();},style:{padding:"11px 36px",fontSize:15,fontWeight:900,fontFamily:"inherit",borderRadius:10,border:"none",cursor:"pointer",letterSpacing:2,color:"#fff",background:jpReelSpinning?"linear-gradient(135deg,#e74c3c,#c0392b)":"linear-gradient(135deg,#e0b020,#b8860b)",boxShadow:jpReelSpinning?"0 3px 14px rgba(231,76,60,0.4)":"0 3px 14px rgba(224,176,32,0.4)"}},jpReelSpinning?("■ "+t("jackpot.slot_stop")):("🎰 "+t("jackpot.slot_spin")))));
+      }
+    }else{
     // MaxBet setting (capped by matchMaxBetCap for this match)
     var mbBtnS={width:30,height:30,borderRadius:6,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",color:"var(--text-muted)",fontSize:10,cursor:"pointer",fontFamily:"inherit"};
     betKids.push(e("div",{key:"maxbet",style:{padding:"8px 10px",borderRadius:8,background:"rgba(192,57,43,0.06)",border:"1px solid rgba(192,57,43,0.15)",marginBottom:14}},
@@ -5525,9 +5640,12 @@ function NiuNiu(){
       })(bi);
     }
     betKids.push(e("div",{key:"bets"},betInputs));
+    }
+    if(!isJackpotMode||jpCoolBet>=1){
     betKids.push(e("div",{key:"go",style:{textAlign:"center",marginTop:14}},
       e("button",{onClick:function(){dealRound(chips);},style:{padding:"10px 32px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:9,border:"none",cursor:"pointer",
         background:"linear-gradient(135deg,var(--accent),var(--accent-dark))",color:"var(--bg)",letterSpacing:2,boxShadow:"0 3px 12px rgba(212,175,55,0.22)"}},t("battle.deal"))));
+    }
 
     return e("div",{style:{minHeight:"100vh",padding:10,maxWidth:860,margin:"0 auto"}},
       e("div",{style:{maxWidth:420,margin:"0 auto",padding:"20px 16px"}},betKids));
@@ -6071,7 +6189,7 @@ function NiuNiu(){
   // Next round
   if(phase==="result"){
     gameChildren.push(e("div",{key:"next",style:{textAlign:"center",marginTop:14,animation:"fadeUp .5s ease",display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}},
-      isBattleLike(appMode)?e("button",{onClick:function(){setPhase("summary");},style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},"📊 "+t("game.final")):null,
+      isBattleLike(appMode)?(function(){var _lk=(appMode==="event"&&selectedEvent==="jackpot"&&jackpotPool>0);return e("button",{onClick:function(){if(_lk)return;setPhase("summary");},disabled:_lk,style:{padding:"9px 20px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:_lk?"#8a6a2a":"#7a9a7a",cursor:_lk?"not-allowed":"pointer",opacity:_lk?0.55:1}},_lk?("🔒 "+t("jackpot.tally_locked")):("📊 "+t("game.final")));})():null,
       isBattleLike(appMode)?e("button",{onClick:function(){if(soundOn)SFX.buttonClick();setBattleConfigMode("menu");},style:{padding:"9px 14px",fontSize:12,fontWeight:700,fontFamily:"inherit",borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"#7a9a7a",cursor:"pointer"}},t("battle.config")):null,
       appMode==="flip"?e("button",{onClick:function(){
         if(soundOn)SFX.buttonClick();
