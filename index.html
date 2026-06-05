@@ -1217,10 +1217,10 @@ var I18N={
     "event.roulette.applying":"全員の役を更新中…",
     "event.jackpot.name":"💰 ジャックポット",
     "event.jackpot.tagline":"役なし敗北がプールを肥やす",
-    "event.jackpot.desc":"役なし(牛0)で負けると、勝者の配当の25%がプールへ。牛牛以上の勝者がプールを総取り＋配当も全額。複数いるときは一番強い役の1人が総取り。",
+    "event.jackpot.desc":"役なし(牛0)で負けると、勝者の配当の25〜50%(クール毎にスロットで変動)がプールへ。牛牛以上の勝者がプールを総取り＋配当も全額。複数いるときは一番強い役の1人が総取り。",
     "event.jackpot.rule_title":"ジャックポットのルール",
     "event.jackpot.rule_step1":"通常通り配布・絞り・勝敗判定",
-    "event.jackpot.rule_step2":"役なし(牛0)のプレイヤーが負けると、勝者の配当の25%がプールへ(残り75%は勝者の手元)",
+    "event.jackpot.rule_step2":"役なし(牛0)のプレイヤーが負けると、勝者の配当の25〜50%(クール毎に変動)がプールへ(残りは勝者の手元)",
     "event.jackpot.rule_step3":"牛1〜牛9の勝者:配当のみ、JP獲得なし",
     "event.jackpot.rule_step4":"牛牛以上(特殊役含む)の勝者:プール総取り＋配当全額(半分カットなし)",
     "event.jackpot.rule_step5":"牛牛以上が複数いるとき:その中で一番強い役の1人がプール総取り",
@@ -1230,6 +1230,7 @@ var I18N={
     "jackpot.cool_bet":"今回の賭け金（固定）",
     "jackpot.slot_spin":"回す",
     "jackpot.slot_stop":"ストップ",
+    "jackpot.cut_pct":"積立率",
     "jackpot.tally_locked":"プール放出まで終了できません",
     "setup.jp_bet_range":"賭け金レンジ（最低〜最高）",
     "setup.jp_bet_range_desc":"JPが出るまでを1区切りとし、その範囲から固定betを自動で抽選します",
@@ -1676,10 +1677,10 @@ var I18N={
     "event.roulette.applying":"Updating everyone's hands...",
     "event.jackpot.name":"💰 Jackpot",
     "event.jackpot.tagline":"No-bull losses feed the pool",
-    "event.jackpot.desc":"When a no-bull (牛0) player loses, 25% of the winner's payout goes to the pool. A winner with 牛牛 or higher takes the whole pool plus full payout. If several qualify, the strongest hand takes it all.",
+    "event.jackpot.desc":"When a no-bull (牛0) player loses, 25-50% (varies per cool) of the winner's payout goes to the pool. A winner with 牛牛 or higher takes the whole pool plus full payout. If several qualify, the strongest hand takes it all.",
     "event.jackpot.rule_title":"Jackpot Rules",
     "event.jackpot.rule_step1":"Deal, squeeze, and decide winners as normal",
-    "event.jackpot.rule_step2":"When a no-bull (牛0) player loses, 25% of the winner's payout goes to the pool (winner keeps the other 75%)",
+    "event.jackpot.rule_step2":"When a no-bull (牛0) player loses, 25-50% (varies per cool) of the winner's payout goes to the pool (winner keeps the rest)",
     "event.jackpot.rule_step3":"Winners with 牛1–牛9: payout only, no jackpot",
     "event.jackpot.rule_step4":"Winners with 牛牛+ (incl. special): take the whole pool + full payout (no half-cut)",
     "event.jackpot.rule_step5":"If multiple players have 牛牛+: the single strongest hand takes the whole pool",
@@ -1689,6 +1690,7 @@ var I18N={
     "jackpot.cool_bet":"Current Bet (fixed)",
     "jackpot.slot_spin":"SPIN",
     "jackpot.slot_stop":"STOP",
+    "jackpot.cut_pct":"Cut %",
     "jackpot.tally_locked":"Can't end until the pool pays out",
     "setup.jp_bet_range":"Bet Range (min–max)",
     "setup.jp_bet_range_desc":"A fixed bet is auto-drawn from this range, locked until the jackpot is won",
@@ -2117,10 +2119,10 @@ var I18N={
     "event.roulette.applying":"更新全员手牌中…",
     "event.jackpot.name":"💰 头奖",
     "event.jackpot.tagline":"无役落败者养肥奖池",
-    "event.jackpot.desc":"无役(牛0)落败时,赢家配当的25%进入奖池。牛牛以上的赢家独得奖池+全额配当。多人符合时,最强的一人独得。",
+    "event.jackpot.desc":"无役(牛0)落败时,赢家配当的25〜50%(每轮变动)进入奖池。牛牛以上的赢家独得奖池+全额配当。多人符合时,最强的一人独得。",
     "event.jackpot.rule_title":"头奖规则",
     "event.jackpot.rule_step1":"正常发牌、挤牌、定胜负",
-    "event.jackpot.rule_step2":"无役(牛0)的玩家落败时,赢家配当的25%进入奖池(其余75%归赢家)",
+    "event.jackpot.rule_step2":"无役(牛0)的玩家落败时,赢家配当的25〜50%(每轮变动)进入奖池(其余归赢家)",
     "event.jackpot.rule_step3":"牛1〜牛9的赢家:只拿配当,不获奖池",
     "event.jackpot.rule_step4":"牛牛以上(含特殊役)的赢家:独得奖池+配当全额(不减半)",
     "event.jackpot.rule_step5":"有多名牛牛以上时:其中最强的一人独得奖池",
@@ -2130,6 +2132,7 @@ var I18N={
     "jackpot.cool_bet":"当前赌注（固定）",
     "jackpot.slot_spin":"转动",
     "jackpot.slot_stop":"停止",
+    "jackpot.cut_pct":"累积率",
     "jackpot.tally_locked":"奖池清空前无法结束",
     "setup.jp_bet_range":"赌注范围（最低〜最高）",
     "setup.jp_bet_range_desc":"在中JP之前固定，从此范围自动抽取赌注",
@@ -3045,6 +3048,8 @@ function NiuNiu(){
   var jpb4=useState(0),jpReelValue=jpb4[0],setJpReelValue=jpb4[1]; // slot reel display value (visual)
   var jpb5=useState(false),jpReelSpinning=jpb5[0],setJpReelSpinning=jpb5[1];
   var jpReelRef=useRef({id:null,decel:false}); // slot spin interval id + decel guard
+  var jpb6=useState(25),jpCutPct=jpb6[0],setJpCutPct=jpb6[1];           // JP pool cut % for this cool (25-50)
+  var jpb7=useState(25),jpCutReelValue=jpb7[0],setJpCutReelValue=jpb7[1]; // cut% reel display (visual)
   var b7=useState(null),roundDeltas=b7[0],setRoundDeltas=b7[1];
   var b8=useState("rule"),rbTab=b8[0],setRbTab=b8[1];
   // Shortcut presets for bet screens (4 values each)
@@ -3168,7 +3173,7 @@ function NiuNiu(){
       history:history,
       maxBet:maxBet,
       matchMaxBetCap:matchMaxBetCap,
-      jpBetMin:jpBetMin,jpBetMax:jpBetMax,jpCoolBet:jpCoolBet,
+      jpBetMin:jpBetMin,jpBetMax:jpBetMax,jpCoolBet:jpCoolBet,jpCutPct:jpCutPct,
       jackpotPool:jackpotPool,
       selectedEvent:selectedEvent,
       dealer:dealer,
@@ -3177,7 +3182,7 @@ function NiuNiu(){
       inactivePlayers:inactivePlayers
     };
     saveBattleSession(session);
-  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,matchMaxBetCap,jpBetMin,jpBetMax,jpCoolBet,jackpotPool,selectedEvent,dealer,bets,inactivePlayers]);
+  },[appMode,phase,roundNum,chips,history,pc,names,betRule,gameMode,spoilerLevel,maxBet,matchMaxBetCap,jpBetMin,jpBetMax,jpCoolBet,jpCutPct,jackpotPool,selectedEvent,dealer,bets,inactivePlayers]);
 
   function applyResume(session){
     setPc(session.pc||2);
@@ -3193,6 +3198,7 @@ function NiuNiu(){
     if(typeof session.jpBetMin==="number")setJpBetMin(session.jpBetMin);
     if(typeof session.jpBetMax==="number")setJpBetMax(session.jpBetMax);
     if(typeof session.jpCoolBet==="number")setJpCoolBet(session.jpCoolBet);
+    if(typeof session.jpCutPct==="number")setJpCutPct(session.jpCutPct);
     if(typeof session.jackpotPool==="number")setJackpotPool(session.jackpotPool);
     setDealer(session.dealer||0);
     setBets(session.bets||{});
@@ -3500,23 +3506,25 @@ function NiuNiu(){
     return lo+Math.floor(Math.random()*(hi-lo+1));
   }
   function rollCoolBet(){var b=rollBetValue();setJpCoolBet(b);return b;}
-  // Slot machine: SPIN starts the reel spinning; STOP decelerates and locks the cool's bet.
+  // Jackpot: pure uniform-int roll for the pool cut % in [25,50].
+  function rollCutPct(){return 25+Math.floor(Math.random()*26);}
+  // Slot machine: SPIN spins BOTH reels (bet + cut%); STOP decelerates and locks both at once.
   function startReel(){
     if(jpReelSpinning)return;
     setJpReelSpinning(true);
     jpReelRef.current.decel=false;
     if(jpReelRef.current.id)clearInterval(jpReelRef.current.id);
-    jpReelRef.current.id=setInterval(function(){setJpReelValue(rollBetValue());if(soundOn)SFX.slotTick();},60);
+    jpReelRef.current.id=setInterval(function(){setJpReelValue(rollBetValue());setJpCutReelValue(rollCutPct());if(soundOn)SFX.slotTick();},60);
   }
   function stopReel(){
     if(!jpReelSpinning||jpReelRef.current.decel)return;
     jpReelRef.current.decel=true;
     if(jpReelRef.current.id){clearInterval(jpReelRef.current.id);jpReelRef.current.id=null;}
-    var fin=rollBetValue(); // final value (uniform) — reel decelerates and lands on it
+    var finBet=rollBetValue(),finCut=rollCutPct(); // final values (uniform) — both reels land on these
     var delays=[90,130,190,270,380];var i=0;
     (function step(){
-      if(i<delays.length-1){setJpReelValue(rollBetValue());if(soundOn)SFX.slotTick();var d=delays[i];i++;setTimeout(step,d);}
-      else{setJpReelValue(fin);setJpCoolBet(fin);setJpReelSpinning(false);jpReelRef.current.decel=false;if(soundOn)SFX.slotStop();}
+      if(i<delays.length-1){setJpReelValue(rollBetValue());setJpCutReelValue(rollCutPct());if(soundOn)SFX.slotTick();var d=delays[i];i++;setTimeout(step,d);}
+      else{setJpReelValue(finBet);setJpCutReelValue(finCut);setJpCoolBet(finBet);setJpCutPct(finCut);setJpReelSpinning(false);jpReelRef.current.decel=false;if(soundOn)SFX.slotStop();}
     })();
   }
   // Stop the reel (and its ticking sound) if we leave the betting screen mid-spin.
@@ -3928,11 +3936,11 @@ function NiuNiu(){
       var winnerEv=dealerWins?dealerEv:childEv;
       var loserEv=dealerWins?childEv:dealerEv;
       // Pool cut: loser is 役なし AND winner is NOT jackpot-rank (牛牛以上はカットされない).
-      // 25% of the payout goes to the pool; remainder (incl. fraction) stays with the winner.
+      // A per-cool % (25-50, set by the slot) of the payout goes to the pool; remainder (incl. fraction) stays with the winner.
       var poolCut=0;
       var winnerGets=amount;
       if(isNoBull(loserEv)&&!isJackpotRank(winnerEv)){
-        poolCut=Math.floor(amount*0.25); // 端数は勝者へ: プール側を切り捨て
+        poolCut=Math.floor(amount*(jpCutPct/100)); // 端数は勝者へ: プール側を切り捨て
         winnerGets=amount-poolCut;
         if(poolCut>0){
           // The winner of this match contributes poolCut to the pool
@@ -4618,7 +4626,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.37 · © 2026 KTR (",
+            "v1.4.38 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5573,17 +5581,27 @@ function NiuNiu(){
 
     if(isJackpotMode){
       if(jpCoolBet>=1){
-        // Decided: show the locked fixed bet for this cool (read-only).
-        betKids.push(e("div",{key:"jpbet",style:{padding:"14px 12px",borderRadius:10,background:"rgba(224,176,32,0.08)",border:"1px solid rgba(224,176,32,0.25)",marginBottom:14,textAlign:"center"}},
-          e("div",{style:{fontSize:10,color:"#e0b020",fontWeight:700,letterSpacing:1,marginBottom:4}},"💰 "+t("jackpot.cool_bet")),
-          e("div",{style:{fontSize:38,fontWeight:900,color:"var(--accent)",lineHeight:1}},jpCoolBet),
-          e("div",{style:{fontSize:9,color:"var(--text-dim)",marginTop:6}},jpBetMin+" 〜 "+jpBetMax)));
+        // Decided: show this cool's locked bet AND pool cut % (read-only).
+        betKids.push(e("div",{key:"jpbet",style:{padding:"12px",borderRadius:10,background:"rgba(224,176,32,0.08)",border:"1px solid rgba(224,176,32,0.25)",marginBottom:14}},
+          e("div",{style:{display:"flex",justifyContent:"space-around",alignItems:"center"}},
+            e("div",{style:{textAlign:"center"}},
+              e("div",{style:{fontSize:10,color:"#e0b020",fontWeight:700,letterSpacing:1,marginBottom:3}},"💰 BET"),
+              e("div",{style:{fontSize:34,fontWeight:900,color:"var(--accent)",lineHeight:1}},jpCoolBet)),
+            e("div",{style:{width:1,alignSelf:"stretch",background:"rgba(224,176,32,0.25)",margin:"0 4px"}}),
+            e("div",{style:{textAlign:"center"}},
+              e("div",{style:{fontSize:10,color:"#e0b020",fontWeight:700,letterSpacing:1,marginBottom:3}},"📥 "+t("jackpot.cut_pct")),
+              e("div",{style:{fontSize:34,fontWeight:900,color:"#e0b020",lineHeight:1}},jpCutPct+"%")))));
       }else{
-        // Pending: slot machine — SPIN to spin the reel, STOP to lock this cool's bet.
+        // Pending: slot — SPIN spins both reels (bet + cut%), STOP locks both at once.
+        var reelNum=function(label,val,sub){return e("div",{style:{textAlign:"center",flex:1}},
+          e("div",{style:{fontSize:10,color:"#e0b020",fontWeight:800,letterSpacing:1,marginBottom:4}},label),
+          e("div",{style:{fontSize:44,fontWeight:900,color:jpReelSpinning?"var(--accent)":"#8a6a2a",lineHeight:1,letterSpacing:1,textShadow:jpReelSpinning?"0 0 16px rgba(212,175,55,0.6)":"none",fontVariantNumeric:"tabular-nums"}},val),
+          e("div",{style:{fontSize:9,color:"var(--text-dim)",marginTop:5}},sub));};
         betKids.push(e("div",{key:"jpslot",style:{padding:"16px 12px",borderRadius:12,background:"rgba(224,176,32,0.08)",border:"2px solid rgba(224,176,32,0.35)",marginBottom:14,textAlign:"center",animation:jpReelSpinning?"winPulse 0.5s ease-in-out infinite":"none"}},
-          e("div",{style:{fontSize:11,color:"#e0b020",fontWeight:800,letterSpacing:2,marginBottom:6}},"🎰 "+t("jackpot.cool_bet")),
-          e("div",{style:{fontSize:52,fontWeight:900,color:jpReelSpinning?"var(--accent)":"#8a6a2a",lineHeight:1,letterSpacing:2,textShadow:jpReelSpinning?"0 0 18px rgba(212,175,55,0.6)":"none",fontVariantNumeric:"tabular-nums"}},jpReelSpinning?jpReelValue:"?"),
-          e("div",{style:{fontSize:9,color:"var(--text-dim)",margin:"6px 0 12px"}},jpBetMin+" 〜 "+jpBetMax),
+          e("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"center",marginBottom:12}},
+            reelNum("💰 BET",jpReelSpinning?String(jpReelValue):"?",jpBetMin+"〜"+jpBetMax),
+            e("div",{style:{width:1,alignSelf:"stretch",background:"rgba(224,176,32,0.3)",margin:"4px 2px"}}),
+            reelNum("📥 "+t("jackpot.cut_pct"),jpReelSpinning?(jpCutReelValue+"%"):"?","25〜50%")),
           e("button",{onClick:function(){if(jpReelSpinning)stopReel();else startReel();},style:{padding:"11px 36px",fontSize:15,fontWeight:900,fontFamily:"inherit",borderRadius:10,border:"none",cursor:"pointer",letterSpacing:2,color:"#fff",background:jpReelSpinning?"linear-gradient(135deg,#e74c3c,#c0392b)":"linear-gradient(135deg,#e0b020,#b8860b)",boxShadow:jpReelSpinning?"0 3px 14px rgba(231,76,60,0.4)":"0 3px 14px rgba(224,176,32,0.4)"}},jpReelSpinning?("■ "+t("jackpot.slot_stop")):("🎰 "+t("jackpot.slot_spin")))));
       }
     }else{
