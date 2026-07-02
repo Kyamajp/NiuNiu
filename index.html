@@ -156,6 +156,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 @keyframes aliceMultPulse{0%{transform:scale(1)}35%{transform:scale(1.28)}70%{transform:scale(0.97)}100%{transform:scale(1)}}
 @keyframes aliceKakFlash{0%{opacity:0}10%{opacity:0.92}45%{opacity:0.85}100%{opacity:0}}
 @keyframes aliceKakTitle{0%{opacity:0;transform:scale(0.2) rotate(-14deg);filter:blur(6px)}45%{opacity:1;transform:scale(1.35) rotate(5deg);filter:blur(0)}70%{transform:scale(0.92) rotate(-2deg)}100%{opacity:0;transform:scale(1.9) rotate(0deg);filter:blur(3px)}}
+@keyframes x2Veil{0%{opacity:0}22%{opacity:1}78%{opacity:1}100%{opacity:0}}
+@keyframes x2Stamp{0%{transform:scale(2.3) rotate(-9deg);opacity:0;filter:blur(5px)}45%{transform:scale(0.9) rotate(3deg);opacity:1;filter:blur(0)}66%{transform:scale(1.06) rotate(-1.5deg)}82%{transform:scale(0.98)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes x2Ring{0%{transform:scale(0.25);opacity:0}16%{opacity:0.85}100%{transform:scale(2.7);opacity:0}}
+@keyframes x2Shine{0%{background-position:-160% 0}62%{background-position:160% 0}100%{background-position:160% 0}}
+@keyframes x2Sub{0%{opacity:0;letter-spacing:0}42%{opacity:0}72%{opacity:1;letter-spacing:14px}100%{opacity:0.96;letter-spacing:12px}}
+@keyframes x2Spark{0%{transform:translate(0,0) scale(0);opacity:0}25%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(1)}100%{transform:translate(calc(var(--dx)*1.6),calc(var(--dy)*1.6)) scale(0);opacity:0}}
+@keyframes plus5Pop{0%{opacity:0;transform:translateY(8px) scale(0.5)}22%{opacity:1;transform:translateY(-4px) scale(1.2)}42%{transform:translateY(-9px) scale(1)}100%{opacity:0;transform:translateY(-26px) scale(1)}}
 @keyframes aliceKakRay{0%{opacity:0;transform:translate(-50%,-50%) scale(0.2) rotate(0deg)}30%{opacity:0.8}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4) rotate(80deg)}}
 @keyframes aliceKakGlow{0%,100%{box-shadow:0 0 18px rgba(224,64,122,0.4),0 0 40px rgba(224,64,122,0.2),inset 0 0 20px rgba(224,64,122,0.1)}50%{box-shadow:0 0 34px rgba(255,120,180,0.85),0 0 70px rgba(224,64,122,0.5),0 0 110px rgba(180,40,120,0.3),inset 0 0 30px rgba(255,120,180,0.2)}}
 @keyframes aliceKakBorder{0%{border-color:#e0407a}25%{border-color:#f0c040}50%{border-color:#60d0f0}75%{border-color:#c060f0}100%{border-color:#e0407a}}
@@ -2661,6 +2668,7 @@ function PlayerCards(props){
     hurricaneDiscard=props.hurricaneDiscard,hurricaneRevealRefill=props.hurricaneRevealRefill,
     jpContrib=props.jpContrib,jpContribTarget=props.jpContribTarget,jpIsWinTarget=props.jpIsWinTarget,
     jpGrossDelta=props.jpGrossDelta,jpNetDelta=props.jpNetDelta,
+    tulipBaseDelta=props.tulipBaseDelta,tulipDelta=props.tulipDelta,
     dealer=props.dealer;
 
   // JP contributor: animate the displayed delta from gross (pre-cut) down to net (post-cut).
@@ -2690,7 +2698,21 @@ function PlayerCards(props){
     return function(){timers.forEach(clearTimeout);};
   },[hasJpCountdown,jpGrossDelta,jpNetDelta,roundNum]);
   // Effective delta to display: JP countdown override takes priority
-  var effChipDelta=(displayDelta!==null)?displayDelta:chipDelta;
+  // Tulip staged reveal: show the NORMAL payout first, then the Tulip +/- adjustment, then the final total.
+  var hasTulipReveal=(typeof tulipBaseDelta==="number"&&typeof tulipDelta==="number"&&tulipDelta!==0);
+  var tr0=useState(null),tulipDispBase=tr0[0],setTulipDispBase=tr0[1]; // holds the base value during beats 1-2
+  var tr1=useState(null),tulipFloat=tr1[0],setTulipFloat=tr1[1];       // the floating +/- Tulip badge
+  useEffect(function(){
+    if(!hasTulipReveal){setTulipDispBase(null);setTulipFloat(null);return;}
+    var timers=[];
+    setTulipDispBase(tulipBaseDelta); // beat 1: show the normal payout
+    setTulipFloat(null);
+    timers.push(setTimeout(function(){setTulipFloat(tulipDelta);if(soundOn&&SFX&&SFX.aliceHit)try{SFX.aliceHit();}catch(e){}},700)); // beat 2: Tulip +/- flies in
+    timers.push(setTimeout(function(){setTulipDispBase(null);},1550)); // beat 3: badge shows the final total (fallback to chipDelta)
+    timers.push(setTimeout(function(){setTulipFloat(null);},2600));    // float fades out
+    return function(){timers.forEach(clearTimeout);};
+  },[hasTulipReveal,tulipBaseDelta,tulipDelta,roundNum]);
+  var effChipDelta=(displayDelta!==null)?displayDelta:(tulipDispBase!==null?tulipDispBase:chipDelta);
 
   // Dealer-prominent layout: only in 3p battle mode
   var dealerProminent=battleMode&&pc===3;
@@ -2906,7 +2928,15 @@ function PlayerCards(props){
           color:effChipDelta>0?"#27ae60":"#e74c3c",
           animation:"chipBounce 0.6s ease both",
           textShadow:effChipDelta>0?"0 0 12px rgba(39,174,96,0.5),0 0 24px rgba(39,174,96,0.2)":"0 0 12px rgba(231,76,60,0.5),0 0 24px rgba(231,76,60,0.2)"}},
-          effChipDelta>0?"+"+effChipDelta:effChipDelta)):null,
+          effChipDelta>0?"+"+effChipDelta:effChipDelta),
+        tulipFloat!==null&&tulipFloat!==0?e("div",{style:{position:"absolute",right:"100%",top:"50%",transform:"translateY(-50%)",marginRight:5,whiteSpace:"nowrap",pointerEvents:"none",zIndex:12}},
+          e("div",{style:{fontSize:compactMode?10:12,fontWeight:900,padding:"2px 7px",borderRadius:9,
+          background:tulipFloat>0?"rgba(39,174,96,0.16)":"rgba(224,64,122,0.16)",
+          border:"1px solid "+(tulipFloat>0?"rgba(39,174,96,0.55)":"rgba(224,64,122,0.6)"),
+          color:tulipFloat>0?"#4ee08a":"#ff7aa8",
+          animation:"splashIn 0.4s ease both",
+          textShadow:tulipFloat>0?"0 0 8px rgba(39,174,96,0.5)":"0 0 8px rgba(224,64,122,0.5)"}},
+          "🌷 "+(tulipFloat>0?"+"+tulipFloat:tulipFloat))):null):null,
       isW?e("span",{style:{fontSize:compactMode?10:14,animation:"chipBounce 0.6s ease 0.3s both"}},"👑"):null)));
 
   // Cards
@@ -3158,6 +3188,10 @@ function NiuNiu(){
   var sc1=useState(loadShortcut("niuniu_max_shortcuts",defaultMaxShortcuts)),maxShortcuts=sc1[0],setMaxShortcutsState=sc1[1];
   var sc2=useState(loadShortcut("niuniu_player_shortcuts",defaultPlayerShortcuts)),playerShortcuts=sc2[0],setPlayerShortcutsState=sc2[1];
   var uix1=useState(false),showAllHist=uix1[0],setShowAllHist=uix1[1]; // summary: round-history expand toggle
+  var uix2=useState(null),tulipReveal=uix2[0],setTulipReveal=uix2[1]; // {normal,tulip} for staged Tulip chip-delta reveal on the board
+  var uix3=useState(false),x2Flash=uix3[0],setX2Flash=uix3[1]; // 16R final-flip ×2 moment (screen flourish)
+  var uix5=useState(false),x2On=uix5[0],setX2On=uix5[1]; // 16R ×2 has landed (persistent): doubles the label number AFTER the post-final-card pause
+  var uix6=useState(false),compOn=uix6[0],setCompOn=uix6[1]; // completion +5 has landed (revealed after a short beat, so the bonus is clearly visible)
   function setMaxShortcuts(arr){
     setMaxShortcutsState(arr);
     try{localStorage.setItem("niuniu_max_shortcuts",JSON.stringify(arr));}catch(e){}
@@ -3636,8 +3670,19 @@ function NiuNiu(){
     var maxSteps=aliceData.reduce(function(m,w){return Math.max(m,w.steps.length);},0);
     if(aliceSi>=maxSteps){
       var anyC=aliceData.some(function(w){return w.completed;});
-      var tt0=setTimeout(function(){setAliceDone(true);},anyC?2400:1300);
-      return function(){clearTimeout(tt0);};
+      var anyR16done=aliceData.some(function(w){return w.tier==="r16";});
+      var COMPD=650; // beat AFTER the final card before the +5 completion bonus is revealed
+      var X2D=900;   // pause before the ×2 (measured from the +5 reveal when completed)
+      var tk=[];
+      if(anyC){ tk.push(setTimeout(function(){setCompOn(true);if(soundOn&&SFX&&SFX.aliceComplete)try{SFX.aliceComplete();}catch(e){}},COMPD)); }
+      var base=anyC?COMPD:0; // ×2 waits until the +5 has been shown (if completed)
+      if(anyR16done){
+        tk.push(setTimeout(function(){setX2On(true);setX2Flash(true);if(soundOn&&SFX&&SFX.aliceKakuhen)try{SFX.aliceKakuhen();}catch(e){}},base+X2D));
+        tk.push(setTimeout(function(){setX2Flash(false);},base+X2D+1200));
+      }
+      var doneAt=anyR16done?(base+X2D+1400):(anyC?(COMPD+1600):1300);
+      tk.push(setTimeout(function(){setAliceDone(true);},doneAt));
+      return function(){tk.forEach(function(t){clearTimeout(t);});};
     }
     var tick=aliceData.map(function(w){return w.steps[aliceSi];}).filter(Boolean);
     var anyR16=tick.some(function(s){return s.enterR16;});
@@ -3681,6 +3726,7 @@ function NiuNiu(){
     var suppressInitialAlerts=(appMode==="event"&&getCurrentEvent()==="hurricane");
     setAlerts(suppressInitialAlerts?{}:computeAlerts(h));
     setRoundDeltas(null);
+    setTulipReveal(null);
     setRoundNum(function(r){return r+1;});
     // Reset secret menu usage flags for new round
     setPeekActive(null);
@@ -4103,6 +4149,7 @@ function NiuNiu(){
       if(dWins){deltas[dealer]+=nAmt;deltas[ci]-=nAmt;}
       else{deltas[dealer]-=nAmt;deltas[ci]+=nAmt;}
     }
+    var normalDeltas=Object.assign({},deltas); // snapshot of the normal payout BEFORE the Tulip duel (for staged reveal)
     // (2) INDEPENDENT Tulip duel — the single STRONGEST hand flips against the single WEAKEST hand; only its FLIP BONUS (hits, +completion, ×2 in 16R) moves chips between those two, ADDED on top of (1). The hand-points multiplier is NOT re-added here (it is already paid by (1)). Strength = bullRank, then highCard (unique).
     var remain=(remainingDeck&&remainingDeck.length)?remainingDeck.slice():[];
     function shuf(a){var d=a.slice();for(var x=d.length-1;x>0;x--){var y=Math.floor(Math.random()*(x+1));var t=d[x];d[x]=d[y];d[y]=t;}return d;}
@@ -4122,19 +4169,20 @@ function NiuNiu(){
     var duelBet=bets[minIdx]||1;            // the weakest (loser) stakes their bet
     var duelAmount=Math.round(duelBet*addMult); // FLIP BONUS ONLY — the hand-points (役の点数) multiplier is already paid by the normal dealer-vs-child payout above, so it is NOT re-added here
     deltas[maxIdx]+=duelAmount; deltas[minIdx]-=duelAmount;
+    var tulipDeltas={};tulipDeltas[maxIdx]=duelAmount;tulipDeltas[minIdx]=-duelAmount; // the Tulip-only adjustment (shown as +/- in the staged reveal)
     var flip={idx:maxIdx,name:names[maxIdx],handRanks:handRanks,
               bonus:r.bonus,addMult:addMult,completed:r.completed,tier:r.tier,steps:r.steps,
               bull10:isB10,r16:isR16,vsIdx:minIdx,vsName:names[minIdx],label:ev[maxIdx].label};
     // Net biggest winner takes the crown (normal + duel combined).
     var bestDelta=-Infinity,bestIdx=0;
     for(var k2 in deltas){if(deltas[k2]>bestDelta){bestDelta=deltas[k2];bestIdx=parseInt(k2);}}
-    tulipDeltasRef.current={deltas:deltas,winner:bestIdx}; // apply AFTER the reveal finishes
+    tulipDeltasRef.current={deltas:deltas,normal:normalDeltas,tulip:tulipDeltas,winner:bestIdx}; // apply AFTER the reveal finishes
     setRoundDeltas(null); setWinner(null); // hide chip changes + winner crown on the board during the reveal
     setHistory(function(prev){return prev.concat([{round:roundNum+1,dealer:dealer,results:ev,deltas:deltas,bets:Object.assign({},bets),names:names.slice(),event:"tulip"}]);});
     pushHistory("niuniu_history_event",{date:new Date().toISOString(),rounds:roundNum+1,playerCount:pc,names:names,winner:bestIdx,results:ev,event:"tulip"});
     setAliceShared(sharedSeq);
     setAliceData([flip]);
-    setAliceSi(0); setAliceBurst(false); setAliceDone(false); setAliceActive(true);
+    setAliceSi(0); setAliceBurst(false); setAliceDone(false); setX2Flash(false); setX2On(false); setCompOn(false); setAliceActive(true);
     setPhase("result"); // stay on the game board; the flip plays as an overlay
   }
 
@@ -4857,7 +4905,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.55 · © 2026 KTR (",
+            "v1.4.65 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -6425,6 +6473,8 @@ function NiuNiu(){
       openThree:openThree,revealCard:revealCard,soundOn:soundOn,
       isDealer:isBattleLike(appMode)&&i===dealer,
       chipDelta:roundDeltas?roundDeltas[i]:null,
+      tulipBaseDelta:(tulipReveal&&tulipReveal.normal&&typeof tulipReveal.normal[i]==="number")?tulipReveal.normal[i]:null,
+      tulipDelta:(tulipReveal&&tulipReveal.tulip&&typeof tulipReveal.tulip[i]==="number")?tulipReveal.tulip[i]:null,
       battleMode:isBattleLike(appMode),
       betAmount:isBattleLike(appMode)?bets[i]:null,
       cardSkin:curSkin,
@@ -6791,18 +6841,22 @@ function NiuNiu(){
       var lastR=revealed.length?revealed[revealed.length-1]:null;
       var showComplete=winnerDone&&lastR&&lastR.comp;
       var tierNow=revealed.some(function(s){return s.mode==="r16"||s.enterR16;})?"r16":(revealed.some(function(s){return s.mode==="kakuhen"||s.enterKak;})?"kakuhen":null);
-      var compNow=showComplete?5:0;
-      var dispMult=tierNow==="r16"?(bonusSoFar+compNow)*2:(bonusSoFar+compNow); // Tulip bonus only (hand-points multiplier is paid by the normal payout, not shown here)
+      var compShown=showComplete&&compOn; // +5 revealed only after the post-final-card beat
+      var compNow=compShown?5:0;
+      var rawBonus=bonusSoFar+compNow;
+      var showX2=winnerDone&&tierNow==="r16"&&x2On; // 16R doubles only AFTER the post-final-card pause (x2On), not the instant the final card lands
+      var dispMult=showX2?rawBonus*2:rawBonus;
       var inKak=!!tierNow;
       var tierCol=tierNow==="r16"?"#ffd76a":"#ffb0d0";
-      var multCol=showComplete?"#f0c040":(tierNow==="r16"?"#ffd76a":aAcc);
+      var multCol=showX2?"#ffe08a":(compShown?"#f0c040":(tierNow==="r16"?"#ffd76a":aAcc));
       var labelBg=tierNow==="r16"?"rgba(58,46,14,0.97)":(tierNow==="kakuhen"?"rgba(58,16,42,0.97)":"transparent");
       var tierPill=tierNow==="r16"?e("span",{style:{fontSize:8,fontWeight:900,padding:"1px 5px",borderRadius:6,background:"#f0c040",color:"#3a2800",letterSpacing:0.5,flexShrink:0}},"16R"):(tierNow==="kakuhen"?e("span",{style:{fontSize:8,fontWeight:900,padding:"1px 5px",borderRadius:6,background:aAcc,color:"#fff",letterSpacing:0.5,flexShrink:0}},"確変"):null);
-      leftKids.push(e("div",{key:"ll"+wi,style:{height:winnerH,marginBottom:winnerMB,display:"flex",flexDirection:"column",justifyContent:"center",paddingLeft:tierNow?6:0,paddingRight:4,background:labelBg,borderRadius:"0 6px 6px 0",boxShadow:tierNow?("inset 3px 0 0 "+(tierNow==="r16"?"#f0c040":aAcc)):"none"}},
+      leftKids.push(e("div",{key:"ll"+wi,style:{position:"relative",height:winnerH,marginBottom:winnerMB,display:"flex",flexDirection:"column",justifyContent:"center",paddingLeft:tierNow?6:0,paddingRight:4,background:labelBg,borderRadius:"0 6px 6px 0",boxShadow:tierNow?("inset 3px 0 0 "+(tierNow==="r16"?"#f0c040":aAcc)):"none"}},
+        compShown?e("div",{key:"p5",style:{position:"absolute",left:0,right:0,top:-14,textAlign:"center",fontSize:14,fontWeight:900,color:"#ffe08a",textShadow:"0 0 12px rgba(240,175,45,0.95),0 1px 2px rgba(0,0,0,0.5)",letterSpacing:1,pointerEvents:"none",animation:"plus5Pop 1.25s ease-out both",zIndex:5}},"+5 完走"):null,
         e("div",{style:{fontSize:10,fontWeight:700,color:inKak?tierCol:"rgba(255,255,255,0.85)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},w.name),
         e("div",{style:{display:"flex",alignItems:"center",gap:4}},
-          e("span",{style:{fontSize:15,fontWeight:900,color:multCol,lineHeight:1.1}},"×"+dispMult+(showComplete?" 🎊":"")),
-          tierPill)));
+          e("span",{key:showX2?"m2":(compShown?"mc":"m1"),style:{fontSize:15,fontWeight:900,color:multCol,lineHeight:1.1,animation:(showX2||compShown)?"aliceMultPulse 0.6s ease both":"none",textShadow:showX2?"0 0 10px rgba(255,210,90,0.95),0 0 20px rgba(240,150,40,0.55)":(compShown?"0 0 8px rgba(240,175,45,0.6)":"none")}},"×"+dispMult+(compShown?" 🎊":"")),
+          showX2?e("span",{key:"x2b",style:{fontSize:9,fontWeight:900,padding:"1px 5px",borderRadius:6,background:"#f0c040",color:"#3a2800",letterSpacing:0.5,flexShrink:0,animation:"aliceMultPulse 0.6s ease 0.08s both"}},"×2"):tierPill)));
       rightKids.push(e("div",{key:"rw"+wi,style:{height:winnerH,marginBottom:winnerMB,display:"flex",alignItems:"center",gap:gap}},buildWinnerCells(w)));
     });
     gameChildren.push(e("div",{key:"aliceoverlay",style:{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"16px 10px",background:"rgba(6,4,10,0.6)"}},
@@ -6815,9 +6869,23 @@ function NiuNiu(){
           e("div",{ref:tulipScrollRef,style:{flex:1,minWidth:0,overflowX:"auto",display:"flex",flexDirection:"column",paddingBottom:6}},rightKids)),
         aliceDone?
           e("div",{style:{textAlign:"center",marginTop:12,flexShrink:0}},
-            e("button",{onClick:function(){var pd=tulipDeltasRef.current;if(pd){setChips(function(prev){var n=Object.assign({},prev);for(var k in pd.deltas)n[k]=(n[k]||0)+pd.deltas[k];return n;});setRoundDeltas(pd.deltas);setWinner(pd.winner);tulipDeltasRef.current=null;}setAliceActive(false);},style:{padding:"11px 40px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,"+aAcc+",#8a2050)",color:"#fff",letterSpacing:2,boxShadow:"0 3px 16px rgba(224,64,122,0.4)"}},"OK ▶")):
+            e("button",{onClick:function(){var pd=tulipDeltasRef.current;if(pd){setChips(function(prev){var n=Object.assign({},prev);for(var k in pd.deltas)n[k]=(n[k]||0)+pd.deltas[k];return n;});setRoundDeltas(pd.deltas);setWinner(pd.winner);setTulipReveal({normal:pd.normal,tulip:pd.tulip});tulipDeltasRef.current=null;}setAliceActive(false);},style:{padding:"11px 40px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,"+aAcc+",#8a2050)",color:"#fff",letterSpacing:2,boxShadow:"0 3px 16px rgba(224,64,122,0.4)"}},"OK ▶")):
           e("div",{style:{textAlign:"center",marginTop:10,flexShrink:0}},
             e("button",{onClick:function(){setAliceDone(true);},style:{padding:"6px 18px",fontSize:10,borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"transparent",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontFamily:"inherit"}},"スキップ »")))));
+    if(x2Flash){
+      // Stylish, DISTINCT-from-16R ×2 moment: screen dims (vignette focus), a metallic-gold "×2" stamps in
+      // with shockwave rings, a shimmer sweep, and radial sparks — no bright gold flash like the 16R burst.
+      gameChildren.push(e("div",{key:"x2veil",style:{position:"fixed",inset:0,background:"radial-gradient(circle at 50% 41%,rgba(30,22,4,0) 24%,rgba(4,3,8,0.64) 74%)",zIndex:210,pointerEvents:"none",animation:"x2Veil 1.15s ease-out both"}}));
+      var sparks=[];
+      for(var _s=0;_s<10;_s++){var _ang=(_s/10)*Math.PI*2,_d=64+(_s%3)*10;sparks.push(e("div",{key:"sp"+_s,style:{position:"absolute",left:"50%",top:"46%",width:5,height:5,marginLeft:-2.5,marginTop:-2.5,borderRadius:"50%",background:"#ffe488",boxShadow:"0 0 8px rgba(255,200,90,0.95)","--dx":(Math.cos(_ang)*_d)+"px","--dy":(Math.sin(_ang)*_d)+"px",animation:"x2Spark 0.85s ease-out "+(0.12+(_s%3)*0.04)+"s both"}}));}
+      gameChildren.push(e("div",{key:"x2wrap",style:{position:"fixed",top:"40%",left:0,right:0,zIndex:211,pointerEvents:"none",textAlign:"center"}},
+        e("div",{style:{position:"relative",display:"inline-block"}},
+          e("div",{style:{position:"absolute",left:"50%",top:"46%",width:150,height:150,marginLeft:-75,marginTop:-75,borderRadius:"50%",border:"3px solid rgba(255,214,110,0.9)",boxShadow:"0 0 22px rgba(255,190,70,0.55)",animation:"x2Ring 0.9s ease-out both"}}),
+          e("div",{style:{position:"absolute",left:"50%",top:"46%",width:150,height:150,marginLeft:-75,marginTop:-75,borderRadius:"50%",border:"2px solid rgba(255,244,208,0.75)",animation:"x2Ring 0.95s ease-out .14s both"}}),
+          e("div",{style:{position:"relative"}},sparks),
+          e("div",{style:{position:"relative",fontSize:92,fontWeight:900,letterSpacing:2,lineHeight:1,backgroundImage:"linear-gradient(100deg,#a9760a 0%,#ffe488 26%,#fff8db 50%,#ffe488 74%,#a9760a 100%)",backgroundSize:"250% 100%",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 24px rgba(255,200,80,0.9)) drop-shadow(0 4px 10px rgba(0,0,0,0.55))",animation:"x2Stamp 0.7s cubic-bezier(.2,1.5,.4,1) both, x2Shine 1.0s ease-out .16s both",display:"inline-block"}},"×2"),
+          e("div",{style:{fontSize:14,fontWeight:900,color:"#ffd76a",letterSpacing:12,marginTop:6,textShadow:"0 0 14px rgba(240,170,40,0.85)",animation:"x2Sub 1.0s ease-out both"}},"DOUBLE"))));
+    }
     if(aliceBurst){
       var isR16=aliceBurst==="r16";
       gameChildren.push(e("div",{key:"aflash",style:{position:"fixed",inset:0,background:isR16?"radial-gradient(circle,rgba(255,220,110,0.9),rgba(240,150,40,0.55) 42%,rgba(60,30,0,0.25) 82%)":"radial-gradient(circle,rgba(255,140,190,0.85),rgba(224,64,122,0.5) 42%,rgba(50,0,35,0.2) 82%)",zIndex:210,pointerEvents:"none",animation:"aliceKakFlash 1s ease-out"}}));
