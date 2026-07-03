@@ -4166,7 +4166,7 @@ function NiuNiu(){
     var comp=r.completed?5:0;               // completion bonus +5 (Tulip only)
     var isR16=r.tier==="r16";
     var addMult=isR16?(r.bonus+comp)*2:(r.bonus+comp); // Tulip bonus = flip hits (+completion), 16R doubles the whole thing; this IS the entire Tulip payout multiplier
-    var duelBet=bets[minIdx]||1;            // the weakest (loser) stakes their bet
+    var duelBet=(minIdx===dealer?bets[maxIdx]:bets[minIdx])||1; // the loser stakes their bet — but the dealer (banker) has no live bet, so when the dealer is the loser, reference the child (winner=maxIdx) bet instead of the dealer's stale bet
     var duelAmount=Math.round(duelBet*addMult); // FLIP BONUS ONLY — the hand-points (役の点数) multiplier is already paid by the normal dealer-vs-child payout above, so it is NOT re-added here
     deltas[maxIdx]+=duelAmount; deltas[minIdx]-=duelAmount;
     var tulipDeltas={};tulipDeltas[maxIdx]=duelAmount;tulipDeltas[minIdx]=-duelAmount; // the Tulip-only adjustment (shown as +/- in the staged reveal)
@@ -4905,7 +4905,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.65 · © 2026 KTR (",
+            "v1.4.66 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
