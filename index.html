@@ -163,6 +163,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 @keyframes x2Sub{0%{opacity:0;letter-spacing:0}42%{opacity:0}72%{opacity:1;letter-spacing:14px}100%{opacity:0.96;letter-spacing:12px}}
 @keyframes x2Spark{0%{transform:translate(0,0) scale(0);opacity:0}25%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(1)}100%{transform:translate(calc(var(--dx)*1.6),calc(var(--dy)*1.6)) scale(0);opacity:0}}
 @keyframes plus5Pop{0%{opacity:0;transform:translateY(8px) scale(0.5)}22%{opacity:1;transform:translateY(-4px) scale(1.2)}42%{transform:translateY(-9px) scale(1)}100%{opacity:0;transform:translateY(-26px) scale(1)}}
+@keyframes diceIn{0%{transform:rotate(-200deg) scale(0.2);opacity:0}60%{transform:rotate(12deg) scale(1.12);opacity:1}80%{transform:rotate(-4deg) scale(0.97)}100%{transform:rotate(0) scale(1);opacity:1}}
+@keyframes diceTumble{0%{transform:rotate(0deg) scale(0.6);opacity:0.6}40%{transform:rotate(420deg) scale(1.22);opacity:1}100%{transform:rotate(900deg) scale(1)}}
+@keyframes handJoin{0%{transform:scale(0.2) translateY(-20px);opacity:0}55%{transform:scale(1.15) translateY(2px);opacity:1}100%{transform:scale(1) translateY(0)}}
+@keyframes handHit{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-7px) scale(1.09)}100%{transform:translateY(-4px) scale(1.04)}}
 @keyframes aliceKakRay{0%{opacity:0;transform:translate(-50%,-50%) scale(0.2) rotate(0deg)}30%{opacity:0.8}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4) rotate(80deg)}}
 @keyframes aliceKakGlow{0%,100%{box-shadow:0 0 18px rgba(224,64,122,0.4),0 0 40px rgba(224,64,122,0.2),inset 0 0 20px rgba(224,64,122,0.1)}50%{box-shadow:0 0 34px rgba(255,120,180,0.85),0 0 70px rgba(224,64,122,0.5),0 0 110px rgba(180,40,120,0.3),inset 0 0 30px rgba(255,120,180,0.2)}}
 @keyframes aliceKakBorder{0%{border-color:#e0407a}25%{border-color:#f0c040}50%{border-color:#60d0f0}75%{border-color:#c060f0}100%{border-color:#e0407a}}
@@ -467,6 +471,7 @@ function applyRouletteDelta(bullRank, delta){
 
 var SUITS=["♠","♥","♦","♣"];
 var RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+var TULIP_ACE_SPECIAL=false; // set by the App on every render; gates the special golden ♠A face (Tulip event only, where the ♠A effect exists)
 var RANK_ORDER={"A":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13};
 var SUIT_ORDER={"♠":4,"♥":3,"♦":2,"♣":1};
 // 先バレ強度スライダー: Lv1〜Lv5、非牛時のglitch/red出現率にこのscaleを乗算
@@ -681,6 +686,8 @@ function CardFace(props){
   }
   var isFace=["J","Q","K"].indexOf(card.rank)>=0,pips=PIP[card.rank];
   var isAceOfSpades=card.rank==="A"&&card.suit==="♠";
+  var spTulip=isAceOfSpades&&TULIP_ACE_SPECIAL; // golden special MARK only (Tulip event: ♠A in the 5th slot grants +1 guarantee); frame/corners stay normal so the squeeze doesn't spoil it
+  var sp7Tulip=card.rank==="7"&&card.suit==="♠"&&TULIP_ACE_SPECIAL; // rainbow special MARK only (Tulip event: 虹色7 absorption); frame/corners stay normal
   var pipSize=isAceOfSpades?w*0.95*(ft.suitScale||1):(card.rank==="A"?w*0.42*(ft.suitScale||1):w*0.24*(ft.suitScale||1));
   var cTop=h*0.10,cLeft=w*0.08,cW2=w*0.84,cH2=h*0.80;
   var bgGrad=highlight?"linear-gradient(145deg,"+ft.hlBg[0]+" 0%,"+ft.hlBg[1]+" 100%)":"linear-gradient(145deg,"+ft.bg[0]+" 0%,"+ft.bg[1]+" 100%)";
@@ -744,11 +751,13 @@ function CardFace(props){
               var r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
               return (r+g+b)>=384; // 128*3, midpoint
             }
-            var accent=isLight(color)?"#1a1a1a":"#fff";
-            return e("svg",{viewBox:"0 0 100 110",width:pipSize,height:pipSize*1.1,style:{display:"block"}},
+            var accent=spTulip?"#5a3c00":(isLight(color)?"#1a1a1a":"#fff");
+            return e("svg",{viewBox:"0 0 100 110",width:pipSize,height:pipSize*1.1,style:{display:"block",filter:spTulip?"drop-shadow(0 0 5px rgba(212,175,55,0.85))":"none"}},
+              spTulip?e("defs",null,e("linearGradient",{id:"asgold",x1:"0",y1:"0",x2:"0",y2:"1"},
+                e("stop",{offset:"0%",stopColor:"#f7df8b"}),e("stop",{offset:"45%",stopColor:"#d4af37"}),e("stop",{offset:"100%",stopColor:"#8a6508"}))):null,
               // Main spade silhouette
               e("path",{d:"M 50 8 C 28 30, 14 50, 18 70 C 20 82, 30 86, 40 80 C 43 78, 46 75, 48 72 L 44 96 Q 50 99 56 96 L 52 72 C 54 75, 57 78, 60 80 C 70 86, 80 82, 82 70 C 86 50, 72 30, 50 8 Z",
-                fill:color,stroke:color,strokeWidth:0.5}),
+                fill:spTulip?"url(#asgold)":color,stroke:spTulip?"#a67c00":color,strokeWidth:0.5}),
               // Crown at top
               e("path",{d:"M 42 28 L 45 22 L 50 26 L 55 22 L 58 28 L 56 32 L 44 32 Z",
                 fill:accent,stroke:"none",opacity:0.9}),
@@ -758,7 +767,7 @@ function CardFace(props){
               // Letter A (stylized)
               e("path",{d:"M 42 65 L 50 40 L 58 65 M 45 57 L 55 57",
                 stroke:accent,strokeWidth:2.2,fill:"none",strokeLinecap:"round",strokeLinejoin:"round",opacity:0.95}));
-          })():card.suit);
+          })():((sp7Tulip&&p[0]===50)?e("span",{style:{backgroundImage:"linear-gradient(135deg,#ff1744,#ff9100,#ffea00,#00e676,#00b0ff,#d500f9)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 4px rgba(255,80,180,0.9)) saturate(1.6)"}},card.suit):card.suit));
       })));
   }
   return e("div",{style:{width:w,height:h,position:"relative",
@@ -1263,15 +1272,18 @@ var I18N={
     "event.jackpot.desc":"役なし(牛0)で負けると、勝者の配当の25〜50%(クール毎にスロットで変動)がプールへ。牛牛以上の勝者がプールを総取り＋配当も全額。複数いるときは一番強い役の1人が総取り。",
     "event.tulip.name":"🌷 チューリップ",
     "event.tulip.tagline":"隣の数字まで咲かせる",
-    "event.tulip.desc":"通常の親vs子配当（役の点数倍）に加えて、最強の役の人が最弱の役の人に1対1で残り山を1枚ずつめくる。同じ数字＋その両隣が一致でチューリップ配当+1（A は A・2、K は K・Q、折り返しなし）。一度に3枚以上で確変(2枚めくり)、4枚以上で16R。五小牛以上は確変スタート。完走で+5。16Rは加算分(hit＋完走)を最後にまとめて2倍。役の点数倍は通常配当で加算済みのためチューリップには含めない。",
+    "event.tulip.desc":"通常の親vs子配当（役の点数倍）に加えて、最強の役の人が最弱の役の人に1対1で残り山を1枚ずつめくる。同じ数字＋その両隣が一致でチューリップ配当+1（A は A・2、K は K・Q、折り返しなし）。一度に3枚以上で確変(2枚めくり)、4枚で16R、5枚で32R、6枚以上で64R。五小牛以上は確変スタート。目無し同士で最強なら1枚目が外れでも次から確変（0は0）。完走でサイコロ2個の合計をボーナス加算（ゾロ目は振り足しで累積、ピンゾロ(1,1)はその回+20）。16Rは加算分(hit＋完走)を最後にまとめて2倍。役の点数倍は通常配当で加算済みのためチューリップには含めない。",
     "event.tulip.rule_title":"チューリップのルール",
     "event.tulip.rule_step1":"通常通り配布・絞り・役判定し、親vs子の通常配当（役の点数倍）を実施",
-    "event.tulip.rule_step2":"メンバー中で一番強い役の人が、一番弱い役の人に対して残り山を上から1枚ずつめくる（独立・1対1）。『同じ数字＋その両隣』が出たら一致枚数だけ倍率+1（例: 手札に4なら3・4・5が対象。A は A・2、K は K・Q、折り返しなし）",
-    "event.tulip.rule_step3":"外れ（0枚一致）が出たら終了。チューリップの配当＝めくりで貯めた加算分（hit数）のみを最弱の相手に適用（役の点数倍は通常配当で既に加算済みのため含めない。賭け金は最弱プレイヤー基準）",
+    "event.tulip.rule_step2":"メンバー中で一番強い役の人が、一番弱い役の人に対して残り山を上から1枚ずつめくる（独立・1対1）。『同じ数字＋その両隣』が出たら一致枚数だけ倍率+1（例: 手札に4なら3・4・5が対象。A は A・2、K は K・Q、折り返しなし）。確変に入るまでは1枚おきにめくり、間の1枚はバーンカードとしてノーカウントで捨てる（確変/16R突入後はバーンなし）",
+    "event.tulip.rule_step3":"外れ（0枚一致）が出たら終了。チューリップの配当＝めくりで貯めた加算分（hit数）のみを最弱の相手に適用（役の点数倍は通常配当で既に加算済みのため含めない。賭け金は敗者＝最弱の額基準、ただし親が敗者の時は勝者の子の額基準）",
     "event.tulip.rule_step4":"一度に3枚以上一致で「確変」：以降2枚ずつめくり、2枚中1枚でも一致で継続（2枚とも外れで終了）。五小牛以上の役は最初から確変スタート",
-    "event.tulip.rule_step5":"一度に4枚以上一致で「16R」：突入後も加算は1hitあたり+1倍だが、最後に加算分（hit数＋完走bonus）をまとめて2倍にする（例: 16R完走なら (hit数＋完走)×2 がチューリップ配当。役の点数倍は通常配当で別途）",
-    "event.tulip.rule_note1":"山を最後までめくり切り、その最後の手に一致があれば「完走」でチューリップ配当に+5（外れで山が尽きたら完走なし）",
-    "event.tulip.rule_note2":"牛牛以上は最初の外れを1回だけ無効化（転落保証）",
+    "event.tulip.rule_step5":"一度に4枚以上一致で「16R」：突入後も加算は1hitあたり+1倍だが、最後に加算分（hit数＋完走bonus）をまとめて2倍にする。5枚一致の32Rなら×3、6枚以上の64Rなら×4（例: 16R完走なら (hit数＋完走)×2。役の点数倍は通常配当で別途）",
+    "event.tulip.rule_note1":"山を最後までめくり切り、その最後の手に一致があれば「完走」。サイコロ2個を振り合計をチューリップ配当に加算、ゾロ目なら振り足して累積、ピンゾロ(1,1)はその回を+20として加算（外れで山が尽きたら完走なし）",
+    "event.tulip.rule_note2":"牛牛以上は最初の外れを1回だけ無効化（転落保証）。保証を使わずに完走した場合、残した保証1つにつき完走ダイスを追加で1回振れる",
+    "event.tulip.rule_note3":"「0は0」：役なし（目無し）で最強となりめくる場合、1枚目が外れでも終了せず、次のカードから確変として続行（1枚目のみ・一度きり）",
+    "event.tulip.rule_note4":"5枚目（右下）が♠Aの人がめくり手（最強）になると転落保証+1（牛牛以上なら合計2権利）。この♠Aは金色の特別デザインで表示される",
+    "event.tulip.rule_note5":"虹色7：めくり手の手札に♠7があると、めくりで評価された♥/♦/♣の7は手札に加わり以降の判定対象が増える。♠7がめくりで出た場合も、手札に他の7があれば手札に加わる（その札自身のhitは加わる前の手札で計算）。バーンされた7は完全に無効",
     "event.jackpot.rule_title":"ジャックポットのルール",
     "event.jackpot.rule_step1":"通常通り配布・絞り・勝敗判定",
     "event.jackpot.rule_step2":"役なし(牛0)のプレイヤーが負けると、勝者の配当の25〜50%(クール毎に変動)がプールへ(残りは勝者の手元)",
@@ -1739,15 +1751,18 @@ var I18N={
     "event.jackpot.desc":"When a no-bull (牛0) player loses, 25-50% (varies per cool) of the winner's payout goes to the pool. A winner with 牛牛 or higher takes the whole pool plus full payout. If several qualify, the strongest hand takes it all.",
     "event.tulip.name":"🌷 Tulip",
     "event.tulip.tagline":"Blooms into the neighbors",
-    "event.tulip.desc":"On top of the normal dealer-vs-child payout (hand-points multiplier), the STRONGEST hand flips against the WEAKEST hand, 1-on-1. A flip matching a rank in your hand OR its two neighbors adds +1 to the Tulip bonus (A covers A·2, K covers K·Q, no wrap). 3+ at once → Kakuhen (draw 2); 4+ → 16R. 5-small-bull+ starts in Kakuhen. Complete → +5. 16R doubles the whole bonus (hits + completion) at the end. The hand-points multiplier is already paid by the normal payout, so it is NOT included in Tulip.",
+    "event.tulip.desc":"On top of the normal dealer-vs-child payout (hand-points multiplier), the STRONGEST hand flips against the WEAKEST hand, 1-on-1. A flip matching a rank in your hand OR its two neighbors adds +1 to the Tulip bonus (A covers A·2, K covers K·Q, no wrap). 3+ at once → Kakuhen (draw 2); 4 → 16R, 5 → 32R, 6+ → 64R. 5-small-bull+ starts in Kakuhen. A no-bull flipper's first miss converts to Kakuhen instead of stopping (Zero-is-Zero). Complete → roll 2 dice and add the total (doubles roll again and stack; snake eyes 1·1 counts that roll as +20). 16R doubles the whole bonus (hits + completion) at the end. The hand-points multiplier is already paid by the normal payout, so it is NOT included in Tulip.",
     "event.tulip.rule_title":"Tulip Rules",
     "event.tulip.rule_step1":"Deal, squeeze, evaluate hands, and settle the normal dealer-vs-child payout (hand-points multiplier)",
-    "event.tulip.rule_step2":"The strongest hand among members flips against the weakest, one card at a time (independent, 1-on-1). If the flip matches a rank in the hand OR either neighbor, +1 per matching card (a 4 covers 3·4·5; A covers A·2, K covers K·Q, no wrap)",
-    "event.tulip.rule_step3":"A miss (no match) ends it. The Tulip payout = the accumulated flip bonus (hits) ONLY, applied against the weakest opponent (the hand-points multiplier is already paid by the normal payout, so it is not re-added; stake = the weakest player's bet)",
+    "event.tulip.rule_step2":"The strongest hand among members flips against the weakest, one card at a time (independent, 1-on-1). If the flip matches a rank in the hand OR either neighbor, +1 per matching card (a 4 covers 3·4·5; A covers A·2, K covers K·Q, no wrap). Until Kakuhen, cards are flipped every other one — the card in between is burned (discarded, no count). No burns once in Kakuhen/16R",
+    "event.tulip.rule_step3":"A miss (no match) ends it. The Tulip payout = the accumulated flip bonus (hits) ONLY, applied against the weakest opponent (the hand-points multiplier is already paid by the normal payout, so it is not re-added; stake = the loser's bet — or the winning child's bet when the dealer is the loser)",
     "event.tulip.rule_step4":"Matching 3+ at once triggers Kakuhen: draw 2 at a time, continue if either hits (stop if both miss). Hands of 5-small-bull or higher start in Kakuhen",
-    "event.tulip.rule_step5":"Matching 4+ at once triggers 16R: hits still count +1 each, but at the END the whole bonus (hits + completion) is doubled (e.g. 16R complete → (hits + completion)×2 as the Tulip payout; the hand-points multiplier is separate, via the normal payout)",
-    "event.tulip.rule_note1":"Clearing the whole deck with a hit on the final flip = complete, adds +5 to the Tulip bonus (no complete if a miss empties the deck)",
-    "event.tulip.rule_note2":"Niu-Niu or higher negates the first miss once (fall guarantee)",
+    "event.tulip.rule_step5":"Matching 4+ at once triggers 16R: hits still count +1 each, but at the END the whole bonus (hits + completion) is multiplied: ×2 for 16R, ×3 for 32R (5 matches), ×4 for 64R (6+); the hand-points multiplier is separate, via the normal payout",
+    "event.tulip.rule_note1":"Clearing the whole deck with a hit on the final flip = complete: roll 2 dice and add the total to the Tulip bonus — doubles roll again (stacking), snake eyes 1·1 counts that roll as +20 (no complete if a miss empties the deck)",
+    "event.tulip.rule_note2":"Niu-Niu or higher negates the first miss once (fall guarantee). If you complete WITHOUT using it, each unused guarantee grants one extra completion-dice roll",
+    "event.tulip.rule_note3":"Zero-is-Zero: when a NO-BULL hand is the strongest and flips, a miss on the very first card does not end the run — it continues in Kakuhen from the next card (first card only)",
+    "event.tulip.rule_note4":"If the flipper's 5th card (bottom-right) is the Ace of Spades, +1 fall guarantee (2 total with Niu-Niu or higher). That ♠A shows a special golden design",
+    "event.tulip.rule_note5":"Rainbow 7: if the flipper holds the ♠7, an EVALUATED flipped ♥/♦/♣ 7 joins the hand (growing future matches). A flipped ♠7 also joins if the hand holds any other 7 (its own hit is counted with the hand BEFORE it joins). Burned 7s are completely void",
     "event.jackpot.rule_title":"Jackpot Rules",
     "event.jackpot.rule_step1":"Deal, squeeze, and decide winners as normal",
     "event.jackpot.rule_step2":"When a no-bull (牛0) player loses, 25-50% (varies per cool) of the winner's payout goes to the pool (winner keeps the rest)",
@@ -2197,15 +2212,18 @@ var I18N={
     "event.jackpot.desc":"无役(牛0)落败时,赢家配当的25〜50%(每轮变动)进入奖池。牛牛以上的赢家独得奖池+全额配当。多人符合时,最强的一人独得。",
     "event.tulip.name":"🌷 郁金香",
     "event.tulip.tagline":"连邻座点数一起绽放",
-    "event.tulip.desc":"在正常的庄vs闲配当（牌型点数倍）之上,最强牌型对最弱牌型1对1翻开剩余牌堆。翻到与自己手牌相同的点数或其左右相邻点数则郁金香加成+1（A含A·2，K含K·Q，不折返）。一次命中3张以上进入确变(翻2张)，4张以上进入16R。五小牛以上确变开始。完走+5。16R最后将加成(命中＋完走)整体×2。牌型点数倍已由正常配当计入,郁金香不再包含。",
+    "event.tulip.desc":"在正常的庄vs闲配当（牌型点数倍）之上,最强牌型对最弱牌型1对1翻开剩余牌堆。翻到与自己手牌相同的点数或其左右相邻点数则郁金香加成+1（A含A·2，K含K·Q，不折返）。一次命中3张以上进入确变(翻2张)，4张进入16R,5张进入32R,6张以上进入64R。五小牛以上确变开始。无牛为最强翻牌时,首张未命中不结束而转入确变（0即0）。完走时掷2颗骰子,总和计入加成（对子可再掷累积,豹子1·1该次按+20计）。16R最后将加成(命中＋完走)整体×2。牌型点数倍已由正常配当计入,郁金香不再包含。",
     "event.tulip.rule_title":"郁金香规则",
     "event.tulip.rule_step1":"正常发牌、挤牌、评定牌型,并结算庄vs闲的正常配当（牌型点数倍）",
-    "event.tulip.rule_step2":"成员中牌型最强者对牌型最弱者逐张翻开剩余牌堆（独立·1对1）。若翻到与手牌相同的点数或其相邻点数,每张+1（如手中有4则3·4·5命中；A含A·2，K含K·Q，不折返）",
-    "event.tulip.rule_step3":"出现未命中（0张）即结束。郁金香配当＝翻牌累积的加成（命中数）仅此,应用于最弱的对手（牌型点数倍已由正常配当计入,故不重复；下注以最弱玩家为准）",
+    "event.tulip.rule_step2":"成员中牌型最强者对牌型最弱者逐张翻开剩余牌堆（独立·1对1）。若翻到与手牌相同的点数或其相邻点数,每张+1（如手中有4则3·4·5命中；A含A·2，K含K·Q，不折返）。进入确变前隔一张翻一张,中间那张作为烧牌弃置不计（进入确变/16R后不再烧牌）",
+    "event.tulip.rule_step3":"出现未命中（0张）即结束。郁金香配当＝翻牌累积的加成（命中数）仅此,应用于最弱的对手（牌型点数倍已由正常配当计入,故不重复；下注以败者＝最弱为准,若庄家为败者则以获胜闲家为准）",
     "event.tulip.rule_step4":"一次命中3张以上进入「确变」：之后每次翻2张,2张任一命中则继续（2张全未命中结束）。五小牛以上的牌型从一开始即确变开始",
-    "event.tulip.rule_step5":"一次命中4张以上进入「16R」：进入后每命中仍+1倍,但最后将加成（命中数＋完走bonus）整体×2（例: 16R完走则 (命中数＋完走)×2 为郁金香配当；牌型点数倍另计,经正常配当）",
-    "event.tulip.rule_note1":"翻完整堆且最后一手有命中＝完走,郁金香加成+5（若因未命中翻完则不算完走）",
-    "event.tulip.rule_note2":"牛牛以上首次未命中可抵消1次（转落保证）",
+    "event.tulip.rule_step5":"一次命中4张以上进入「16R」：进入后每命中仍+1倍,但最后将加成（命中数＋完走bonus）整体倍化:16R×2,32R(5张)×3,64R(6张以上)×4;牌型点数倍另计,经正常配当",
+    "event.tulip.rule_note1":"翻完整堆且最后一手有命中＝完走:掷2颗骰子,总和加入郁金香加成;掷出对子可再掷累积,1·1该次按+20计（若因未命中翻完则不算完走）",
+    "event.tulip.rule_note2":"牛牛以上首次未命中可抵消1次（转落保证）。若未使用保证即完走,每个未用保证可额外多掷1次完走骰子",
+    "event.tulip.rule_note3":"「0即0」:无牛牌型为最强而翻牌时,第1张未命中不结束,自下一张起以确变继续（仅限第1张）",
+    "event.tulip.rule_note4":"翻牌者的第5张（右下）为黑桃A时,转落保证+1（牛牛以上共2次）。该♠A以金色特别设计显示",
+    "event.tulip.rule_note5":"彩虹7:翻牌者手中有♠7时,翻出并被评价的♥/♦/♣7会加入手牌,之后判定范围增大。翻出♠7时,若手中已有其他7也会加入（该张自身的命中按加入前的手牌计算）。被烧掉的7完全无效",
     "event.jackpot.rule_title":"头奖规则",
     "event.jackpot.rule_step1":"正常发牌、挤牌、定胜负",
     "event.jackpot.rule_step2":"无役(牛0)的玩家落败时,赢家配当的25〜50%(每轮变动)进入奖池(其余归赢家)",
@@ -3105,6 +3123,7 @@ function NiuNiu(){
   var se2=useState(null),expandedEventRules=se2[0],setExpandedEventRules=se2[1];
   // Component-scoped override of getCurrentEvent: reads from state instead of date
   function getCurrentEvent(){return selectedEvent;}
+  TULIP_ACE_SPECIAL=(appMode==="event"&&selectedEvent==="tulip"); // ♠A special face only where the effect exists
   var sh6=useState(null),hurricaneAnimatingDiscard=sh6[0],setHurricaneAnimatingDiscard=sh6[1]; // {pi:N, ci:N} during spiral-out animation
   var sh7=useState(new Set()),hurricaneAnimatingRefill=sh7[0],setHurricaneAnimatingRefill=sh7[1]; // Set of pi currently showing spawn animation
   // Roulette event states
@@ -3192,6 +3211,11 @@ function NiuNiu(){
   var uix3=useState(false),x2Flash=uix3[0],setX2Flash=uix3[1]; // 16R final-flip ×2 moment (screen flourish)
   var uix5=useState(false),x2On=uix5[0],setX2On=uix5[1]; // 16R ×2 has landed (persistent): doubles the label number AFTER the post-final-card pause
   var uix6=useState(false),compOn=uix6[0],setCompOn=uix6[1]; // completion +5 has landed (revealed after a short beat, so the bonus is clearly visible)
+  var uix7=useState(-1),diceIdx=uix7[0],setDiceIdx=uix7[1]; // completion dice reveal: index of the last shown roll (-1 = hidden)
+  var uix8=useState(false),diceOpen=uix8[0],setDiceOpen=uix8[1]; // completion dice panel is open (waiting for / during player rolls)
+  var uix9=useState(false),diceRolling=uix9[0],setDiceRolling=uix9[1]; // tumble animation in progress
+  var uix11=useState(function(){try{var v=localStorage.getItem("niuniu_tulip_speed");if(v==="slow"||v==="fast")return v;}catch(e){}return "normal";}),tulipSpeed=uix11[0],setTulipSpeedRaw=uix11[1];
+  function setTulipSpeed(v){setTulipSpeedRaw(v);try{localStorage.setItem("niuniu_tulip_speed",v);}catch(e){}}
   function setMaxShortcuts(arr){
     setMaxShortcutsState(arr);
     try{localStorage.setItem("niuniu_max_shortcuts",JSON.stringify(arr));}catch(e){}
@@ -3294,6 +3318,7 @@ function NiuNiu(){
     if(roundNum===0&&history.length===0)return;
     var session={
       ts:Date.now(),
+      appMode:appMode,
       pc:pc,
       names:names,
       betRule:betRule,
@@ -3337,7 +3362,10 @@ function NiuNiu(){
     // Always resume into pickDealer so player picks new dealer for next round
     var sc={};for(var i=0;i<(session.pc||2);i++)sc[i]=0;
     setScores(sc);
-    setAppMode("battle");
+    // Restore the mode the session was actually in (battle OR event). Older sessions lack appMode → default battle (previous behavior). An "event" session without selectedEvent cannot run event logic → fall back to battle.
+    var resumeMode=(session.appMode==="event"&&session.selectedEvent)?"event":"battle";
+    setSelectedEvent(session.selectedEvent||null);
+    setAppMode(resumeMode);
     setPhase("pickDealer");
     setPendingResume(null);
   }
@@ -3670,36 +3698,48 @@ function NiuNiu(){
     var maxSteps=aliceData.reduce(function(m,w){return Math.max(m,w.steps.length);},0);
     if(aliceSi>=maxSteps){
       var anyC=aliceData.some(function(w){return w.completed;});
-      var anyR16done=aliceData.some(function(w){return w.tier==="r16";});
-      var COMPD=650; // beat AFTER the final card before the +5 completion bonus is revealed
-      var X2D=900;   // pause before the ×2 (measured from the +5 reveal when completed)
+      var anyR16done=aliceData.some(function(w){return w.tier==="r16"||w.tier==="r32"||w.tier==="r64";});
+      var COMPD=650;  // beat AFTER the final card before the completion dice panel opens
+      var X2D=900;    // pause before the ×2 (measured from the completion total landing)
+      var w0=aliceData[0];
+      var nR=(anyC&&w0&&w0.completed&&w0.compRolls)?w0.compRolls.length:0;
       var tk=[];
-      if(anyC){ tk.push(setTimeout(function(){setCompOn(true);if(soundOn&&SFX&&SFX.aliceComplete)try{SFX.aliceComplete();}catch(e){}},COMPD)); }
-      var base=anyC?COMPD:0; // ×2 waits until the +5 has been shown (if completed)
+      if(anyC&&nR>0){
+        // Interactive completion dice: only OPEN the panel here — the player rolls with the button; compOn/×2/done are chained from the roll handler.
+        tk.push(setTimeout(function(){setDiceOpen(true);},COMPD));
+        return function(){tk.forEach(function(t){clearTimeout(t);});};
+      }
+      var compAt=COMPD;
+      if(anyC){ tk.push(setTimeout(function(){setCompOn(true);if(soundOn&&SFX&&SFX.aliceComplete)try{SFX.aliceComplete();}catch(e){}},compAt)); }
+      var base=anyC?compAt:0;
       if(anyR16done){
         tk.push(setTimeout(function(){setX2On(true);setX2Flash(true);if(soundOn&&SFX&&SFX.aliceKakuhen)try{SFX.aliceKakuhen();}catch(e){}},base+X2D));
         tk.push(setTimeout(function(){setX2Flash(false);},base+X2D+1200));
       }
-      var doneAt=anyR16done?(base+X2D+1400):(anyC?(COMPD+1600):1300);
+      var doneAt=anyR16done?(base+X2D+1400):(anyC?(compAt+1600):1300);
       tk.push(setTimeout(function(){setAliceDone(true);},doneAt));
       return function(){tk.forEach(function(t){clearTimeout(t);});};
     }
     var tick=aliceData.map(function(w){return w.steps[aliceSi];}).filter(Boolean);
+    var anyR64=tick.some(function(s){return s.enterR64;});
+    var anyR32=tick.some(function(s){return s.enterR32;});
     var anyR16=tick.some(function(s){return s.enterR16;});
     var anyKak=tick.some(function(s){return s.enterKak;});
-    var anyEnter=anyR16||anyKak;
+    var anyEnter=anyR64||anyR32||anyR16||anyKak;
     var anyHit=tick.some(function(s){return s.m>=1;});
+    var allBurn=tick.length>0&&tick.every(function(s){return s.burn;});
     var anyComp=tick.some(function(s){return s.comp;});
-    var prevEnter=aliceSi>0&&aliceData.some(function(w){var p=w.steps[aliceSi-1];return p&&(p.enterKak||p.enterR16);});
-    var delay=(anyEnter?560:680)+(prevEnter?800:0);
+    var prevEnter=aliceSi>0&&aliceData.some(function(w){var p=w.steps[aliceSi-1];return p&&(p.enterKak||p.enterR16||p.enterR32||p.enterR64);});
+    var spdF=tulipSpeed==="fast"?0.55:(tulipSpeed==="slow"?1.4:1); // 3-step flip speed (game-start setting)
+    var delay=Math.round((allBurn?460:((anyEnter?740:900)+(prevEnter?950:0)))*spdF); // base pacing slowed overall (v1.4.80)
     var tt=setTimeout(function(){
       if(soundOn){
         if(anyEnter)SFX.aliceKakuhen();
         else if(anyHit)SFX.aliceHit();
-        else SFX.aliceMiss();
+        else if(!allBurn)SFX.aliceMiss();
         if(anyComp)setTimeout(function(){if(soundOn)SFX.aliceComplete();},260);
       }
-      if(anyEnter){setAliceBurst(anyR16?"r16":"kakuhen");setTimeout(function(){setAliceBurst(false);},1050);}
+      if(anyEnter){setAliceBurst(anyR64?"r64":(anyR32?"r32":(anyR16?"r16":"kakuhen")));setTimeout(function(){setAliceBurst(false);},1050);}
       setAliceSi(aliceSi+1);
     },delay);
     return function(){clearTimeout(tt);};
@@ -4094,28 +4134,62 @@ function NiuNiu(){
   //   16R: a single flip hits 4+ → still +1/hit during the run, but the whole Tulip bonus (hits + completion) is ×2 at the END. Upgrades even from kakuhen. (The hand-points multiplier is paid by the normal dealer-vs-child payout, not by Tulip.)
   //   complete: clear the deck with a final hit → +5. bull10+ negates the first miss once.
   //   (Only the single STRONGEST hand flips, against the single WEAKEST hand — 1-on-1. See finalizeTulipRound.)
-  function resolveTulip(handRanks, deckSeq, isBull10plus, startKak){
+  // Completion bonus dice: roll 2 dice and add the total; doubles roll again (stacking); pinzoro (1,1) counts that roll as +20 (and, being doubles, also rolls again). extraRolls (= UNUSED fall guarantees on completion) each let the sequence continue past ONE non-doubles ending. Safety cap 50 rolls.
+  function rollTulipDice(extraRolls){
+    var rolls=[],total=0,extra=extraRolls||0;
+    for(var g=0;g<50;g++){
+      var a=1+Math.floor(Math.random()*6),b=1+Math.floor(Math.random()*6);
+      total+=(a===1&&b===1)?20:(a+b);
+      rolls.push([a,b]);
+      if(a!==b){ if(extra>0){extra--;continue;} break; } // non-doubles ends the run — unless an unused guarantee extends it once
+    }
+    return {rolls:rolls,total:total};
+  }
+  function resolveTulip(handCards, deckCards, guarantees, startKak, isNoBull){
     var idx=function(r){return RANKS.indexOf(r);};
-    var handV=handRanks.map(idx);
+    var handV=handCards.map(function(c){return idx(c.rank);});
+    var hasS7=handCards.some(function(c){return c.rank==="7"&&c.suit==="♠";});
+    var other7=handCards.filter(function(c){return c.rank==="7"&&c.suit!=="♠";}).length;
     var match=function(r){var f=idx(r);var c=0;for(var k=0;k<handV.length;k++){if(Math.abs(handV[k]-f)<=1)c++;}return c;};
-    var bonus=0,i=0,mode=startKak?"kakuhen":"normal",guarantee=isBull10plus?1:0,completed=false,tier=startKak?"kakuhen":null,steps=[],N=deckSeq.length,batch=0;
+    var matchIdx=function(r){var f=idx(r);var a=[];for(var k=0;k<handV.length;k++){if(Math.abs(handV[k]-f)<=1)a.push(k);}return a;};
+    var bonus=0,i=0,mode=startKak?"kakuhen":"normal",guarantee=(guarantees|0),completed=false,tier=startKak?"kakuhen":null,steps=[],N=deckCards.length,batch=0;
     var rate=function(){return 1;}; // every hit is +1 (normal/kakuhen/16R alike); the 16R ×2 is applied once at the end in finalizeTulipRound
     function proc(){
-      var r=deckSeq[i++];var m=match(r);var rt=rate();var st={r:r,m:m,mode:mode,rate:rt,batch:(mode==="normal"?0:batch)};
+      var c=deckCards[i++];var r=c.rank;var hi=matchIdx(r);var m=hi.length;var rt=rate();var st={r:r,suit:c.suit,m:m,mode:mode,rate:rt,batch:(mode==="normal"?0:batch),hits:hi};
       if(m>=1)bonus+=rt*m;
-      if(m>=4){if(mode!=="r16"){mode="r16";tier="r16";st.enterR16=true;}}
-      else if(m>=3){if(mode==="normal"){mode="kakuhen";tier=tier||"kakuhen";st.enterKak=true;}}
+      // 虹色7: an EVALUATED 7 joins the hand when it pairs the ♠7 with another 7 — a flipped ♥/♦/♣ 7 absorbs if the hand holds the ♠7; a flipped ♠7 absorbs if the hand holds any other 7. Its own hit (above) is counted against the PRE-absorb hand; from the next card the grown hand applies. BURNED 7s never absorb (burns are pure air).
+      if(r==="7"){
+        if(c.suit==="♠"){ if(other7>0&&!hasS7){hasS7=true;handV.push(6);st.absorb=true;} }
+        else if(hasS7){ other7++;handV.push(6);st.absorb=true; }
+      }
+      // Tier ladder (upgrades only): 3 hits→確変, 4→16R(×2 at end), 5→32R(×3), 6+→64R(×4)
+      var lv=function(t){return t==="r64"?4:t==="r32"?3:t==="r16"?2:t==="kakuhen"?1:0;};
+      var nt=m>=6?"r64":(m>=5?"r32":(m>=4?"r16":(m>=3?"kakuhen":null)));
+      if(nt&&lv(nt)>lv(mode==="normal"?null:mode)){
+        var wasNormal=(mode==="normal");
+        mode=nt; if(lv(nt)>lv(tier))tier=nt;
+        if(nt==="r64")st.enterR64=true; else if(nt==="r32")st.enterR32=true; else if(nt==="r16")st.enterR16=true; else if(wasNormal)st.enterKak=true;
+      }
       steps.push(st);return st;
     }
     while(true){
       if(i>=N){ if(steps.length>0){completed=true; steps[steps.length-1].comp=true;} break; }
       if(mode==="normal"){
         var st=proc();
-        if(st.m>=1){ /* continue; mode may have escalated to kakuhen/16R */ }
+        var alive=false;
+        if(st.m>=1){ alive=true; /* continue; mode may have escalated to kakuhen/16R */ }
         else{
           if(i>=N){st.stop=true; break;}
-          else if(guarantee>0){guarantee--; st.guard=true;}
+          else if(isNoBull&&steps.length===1){ // 「0は0」: a NO-BULL flipper's FIRST card missing does not stop — the run converts to kakuhen from the NEXT card (first card only, once). Checked BEFORE the guarantee so an ♠A-granted guarantee is preserved for later.
+            mode="kakuhen"; tier=tier||"kakuhen"; st.zero=true; st.enterKak=true; alive=true;
+          }
+          else if(guarantee>0){guarantee--; st.guard=true; alive=true;}
           else{st.stop=true; break;}
+        }
+        // BURN: while still BELOW kakuhen, cards alternate evaluate/burn — after each evaluated card that keeps the run alive (hit or guarded miss) WITHOUT escalating, the next card is drawn and discarded unevaluated (no hit, no miss). Once kakuhen/16R is entered (or when starting in kakuhen), no cards are burned.
+        if(alive&&mode==="normal"&&i<N){
+          var bc=deckCards[i++];
+          steps.push({r:bc.rank,suit:bc.suit,m:0,mode:"normal",rate:0,batch:0,burn:true});
         }
       }else{ // kakuhen / 16R: draw 2 at a time
         batch++; var batchHits=0;
@@ -4128,7 +4202,7 @@ function NiuNiu(){
         }
       }
     }
-    return {bonus:bonus, completed:completed, tier:tier, steps:steps};
+    return {bonus:bonus, completed:completed, tier:tier, steps:steps, guaranteeLeft:guarantee};
   }
 
   function finalizeTulipRound(){
@@ -4153,25 +4227,33 @@ function NiuNiu(){
     // (2) INDEPENDENT Tulip duel — the single STRONGEST hand flips against the single WEAKEST hand; only its FLIP BONUS (hits, +completion, ×2 in 16R) moves chips between those two, ADDED on top of (1). The hand-points multiplier is NOT re-added here (it is already paid by (1)). Strength = bullRank, then highCard (unique).
     var remain=(remainingDeck&&remainingDeck.length)?remainingDeck.slice():[];
     function shuf(a){var d=a.slice();for(var x=d.length-1;x>0;x--){var y=Math.floor(Math.random()*(x+1));var t=d[x];d[x]=d[y];d[y]=t;}return d;}
-    var sharedSeq=shuf(remain).map(function(c){return c.rank;});
+    var sharedCards=shuf(remain);
+    var sharedSeq=sharedCards.map(function(c){return c.rank;});
     var maxIdx=0,minIdx=0;
     for(var p=1;p<pc;p++){
       if(ev[p].bullRank>ev[maxIdx].bullRank||(ev[p].bullRank===ev[maxIdx].bullRank&&ev[p].highCard>ev[maxIdx].highCard))maxIdx=p;
       if(ev[p].bullRank<ev[minIdx].bullRank||(ev[p].bullRank===ev[minIdx].bullRank&&ev[p].highCard<ev[minIdx].highCard))minIdx=p;
     }
-    var handRanks=hands[maxIdx].map(function(c){return c.rank;});
+    var handCards=hands[maxIdx];
+    var handRanks=handCards.map(function(c){return c.rank;});
     var isB10=ev[maxIdx].bullRank>=10;      // 転落保証 (skip first miss)
+    var aceS5=!!(hands[maxIdx][4]&&hands[maxIdx][4].rank==="A"&&hands[maxIdx][4].suit==="♠"); // 5th card (bottom-right) is the ♠A → +1 guarantee
+    var guarantees=(isB10?1:0)+(aceS5?1:0); // 牛牛以上 + ♠A5枚目 = 2 rights
     var startKak=ev[maxIdx].bullRank>=14;   // 五小牛+ starts in kakuhen
-    var r=resolveTulip(handRanks, sharedSeq, isB10, startKak);
-    var comp=r.completed?5:0;               // completion bonus +5 (Tulip only)
-    var isR16=r.tier==="r16";
-    var addMult=isR16?(r.bonus+comp)*2:(r.bonus+comp); // Tulip bonus = flip hits (+completion), 16R doubles the whole thing; this IS the entire Tulip payout multiplier
+    var isZero=ev[maxIdx].bullRank===0;      // 「0は0」: a no-bull hand can only be maxIdx when EVERYONE is no-bull — the "目無しでめくる権利" case
+    var r=resolveTulip(handCards, sharedCards, guarantees, startKak, isZero);
+    var dice=r.completed?rollTulipDice(r.guaranteeLeft||0):null; // completion dice; unused fall guarantees → +1 roll each
+    var comp=dice?dice.total:0;             // completion bonus = 2-dice total (doubles chain, pinzoro=+20); rolled ONCE here so the reveal replays the same result
+    var isR16=r.tier==="r16"||r.tier==="r32"||r.tier==="r64";
+    var endX=r.tier==="r64"?4:(r.tier==="r32"?3:(r.tier==="r16"?2:1)); // end multiplier: 16R=×2, 32R=×3, 64R=×4
+    var addMult=(r.bonus+comp)*endX; // Tulip bonus = flip hits (+completion), tier multiplies the whole thing at the end; this IS the entire Tulip payout multiplier
     var duelBet=(minIdx===dealer?bets[maxIdx]:bets[minIdx])||1; // the loser stakes their bet — but the dealer (banker) has no live bet, so when the dealer is the loser, reference the child (winner=maxIdx) bet instead of the dealer's stale bet
     var duelAmount=Math.round(duelBet*addMult); // FLIP BONUS ONLY — the hand-points (役の点数) multiplier is already paid by the normal dealer-vs-child payout above, so it is NOT re-added here
     deltas[maxIdx]+=duelAmount; deltas[minIdx]-=duelAmount;
     var tulipDeltas={};tulipDeltas[maxIdx]=duelAmount;tulipDeltas[minIdx]=-duelAmount; // the Tulip-only adjustment (shown as +/- in the staged reveal)
-    var flip={idx:maxIdx,name:names[maxIdx],handRanks:handRanks,
+    var flip={idx:maxIdx,name:names[maxIdx],handRanks:handRanks,hand:handCards.slice(),
               bonus:r.bonus,addMult:addMult,completed:r.completed,tier:r.tier,steps:r.steps,
+              compRolls:dice?dice.rolls:null,compBonus:comp,spadeA:aceS5,endMult:endX,
               bull10:isB10,r16:isR16,vsIdx:minIdx,vsName:names[minIdx],label:ev[maxIdx].label};
     // Net biggest winner takes the crown (normal + duel combined).
     var bestDelta=-Infinity,bestIdx=0;
@@ -4182,7 +4264,7 @@ function NiuNiu(){
     pushHistory("niuniu_history_event",{date:new Date().toISOString(),rounds:roundNum+1,playerCount:pc,names:names,winner:bestIdx,results:ev,event:"tulip"});
     setAliceShared(sharedSeq);
     setAliceData([flip]);
-    setAliceSi(0); setAliceBurst(false); setAliceDone(false); setX2Flash(false); setX2On(false); setCompOn(false); setAliceActive(true);
+    setAliceSi(0); setAliceBurst(false); setAliceDone(false); setX2Flash(false); setX2On(false); setCompOn(false); setDiceIdx(-1); setDiceOpen(false); setDiceRolling(false); setAliceActive(true);
     setPhase("result"); // stay on the game board; the flip plays as an overlay
   }
 
@@ -4905,7 +4987,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.66 · © 2026 KTR (",
+            "v1.4.82 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5718,6 +5800,19 @@ function NiuNiu(){
               color:sel?"#d4af37":"#8faa8f",
               boxShadow:sel?"0 0 12px rgba(212,175,55,0.1)":"none"}},t(SPOILER_LABEL_KEYS[lv-1]));})),
         e("div",{style:{fontSize:9,color:"#5a7a5a",textAlign:"center"}},t("setup.spoiler_intensity_desc"))));
+    }
+
+    // Tulip: flip speed (3 steps)
+    if(appMode==="event"&&selectedEvent==="tulip"){
+      setupKids.push(e("div",{key:"tspd",style:cardStyle},
+        e("label",{style:labelStyle},"🌷 チューリップめくり速度"),
+        e("div",{style:{display:"flex",gap:8}},
+          [["slow","ゆっくり"],["normal","普通"],["fast","速い"]].map(function(o){
+            var on=tulipSpeed===o[0];
+            return e("button",{key:o[0],onClick:function(){setTulipSpeed(o[0]);if(soundOn)SFX.buttonClick();},style:{flex:1,padding:"9px 0",borderRadius:9,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
+              background:on?"linear-gradient(135deg,#e0407a,#8a2050)":"rgba(224,64,122,0.06)",color:on?"#fff":"var(--text-muted)",
+              border:on?"none":"1.5px solid rgba(224,64,122,0.2)",boxShadow:on?"0 2px 8px rgba(224,64,122,0.3)":"none"}},o[1]);
+          }))));
     }
 
     // Battle-specific settings
@@ -6782,26 +6877,17 @@ function NiuNiu(){
     var aAcc="#e0407a";
     var maxSteps=aliceData.reduce(function(m,w){return Math.max(m,w.steps.length);},0);
     var shownCount=Math.min(aliceSi,maxSteps);
-    var sharedShown=(aliceShared||[]).slice(0,shownCount);
     var anyKakActive=aliceData.some(function(w){return w.steps.slice(0,aliceSi).some(function(s){return s.enterKak||s.enterR16||s.batch>0;});});
-    var Lw=108, cardW=32, gap=4;
-    var stickyL=function(extra){return Object.assign({width:Lw,flexShrink:0,position:"sticky",left:0,zIndex:3,background:"rgba(10,8,14,0.96)"},extra||{});};
-    var deckPile=function(){
-      return e("div",{style:{position:"relative",width:32,height:44,flexShrink:0,animation:"aliceDeckWobble 1.6s ease-in-out infinite"}},
-        [0,1,2].map(function(d){return e("div",{key:d,style:{position:"absolute",top:d*1.5,left:d*1.5,width:26,height:38,borderRadius:5,
-          background:anyKakActive?"linear-gradient(135deg,#3a1030,#601040)":"linear-gradient(135deg,#2a2438,#3a3450)",
-          border:"1px solid "+(anyKakActive?"rgba(255,140,190,0.6)":"rgba(255,255,255,0.28)"),boxShadow:"0 1px 4px rgba(0,0,0,0.45)"}},
-          d===2?e("div",{style:{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,opacity:0.55}},"🎴"):null);}));
-    };
-    var sharedCard=function(rank,isLast){
-      return e("div",{style:{width:cardW,height:42,borderRadius:6,flexShrink:0,background:"linear-gradient(150deg,rgba(255,255,255,0.16),rgba(255,255,255,0.05))",border:"1.5px solid rgba(255,255,255,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:"#fff",animation:isLast?"aliceDealOut 0.4s ease-out":"none",boxShadow:"0 2px 6px rgba(0,0,0,0.4)"}},rank);
-    };
+    var cardW=32, gap=4;
     var wCell=function(st,bare){
       var base={width:cardW,height:22,borderRadius:4,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800};
       var bd=function(c){return bare?{}:{border:"1px solid "+c};};
       if(!st)return e("div",{style:Object.assign({},base,{background:"rgba(255,255,255,0.02)",color:"rgba(255,255,255,0.14)"})},"·");
+      if(st.burn)return e("div",{style:Object.assign({},base,{background:"rgba(255,255,255,0.04)",color:"rgba(255,255,255,0.35)",border:bare?"none":"1px dashed rgba(255,255,255,0.18)"})},"—");
+      if(st.absorb)return e("div",{style:Object.assign({},base,{background:"linear-gradient(135deg,rgba(255,110,110,0.32),rgba(255,220,110,0.28),rgba(110,160,255,0.32))",color:"#fff"},bd("rgba(255,170,220,0.65)"))},"+"+((st.rate||1)*st.m));
       if(st.m>=1){var bo=(st.rate||1)*st.m;var r16c=(st.rate===2);return e("div",{style:Object.assign({},base,{background:r16c?"rgba(240,200,80,0.3)":"rgba(80,200,120,0.28)",color:r16c?"#ffe89a":"#8ff0b0"},bd(r16c?"rgba(240,200,80,0.7)":"rgba(90,220,130,0.6)"))},"+"+bo);}
       if(st.guard)return e("div",{style:Object.assign({},base,{background:"rgba(240,180,60,0.22)",color:"#f0d080"},bd("rgba(240,180,60,0.6)"))},"🛡");
+      if(st.zero)return e("div",{style:Object.assign({},base,{background:"rgba(224,64,122,0.24)",color:"#ffb0d0"},bd("rgba(224,64,122,0.65)"))},"0");
       if(st.stop)return e("div",{style:Object.assign({},base,{background:"rgba(220,60,80,0.32)",color:"#ffb0b0"},bd("rgba(230,80,100,0.7)"))},"✕");
       return e("div",{style:Object.assign({},base,{background:"rgba(220,60,80,0.12)",color:"rgba(230,120,130,0.7)"})},"✕");
     };
@@ -6829,50 +6915,130 @@ function NiuNiu(){
       }
       return out;
     };
-    var headerH=46,headerMB=8,winnerH=32,winnerMB=5;
-    var leftKids=[],rightKids=[];
-    leftKids.push(e("div",{key:"lh",style:{height:headerH,marginBottom:headerMB,display:"flex",alignItems:"flex-end"}},deckPile()));
-    rightKids.push(e("div",{key:"rh",style:{height:headerH,marginBottom:headerMB,display:"flex",alignItems:"flex-end",gap:gap}},
-      sharedShown.map(function(rank,i){return e("div",{key:i},sharedCard(rank,i===sharedShown.length-1));})));
-    aliceData.forEach(function(w,wi){
-      var revealed=w.steps.slice(0,aliceSi);
-      var bonusSoFar=revealed.reduce(function(s,st){return s+((st.rate||1)*(st.m||0));},0);
-      var winnerDone=aliceSi>=w.steps.length;
-      var lastR=revealed.length?revealed[revealed.length-1]:null;
-      var showComplete=winnerDone&&lastR&&lastR.comp;
-      var tierNow=revealed.some(function(s){return s.mode==="r16"||s.enterR16;})?"r16":(revealed.some(function(s){return s.mode==="kakuhen"||s.enterKak;})?"kakuhen":null);
-      var compShown=showComplete&&compOn; // +5 revealed only after the post-final-card beat
-      var compNow=compShown?5:0;
-      var rawBonus=bonusSoFar+compNow;
-      var showX2=winnerDone&&tierNow==="r16"&&x2On; // 16R doubles only AFTER the post-final-card pause (x2On), not the instant the final card lands
-      var dispMult=showX2?rawBonus*2:rawBonus;
-      var inKak=!!tierNow;
-      var tierCol=tierNow==="r16"?"#ffd76a":"#ffb0d0";
-      var multCol=showX2?"#ffe08a":(compShown?"#f0c040":(tierNow==="r16"?"#ffd76a":aAcc));
-      var labelBg=tierNow==="r16"?"rgba(58,46,14,0.97)":(tierNow==="kakuhen"?"rgba(58,16,42,0.97)":"transparent");
-      var tierPill=tierNow==="r16"?e("span",{style:{fontSize:8,fontWeight:900,padding:"1px 5px",borderRadius:6,background:"#f0c040",color:"#3a2800",letterSpacing:0.5,flexShrink:0}},"16R"):(tierNow==="kakuhen"?e("span",{style:{fontSize:8,fontWeight:900,padding:"1px 5px",borderRadius:6,background:aAcc,color:"#fff",letterSpacing:0.5,flexShrink:0}},"確変"):null);
-      leftKids.push(e("div",{key:"ll"+wi,style:{position:"relative",height:winnerH,marginBottom:winnerMB,display:"flex",flexDirection:"column",justifyContent:"center",paddingLeft:tierNow?6:0,paddingRight:4,background:labelBg,borderRadius:"0 6px 6px 0",boxShadow:tierNow?("inset 3px 0 0 "+(tierNow==="r16"?"#f0c040":aAcc)):"none"}},
-        compShown?e("div",{key:"p5",style:{position:"absolute",left:0,right:0,top:-14,textAlign:"center",fontSize:14,fontWeight:900,color:"#ffe08a",textShadow:"0 0 12px rgba(240,175,45,0.95),0 1px 2px rgba(0,0,0,0.5)",letterSpacing:1,pointerEvents:"none",animation:"plus5Pop 1.25s ease-out both",zIndex:5}},"+5 完走"):null,
-        e("div",{style:{fontSize:10,fontWeight:700,color:inKak?tierCol:"rgba(255,255,255,0.85)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},w.name),
-        e("div",{style:{display:"flex",alignItems:"center",gap:4}},
-          e("span",{key:showX2?"m2":(compShown?"mc":"m1"),style:{fontSize:15,fontWeight:900,color:multCol,lineHeight:1.1,animation:(showX2||compShown)?"aliceMultPulse 0.6s ease both":"none",textShadow:showX2?"0 0 10px rgba(255,210,90,0.95),0 0 20px rgba(240,150,40,0.55)":(compShown?"0 0 8px rgba(240,175,45,0.6)":"none")}},"×"+dispMult+(compShown?" 🎊":"")),
-          showX2?e("span",{key:"x2b",style:{fontSize:9,fontWeight:900,padding:"1px 5px",borderRadius:6,background:"#f0c040",color:"#3a2800",letterSpacing:0.5,flexShrink:0,animation:"aliceMultPulse 0.6s ease 0.08s both"}},"×2"):tierPill)));
-      rightKids.push(e("div",{key:"rw"+wi,style:{height:winnerH,marginBottom:winnerMB,display:"flex",alignItems:"center",gap:gap}},buildWinnerCells(w)));
+    // ===== STAGE layout: the flipper's (growing) HAND is the hero; current flip card center-stage; history strip below =====
+    var wD=aliceData[0];
+    var revealedS=wD.steps.slice(0,aliceSi);
+    var bonusSoFar=revealedS.reduce(function(s,st){return s+((st.rate||1)*(st.m||0));},0);
+    var winnerDone=aliceSi>=wD.steps.length;
+    var lastR=revealedS.length?revealedS[revealedS.length-1]:null;
+    var showComplete=winnerDone&&lastR&&lastR.comp;
+    var tierNow=revealedS.some(function(s){return s.mode==="r64"||s.enterR64;})?"r64":(revealedS.some(function(s){return s.mode==="r32"||s.enterR32;})?"r32":(revealedS.some(function(s){return s.mode==="r16"||s.enterR16;})?"r16":(revealedS.some(function(s){return s.mode==="kakuhen"||s.enterKak;})?"kakuhen":null)));
+    var endXNow=tierNow==="r64"?4:(tierNow==="r32"?3:(tierNow==="r16"?2:1));
+    var isRTier=endXNow>1;
+    var compShown=showComplete&&compOn; // completion bonus lands only after the post-final-card beat
+    var compNow=compShown?(wD.compBonus||5):0;
+    var rawBonus=bonusSoFar+compNow;
+    var showX2=winnerDone&&isRTier&&x2On;
+    var dispMult=showX2?rawBonus*endXNow:rawBonus;
+    var tierCol=isRTier?"#ffd76a":"#ffb0d0";
+    var multCol=showX2?"#ffe08a":(compShown?"#f0c040":(isRTier?"#ffd76a":aAcc));
+    var tierPill=isRTier?e("span",{style:{fontSize:10,fontWeight:900,padding:"2px 8px",borderRadius:7,background:tierNow==="r64"?"linear-gradient(90deg,#ff5060,#f0c040)":(tierNow==="r32"?"linear-gradient(90deg,#f0c040,#ff9040)":"#f0c040"),color:"#3a2800",letterSpacing:0.5}},tierNow==="r64"?"64R":(tierNow==="r32"?"32R":"16R")):(tierNow==="kakuhen"?e("span",{style:{fontSize:10,fontWeight:900,padding:"2px 8px",borderRadius:7,background:aAcc,color:"#fff",letterSpacing:0.5}},"確変"):null);
+    var absorbedCards=revealedS.filter(function(s){return s.absorb;}).map(function(s){return {rank:"7",suit:s.suit};});
+    var dispHand=(wD.hand||[]).concat(absorbedCards);
+    var hcw=dispHand.length>6?44:52, hch=Math.round(hcw*1.42);
+    var curHits=(function(){var lr=revealedS.length?revealedS[revealedS.length-1]:null;return (lr&&!lr.burn&&lr.hits)?lr.hits:[];})();
+    // Display order: low→high (A→K), stable on ties. hits/absorb logic keeps ORIGINAL indices via oi.
+    var handSorted=dispHand.map(function(c,i){return {c:c,oi:i};}).sort(function(a,b){var d=RANKS.indexOf(a.c.rank)-RANKS.indexOf(b.c.rank);return d!==0?d:(a.oi-b.oi);});
+    var handRow=handSorted.map(function(o){
+      var c=o.c,ci=o.oi;
+      var isAbs=ci>=(wD.hand||[]).length;
+      var isHit=curHits.indexOf(ci)>=0;
+      var face=e(CardFace,{card:c,w:hcw,h:hch,faceTheme:curFace});
+      var body=isHit?e("div",{key:"hl"+shownCount,style:{borderRadius:hcw*0.09,boxShadow:"0 0 0 2.5px #4ee08a,0 0 16px rgba(80,224,138,0.85)",animation:"handHit 0.6s ease both"}},face):face;
+      return isAbs?e("div",{key:"h"+ci,style:{padding:2,borderRadius:hcw*0.12+2,background:"conic-gradient(#ff5252,#ffb142,#ffe45c,#5cd85c,#54a7ff,#b06cff,#ff5252)",animation:"handJoin 0.55s cubic-bezier(.3,1.5,.4,1) both",boxShadow:"0 0 10px rgba(255,180,120,0.6)"}},body)
+                  :e("div",{key:"h"+ci},body);
     });
-    gameChildren.push(e("div",{key:"aliceoverlay",style:{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"16px 10px",background:"rgba(6,4,10,0.6)"}},
-      e("div",{style:{width:"100%",maxWidth:"min(96vw,540px)",maxHeight:"88vh",overflowY:"auto",display:"flex",flexDirection:"column"}},
-        e("div",{style:{textAlign:"center",marginBottom:10,flexShrink:0}},
-          e("div",{style:{fontSize:13,letterSpacing:4,color:aAcc,fontWeight:900}},"🌷 T U L I P"),
-          aliceData[0]?e("div",{style:{fontSize:10,color:"rgba(255,255,255,0.62)",marginTop:3,letterSpacing:0.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},aliceData[0].name+" 👑 vs "+aliceData[0].vsName):null),
-        e("div",{style:{display:"flex",alignItems:"flex-start",gap:6}},
-          e("div",{style:{flexShrink:0,width:Lw,display:"flex",flexDirection:"column"}},leftKids),
-          e("div",{ref:tulipScrollRef,style:{flex:1,minWidth:0,overflowX:"auto",display:"flex",flexDirection:"column",paddingBottom:6}},rightKids)),
+    var deckLeft=Math.max(0,(aliceShared||[]).length-shownCount);
+    var curSt=lastR, curFlash=null;
+    if(curSt){
+      if(curSt.burn)curFlash={txt:"バーン",col:"rgba(255,255,255,0.45)"};
+      else if(curSt.absorb)curFlash={txt:"🌈 手札に追加！ +"+((curSt.rate||1)*curSt.m),col:"#ffd76a"};
+      else if(curSt.zero)curFlash={txt:"0は0！確変へ",col:"#ffb0d0"};
+      else if(curSt.guard)curFlash={txt:"🛡 転落保証",col:"#f0d080"};
+      else if(curSt.m>=1)curFlash={txt:"+"+((curSt.rate||1)*curSt.m)+" HIT",col:"#8ff0b0"};
+      else curFlash={txt:"✕ 外れ",col:"#ff9aa8"};
+    }
+    gameChildren.push(e("div",{key:"aliceoverlay",style:{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",background:anyKakActive?"linear-gradient(180deg,#1c0b1a 0%,#26102a 55%,#120812 100%)":"linear-gradient(180deg,#0a1a0f 0%,#0d2416 55%,#081009 100%)",padding:"calc(8px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom))"}},
+      e("div",{style:{textAlign:"center",flexShrink:0,marginBottom:6}},
+        e("div",{style:{fontSize:12,letterSpacing:4,color:aAcc,fontWeight:900}},"🌷 T U L I P"),
+        e("div",{style:{fontSize:10,color:"rgba(255,255,255,0.6)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},wD.name+" 👑（"+(wD.label||"")+"） vs "+wD.vsName)),
+      e("div",{style:{flexShrink:0,textAlign:"center"}},
+        e("div",{style:{fontSize:9,color:"rgba(255,255,255,0.5)",letterSpacing:2,marginBottom:4}},wD.name+" の手札（"+dispHand.length+"枚）"),
+        e("div",{style:{display:"flex",gap:5,justifyContent:"center",alignItems:"center",flexWrap:"wrap"}},handRow)),
+      e("div",{style:{flex:1,minHeight:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:16}},
+          e("div",{style:{textAlign:"center"}},
+            e("div",{style:{width:34,height:47,borderRadius:6,background:anyKakActive?"linear-gradient(135deg,#3a1030,#601040)":"linear-gradient(135deg,#2a2438,#3a3450)",border:"1px solid rgba(255,255,255,0.28)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,opacity:0.75,animation:"aliceDeckWobble 1.6s ease-in-out infinite"}},"🎴"),
+            e("div",{style:{fontSize:8,color:"rgba(255,255,255,0.45)",marginTop:2}},"残り"+deckLeft)),
+          curSt?e("div",{key:"cc"+shownCount,style:{animation:"aliceDealOut 0.35s ease-out",opacity:curSt.burn?0.4:1,filter:curSt.burn?"grayscale(0.9)":"none"}},
+            e(CardFace,{card:{rank:curSt.r,suit:curSt.suit||"♠"},w:62,h:88,faceTheme:curFace}))
+            :e("div",{style:{width:62,height:88,borderRadius:8,border:"1.5px dashed rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.3)",fontSize:11}},"···")),
+        curFlash?e("div",{key:"cf"+shownCount,style:{fontSize:15,fontWeight:900,color:curFlash.col,letterSpacing:1,textShadow:"0 1px 6px rgba(0,0,0,0.6)",animation:"aliceMultPulse 0.5s ease both",minHeight:20}},curFlash.txt):e("div",{style:{minHeight:20}})),
+      e("div",{ref:tulipScrollRef,style:{flexShrink:0,overflowX:"auto",display:"flex",alignItems:"center",gap:gap,padding:"6px 2px",minHeight:34}},buildWinnerCells(wD)),
+      e("div",{style:{flexShrink:0,textAlign:"center",position:"relative",paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.08)"}},
+        compShown?e("div",{key:"p5",style:{position:"absolute",left:0,right:0,top:-16,textAlign:"center",fontSize:14,fontWeight:900,color:"#ffe08a",textShadow:"0 0 12px rgba(240,175,45,0.95),0 1px 2px rgba(0,0,0,0.5)",letterSpacing:1,pointerEvents:"none",animation:"plus5Pop 1.25s ease-out both",zIndex:5}},"🎲+"+(wD.compBonus||5)+" 完走"):null,
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8}},
+          e("span",{key:showX2?"m2":(compShown?"mc":"m1"),style:{fontSize:26,fontWeight:900,color:multCol,lineHeight:1.1,animation:(showX2||compShown)?"aliceMultPulse 0.6s ease both":"none",textShadow:showX2?"0 0 12px rgba(255,210,90,0.95),0 0 24px rgba(240,150,40,0.55)":(compShown?"0 0 8px rgba(240,175,45,0.6)":"none")}},"×"+dispMult+(compShown?" 🎊":"")),
+          showX2?e("span",{key:"x2b",style:{fontSize:11,fontWeight:900,padding:"2px 8px",borderRadius:7,background:"#f0c040",color:"#3a2800",letterSpacing:0.5,animation:"aliceMultPulse 0.6s ease 0.08s both"}},"×"+endXNow):tierPill),
         aliceDone?
-          e("div",{style:{textAlign:"center",marginTop:12,flexShrink:0}},
+          e("div",{style:{marginTop:8}},
             e("button",{onClick:function(){var pd=tulipDeltasRef.current;if(pd){setChips(function(prev){var n=Object.assign({},prev);for(var k in pd.deltas)n[k]=(n[k]||0)+pd.deltas[k];return n;});setRoundDeltas(pd.deltas);setWinner(pd.winner);setTulipReveal({normal:pd.normal,tulip:pd.tulip});tulipDeltasRef.current=null;}setAliceActive(false);},style:{padding:"11px 40px",fontSize:14,fontWeight:800,fontFamily:"inherit",borderRadius:10,border:"none",cursor:"pointer",background:"linear-gradient(135deg,"+aAcc+",#8a2050)",color:"#fff",letterSpacing:2,boxShadow:"0 3px 16px rgba(224,64,122,0.4)"}},"OK ▶")):
-          e("div",{style:{textAlign:"center",marginTop:10,flexShrink:0}},
+          e("div",{style:{marginTop:6}},
             e("button",{onClick:function(){setAliceDone(true);},style:{padding:"6px 18px",fontSize:10,borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"transparent",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontFamily:"inherit"}},"スキップ »")))));
+    var wDice=aliceActive&&aliceData&&aliceData[0];
+    if(diceOpen&&wDice&&wDice.compRolls){
+      var nRolls=wDice.compRolls.length;
+      var shownRolls=diceIdx>=0?wDice.compRolls.slice(0,diceIdx+1):[];
+      var runTot=0;shownRolls.forEach(function(rr){runTot+=(rr[0]===1&&rr[1]===1)?20:(rr[0]+rr[1]);});
+      var curR=shownRolls.length?shownRolls[shownRolls.length-1]:null;
+      var curPz=!!(curR&&curR[0]===1&&curR[1]===1), curDb=!!(curR&&curR[0]===curR[1]);
+      var moreRolls=diceIdx<nRolls-1; // next roll pending (first roll, or after doubles)
+      var doRoll=function(){
+        if(diceRolling||!moreRolls)return;
+        if(soundOn)try{SFX.buttonClick();}catch(e){}
+        setDiceRolling(true);
+        var nextIdx=diceIdx+1;
+        setTimeout(function(){
+          setDiceRolling(false);setDiceIdx(nextIdx);
+          var rr=wDice.compRolls[nextIdx];
+          if(soundOn)try{(rr[0]===1&&rr[1]===1)?SFX.aliceKakuhen():SFX.aliceHit();}catch(e){}
+          if(nextIdx>=nRolls-1){ // final (non-doubles) roll → total lands on the label, then ×2 / done
+            setTimeout(function(){
+              setDiceOpen(false);setCompOn(true);
+              if(soundOn&&SFX&&SFX.aliceComplete)try{SFX.aliceComplete();}catch(e){}
+              if(wDice.tier==="r16"||wDice.tier==="r32"||wDice.tier==="r64"){
+                setTimeout(function(){setX2On(true);setX2Flash(true);if(soundOn&&SFX&&SFX.aliceKakuhen)try{SFX.aliceKakuhen();}catch(e){}},900);
+                setTimeout(function(){setX2Flash(false);},2100);
+                setTimeout(function(){setAliceDone(true);},2300);
+              }else{
+                setTimeout(function(){setAliceDone(true);},1600);
+              }
+            },800);
+          }
+        },750);
+      };
+      var tumbleDie=function(di){return e("div",{key:"t"+di,style:{width:40,height:40,borderRadius:9,background:"linear-gradient(160deg,#ffffff,#e4e4e4)",color:"#888",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:900,boxShadow:"0 2px 6px rgba(0,0,0,0.4)",animation:"diceTumble 0.75s cubic-bezier(.3,.7,.4,1) "+(di*0.06)+"s both"}},"?");};
+      gameChildren.push(e("div",{key:"dice",style:{position:"fixed",top:"30%",left:0,right:0,zIndex:209,pointerEvents:"none",textAlign:"center"}},
+        e("div",{style:{display:"inline-block",padding:"13px 20px",borderRadius:16,background:"rgba(8,14,10,0.94)",border:"1.5px solid rgba(240,200,80,0.55)",boxShadow:"0 8px 30px rgba(0,0,0,0.55)",pointerEvents:"auto"}},
+          e("div",{style:{fontSize:11,fontWeight:900,color:"#ffd76a",letterSpacing:3,marginBottom:8}},"🎲 完走ボーナス"),
+          (shownRolls.length||diceRolling)?e("div",{style:{display:"flex",gap:12,justifyContent:"center",alignItems:"center",marginBottom:6,flexWrap:"wrap",maxWidth:300}},
+            shownRolls.map(function(rr,ri){
+              var last=ri===shownRolls.length-1&&!diceRolling;
+              var pz=rr[0]===1&&rr[1]===1;
+              var die=function(v,di){return e("div",{key:di,style:{width:last?40:22,height:last?40:22,borderRadius:last?9:5,background:"linear-gradient(160deg,#ffffff,#e4e4e4)",color:v===1?"#d02020":"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:last?24:13,fontWeight:900,boxShadow:"0 2px 6px rgba(0,0,0,0.4)",animation:last?("diceIn 0.5s cubic-bezier(.3,1.6,.4,1) "+(di*0.09)+"s both"):"none"}},v);};
+              return e("div",{key:ri,style:{display:"flex",gap:last?6:3,alignItems:"center",opacity:last?1:0.5}},die(rr[0],0),die(rr[1],1),
+                e("div",{style:{fontSize:last?15:10,fontWeight:900,color:pz?"#ff9060":"#8ff0b0",marginLeft:2}},"+"+(pz?20:(rr[0]+rr[1]))));
+            }).concat(diceRolling?[e("div",{key:"tumble",style:{display:"flex",gap:6,alignItems:"center"}},tumbleDie(0),tumbleDie(1))]:[])):null,
+          diceRolling?null:(curPz?e("div",{style:{fontSize:14,fontWeight:900,color:"#ff9060",letterSpacing:2,textShadow:"0 0 14px rgba(255,120,60,0.9)",animation:"aliceMultPulse 0.6s ease both"}},"ピンゾロ！+20"):
+            (curDb?e("div",{style:{fontSize:12,fontWeight:900,color:"#ffd76a",letterSpacing:2,animation:"aliceMultPulse 0.6s ease both"}},"ゾロ目！"):
+            ((curR&&moreRolls)?e("div",{style:{fontSize:12,fontWeight:900,color:"#f0d080",letterSpacing:1.5,animation:"aliceMultPulse 0.6s ease both"}},"🛡 転落保証ボーナス！"):null))),
+          (diceIdx>=0&&!diceRolling)?e("div",{key:"tt"+diceIdx,style:{fontSize:19,fontWeight:900,color:"#f0c040",marginTop:5,animation:"aliceMultPulse 0.5s ease both"}},"合計 +"+runTot):null,
+          (moreRolls&&!diceRolling)?e("button",{onClick:doRoll,style:{marginTop:9,padding:"10px 26px",borderRadius:12,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:900,letterSpacing:1,color:"#3a2800",background:"linear-gradient(135deg,#ffe08a,#f0b040)",boxShadow:"0 3px 12px rgba(240,176,64,0.5)",animation:diceIdx===-1?"tulipPending 1.2s ease-in-out infinite":"none"}},diceIdx===-1?"🎲 サイコロを振る":"🎲 もう一回振る！"):null)));
+    }
     if(x2Flash){
+      var wX=aliceData&&aliceData[0];
+      var endXF=wX&&wX.tier==="r64"?4:(wX&&wX.tier==="r32"?3:2);
+      var endLbl=endXF===4?"64R QUAD":(endXF===3?"32R TRIPLE":"16R DOUBLE");
       // Stylish, DISTINCT-from-16R ×2 moment: screen dims (vignette focus), a metallic-gold "×2" stamps in
       // with shockwave rings, a shimmer sweep, and radial sparks — no bright gold flash like the 16R burst.
       gameChildren.push(e("div",{key:"x2veil",style:{position:"fixed",inset:0,background:"radial-gradient(circle at 50% 41%,rgba(30,22,4,0) 24%,rgba(4,3,8,0.64) 74%)",zIndex:210,pointerEvents:"none",animation:"x2Veil 1.15s ease-out both"}}));
@@ -6883,14 +7049,15 @@ function NiuNiu(){
           e("div",{style:{position:"absolute",left:"50%",top:"46%",width:150,height:150,marginLeft:-75,marginTop:-75,borderRadius:"50%",border:"3px solid rgba(255,214,110,0.9)",boxShadow:"0 0 22px rgba(255,190,70,0.55)",animation:"x2Ring 0.9s ease-out both"}}),
           e("div",{style:{position:"absolute",left:"50%",top:"46%",width:150,height:150,marginLeft:-75,marginTop:-75,borderRadius:"50%",border:"2px solid rgba(255,244,208,0.75)",animation:"x2Ring 0.95s ease-out .14s both"}}),
           e("div",{style:{position:"relative"}},sparks),
-          e("div",{style:{position:"relative",fontSize:92,fontWeight:900,letterSpacing:2,lineHeight:1,backgroundImage:"linear-gradient(100deg,#a9760a 0%,#ffe488 26%,#fff8db 50%,#ffe488 74%,#a9760a 100%)",backgroundSize:"250% 100%",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 24px rgba(255,200,80,0.9)) drop-shadow(0 4px 10px rgba(0,0,0,0.55))",animation:"x2Stamp 0.7s cubic-bezier(.2,1.5,.4,1) both, x2Shine 1.0s ease-out .16s both",display:"inline-block"}},"×2"),
-          e("div",{style:{fontSize:14,fontWeight:900,color:"#ffd76a",letterSpacing:12,marginTop:6,textShadow:"0 0 14px rgba(240,170,40,0.85)",animation:"x2Sub 1.0s ease-out both"}},"DOUBLE"))));
+          e("div",{style:{position:"relative",fontSize:92,fontWeight:900,letterSpacing:2,lineHeight:1,backgroundImage:"linear-gradient(100deg,#a9760a 0%,#ffe488 26%,#fff8db 50%,#ffe488 74%,#a9760a 100%)",backgroundSize:"250% 100%",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 24px rgba(255,200,80,0.9)) drop-shadow(0 4px 10px rgba(0,0,0,0.55))",animation:"x2Stamp 0.7s cubic-bezier(.2,1.5,.4,1) both, x2Shine 1.0s ease-out .16s both",display:"inline-block"}},"×"+endXF),
+          e("div",{style:{fontSize:14,fontWeight:900,color:"#ffd76a",letterSpacing:12,marginTop:6,textShadow:"0 0 14px rgba(240,170,40,0.85)",animation:"x2Sub 1.0s ease-out both"}},endLbl))));
     }
     if(aliceBurst){
-      var isR16=aliceBurst==="r16";
+      var isR16=aliceBurst==="r16"||aliceBurst==="r32"||aliceBurst==="r64";
+      var burstTitle=aliceBurst==="r64"?"64R":(aliceBurst==="r32"?"32R":(aliceBurst==="r16"?"16R":"確 変"));
       gameChildren.push(e("div",{key:"aflash",style:{position:"fixed",inset:0,background:isR16?"radial-gradient(circle,rgba(255,220,110,0.9),rgba(240,150,40,0.55) 42%,rgba(60,30,0,0.25) 82%)":"radial-gradient(circle,rgba(255,140,190,0.85),rgba(224,64,122,0.5) 42%,rgba(50,0,35,0.2) 82%)",zIndex:210,pointerEvents:"none",animation:"aliceKakFlash 1s ease-out"}}));
       gameChildren.push(e("div",{key:"aktitle",style:{position:"fixed",top:"34%",left:0,right:0,textAlign:"center",zIndex:211,pointerEvents:"none"}},
-        e("div",{style:{fontSize:isR16?58:52,fontWeight:900,color:"#fff",letterSpacing:isR16?10:8,textShadow:isR16?"0 0 34px rgba(255,210,90,1),0 0 66px rgba(240,150,40,0.95)":"0 0 32px rgba(255,120,180,1),0 0 60px rgba(224,64,122,0.9)",animation:"aliceKakTitle 1s ease-out"}},isR16?"16R":"確 変")));
+        e("div",{style:{fontSize:isR16?58:52,fontWeight:900,color:"#fff",letterSpacing:isR16?10:8,textShadow:isR16?"0 0 34px rgba(255,210,90,1),0 0 66px rgba(240,150,40,0.95)":"0 0 32px rgba(255,120,180,1),0 0 60px rgba(224,64,122,0.9)",animation:"aliceKakTitle 1s ease-out"}},burstTitle)));
     }
   }
 
