@@ -3119,7 +3119,6 @@ function NiuNiu(){
   // Component-scoped override of getCurrentEvent: reads from state instead of date
   function getCurrentEvent(){return selectedEvent;}
   TULIP_ACE_SPECIAL=(appMode==="event"&&selectedEvent==="tulip"); // ♠A special face only where the effect exists
-  TULIP_RAINBOW7=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbowOn); // ♠7 rainbow mark only when the rule is ON
   var sh6=useState(null),hurricaneAnimatingDiscard=sh6[0],setHurricaneAnimatingDiscard=sh6[1]; // {pi:N, ci:N} during spiral-out animation
   var sh7=useState(new Set()),hurricaneAnimatingRefill=sh7[0],setHurricaneAnimatingRefill=sh7[1]; // Set of pi currently showing spawn animation
   // Roulette event states
@@ -3216,6 +3215,7 @@ function NiuNiu(){
   var uix14=useState(function(){try{return localStorage.getItem("niuniu_tulip_rainbow")==="1";}catch(e){}return false;}),tulipRainbowOn=uix14[0],setTulipRainbowRaw=uix14[1];
   function setTulipZero(v){setTulipZeroRaw(v);try{localStorage.setItem("niuniu_tulip_zero",v?"1":"0");}catch(e){}}
   function setTulipRainbow(v){setTulipRainbowRaw(v);try{localStorage.setItem("niuniu_tulip_rainbow",v?"1":"0");}catch(e){}}
+  TULIP_RAINBOW7=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbowOn); // ♠7 rainbow mark only when the rule is ON (must run AFTER the state above is initialized)
   function setTulipSpeed(v){setTulipSpeedRaw(v);try{localStorage.setItem("niuniu_tulip_speed",v);}catch(e){}}
   function setMaxShortcuts(arr){
     setMaxShortcutsState(arr);
@@ -4989,7 +4989,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.85 · © 2026 KTR (",
+            "v1.4.86 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
