@@ -4989,7 +4989,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.84 · © 2026 KTR (",
+            "v1.4.85 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -6900,16 +6900,23 @@ function NiuNiu(){
     var anyKakActive=aliceData.some(function(w){return w.steps.slice(0,aliceSi).some(function(s){return s.enterKak||s.enterR16||s.batch>0;});});
     var cardW=32, gap=4;
     var wCell=function(st,bare){
-      var base={width:cardW,height:22,borderRadius:4,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800};
-      var bd=function(c){return bare?{}:{border:"1px solid "+c};};
-      if(!st)return e("div",{style:Object.assign({},base,{background:"rgba(255,255,255,0.02)",color:"rgba(255,255,255,0.14)"})},"·");
-      if(st.burn)return e("div",{style:Object.assign({},base,{background:"rgba(255,255,255,0.04)",color:"rgba(255,255,255,0.35)",border:bare?"none":"1px dashed rgba(255,255,255,0.18)"})},"—");
-      if(st.absorb)return e("div",{style:Object.assign({},base,{background:"linear-gradient(135deg,rgba(255,110,110,0.32),rgba(255,220,110,0.28),rgba(110,160,255,0.32))",color:"#fff"},bd("rgba(255,170,220,0.65)"))},"+"+((st.rate||1)*st.m));
-      if(st.m>=1){var bo=(st.rate||1)*st.m;var r16c=(st.rate===2);return e("div",{style:Object.assign({},base,{background:r16c?"rgba(240,200,80,0.3)":"rgba(80,200,120,0.28)",color:r16c?"#ffe89a":"#8ff0b0"},bd(r16c?"rgba(240,200,80,0.7)":"rgba(90,220,130,0.6)"))},"+"+bo);}
-      if(st.guard)return e("div",{style:Object.assign({},base,{background:"rgba(240,180,60,0.22)",color:"#f0d080"},bd("rgba(240,180,60,0.6)"))},"🛡");
-      if(st.zero)return e("div",{style:Object.assign({},base,{background:"rgba(224,64,122,0.24)",color:"#ffb0d0"},bd("rgba(224,64,122,0.65)"))},"0");
-      if(st.stop)return e("div",{style:Object.assign({},base,{background:"rgba(220,60,80,0.32)",color:"#ffb0b0"},bd("rgba(230,80,100,0.7)"))},"✕");
-      return e("div",{style:Object.assign({},base,{background:"rgba(220,60,80,0.12)",color:"rgba(230,120,130,0.7)"})},"✕");
+      if(!st)return e("div",{style:{width:26,height:38,borderRadius:4,flexShrink:0,background:"rgba(255,255,255,0.02)",border:"1px dashed rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.14)",fontSize:10}},"·");
+      var red=st.suit==="♥"||st.suit==="♦";
+      var txtCol=st.burn?"rgba(255,255,255,0.5)":(red?"#c62828":"#1a1a1a");
+      var bo=(st.rate||1)*(st.m||0);
+      var statusBorder=st.stop?"1.5px solid rgba(235,80,100,0.9)":(st.guard?"1.5px solid rgba(240,180,60,0.85)":(st.zero?"1.5px solid rgba(224,64,122,0.85)":(st.burn?"1px dashed rgba(255,255,255,0.25)":"1px solid rgba(0,0,0,0.2)")));
+      var card=e("div",{style:{width:26,height:38,borderRadius:4,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1,
+        background:st.burn?"rgba(255,255,255,0.06)":"linear-gradient(150deg,#ffffff,#e8e8e8)",border:statusBorder,opacity:st.burn?0.5:1,filter:st.burn?"grayscale(0.85)":"none",boxShadow:st.burn?"none":"0 1px 3px rgba(0,0,0,0.35)"}},
+        e("div",{style:{fontSize:11,fontWeight:900,color:txtCol,lineHeight:1}},st.r),
+        e("div",{style:{fontSize:9,color:txtCol,lineHeight:1}},st.suit||""));
+      var body=st.absorb?e("div",{style:{padding:1.5,borderRadius:6,background:"conic-gradient(#ff5252,#ffb142,#ffe45c,#5cd85c,#54a7ff,#b06cff,#ff5252)",flexShrink:0}},card):card;
+      var badge=null;
+      if(st.m>=1)badge=["+"+bo,st.absorb?"linear-gradient(90deg,#e05252,#d8a832,#5486d8)":"#2f7a4a","#fff"];
+      else if(st.guard)badge=["🛡","rgba(58,44,10,0.95)","#f0d080"];
+      else if(st.zero)badge=["0","rgba(90,20,55,0.95)","#ffb0d0"];
+      else if(!st.burn)badge=["✕","rgba(120,30,40,0.95)","#ffb0b0"];
+      return e("div",{style:{position:"relative",flexShrink:0,paddingBottom:7}},body,
+        badge?e("div",{style:{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",minWidth:16,padding:"0 3px",height:13,borderRadius:7,background:badge[1],color:badge[2],fontSize:8.5,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.45)",whiteSpace:"nowrap",lineHeight:1}},badge[0]):null);
     };
     // 確変/16R: cards come in pairs of 2 (continue if either hits, fall if both miss). Box each pair so the danger is clear.
     var batchBox=function(group){
@@ -6995,7 +7002,7 @@ function NiuNiu(){
             e(CardFace,{card:{rank:curSt.r,suit:curSt.suit||"♠"},w:62,h:88,faceTheme:curFace}))
             :e("div",{style:{width:62,height:88,borderRadius:8,border:"1.5px dashed rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.3)",fontSize:11}},"···"))),
         curFlash?e("div",{key:"cf"+shownCount,style:{fontSize:15,fontWeight:900,color:curFlash.col,letterSpacing:1,textShadow:"0 1px 6px rgba(0,0,0,0.6)",animation:"aliceMultPulse 0.5s ease both",minHeight:20}},curFlash.txt):e("div",{style:{minHeight:20}})),
-      e("div",{ref:tulipScrollRef,style:{flexShrink:0,overflowX:"auto",display:"flex",alignItems:"center",gap:gap,padding:"6px 2px",minHeight:34}},buildWinnerCells(wD)),
+      e("div",{ref:tulipScrollRef,style:{flexShrink:0,overflowX:"auto",display:"flex",alignItems:"center",gap:gap,padding:"6px 2px 3px",minHeight:56}},buildWinnerCells(wD)),
       e("div",{style:{flexShrink:0,textAlign:"center",position:"relative",paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.08)"}},
         compShown?e("div",{key:"p5",style:{position:"absolute",left:0,right:0,top:-16,textAlign:"center",fontSize:14,fontWeight:900,color:"#ffe08a",textShadow:"0 0 12px rgba(240,175,45,0.95),0 1px 2px rgba(0,0,0,0.5)",letterSpacing:1,pointerEvents:"none",animation:"plus5Pop 1.25s ease-out both",zIndex:5}},"🎲+"+(wD.compBonus||5)+" 完走"):null,
         e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8}},
