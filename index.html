@@ -473,6 +473,7 @@ var SUITS=["♠","♥","♦","♣"];
 var RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 var TULIP_ACE_SPECIAL=false; // set by the App on every render; gates the special golden ♠A face (Tulip event only, where the ♠A effect exists)
 var TULIP_RAINBOW7=false; // set by the App on every render; gates the rainbow ♠7 mark (Tulip event AND the rainbow-7 rule enabled)
+var TULIP_RAINBOW3=false; // set by the App on every render; gates the rainbow ♠3 mark (Tulip event AND the rainbow-3 rule enabled)
 var RANK_ORDER={"A":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13};
 var SUIT_ORDER={"♠":4,"♥":3,"♦":2,"♣":1};
 // 先バレ強度スライダー: Lv1〜Lv5、非牛時のglitch/red出現率にこのscaleを乗算
@@ -689,6 +690,7 @@ function CardFace(props){
   var isAceOfSpades=card.rank==="A"&&card.suit==="♠";
   var spTulip=isAceOfSpades&&TULIP_ACE_SPECIAL; // golden special MARK only (Tulip event: ♠A in the 5th slot grants +1 guarantee); frame/corners stay normal so the squeeze doesn't spoil it
   var sp7Tulip=card.rank==="7"&&card.suit==="♠"&&TULIP_RAINBOW7; // rainbow special MARK only when the 虹色7 rule is enabled; frame/corners stay normal
+  var sp3Tulip=card.rank==="3"&&card.suit==="♠"&&TULIP_RAINBOW3; // rainbow special MARK (center pip [50,50]) only when the 虹色3 rule is enabled
   var pipSize=isAceOfSpades?w*0.95*(ft.suitScale||1):(card.rank==="A"?w*0.42*(ft.suitScale||1):w*0.24*(ft.suitScale||1));
   var cTop=h*0.10,cLeft=w*0.08,cW2=w*0.84,cH2=h*0.80;
   var bgGrad=highlight?"linear-gradient(145deg,"+ft.hlBg[0]+" 0%,"+ft.hlBg[1]+" 100%)":"linear-gradient(145deg,"+ft.bg[0]+" 0%,"+ft.bg[1]+" 100%)";
@@ -768,7 +770,7 @@ function CardFace(props){
               // Letter A (stylized)
               e("path",{d:"M 42 65 L 50 40 L 58 65 M 45 57 L 55 57",
                 stroke:accent,strokeWidth:2.2,fill:"none",strokeLinecap:"round",strokeLinejoin:"round",opacity:0.95}));
-          })():((sp7Tulip&&p[0]===50)?e("span",{style:{backgroundImage:"linear-gradient(135deg,#ff1744,#ff9100,#ffea00,#00e676,#00b0ff,#d500f9)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 4px rgba(255,80,180,0.9)) saturate(1.6)"}},card.suit):card.suit));
+          })():(((sp7Tulip&&p[0]===50)||(sp3Tulip&&p[1]===50))?e("span",{style:{backgroundImage:"linear-gradient(135deg,#ff1744,#ff9100,#ffea00,#00e676,#00b0ff,#d500f9)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent",color:"transparent",filter:"drop-shadow(0 0 4px rgba(255,80,180,0.9)) saturate(1.6)"}},card.suit):card.suit));
       })));
   }
   return e("div",{style:{width:w,height:h,position:"relative",
@@ -1280,7 +1282,7 @@ var I18N={
     "event.tulip.rule_step3":"外れ（0枚一致）が出たら終了。チューリップの配当＝めくりで貯めた加算分（hit数）のみを最弱の相手に適用（役の点数倍は通常配当で既に加算済みのため含めない。賭け金は敗者＝最弱の額基準、ただし親が敗者の時は勝者の子の額基準）",
     "event.tulip.rule_step4":"一度に3枚以上一致で「確変」：以降2枚ずつめくり、2枚中1枚でも一致で継続（2枚とも外れで終了）。五小牛以上の役は最初から確変スタート",
     "event.tulip.rule_step5":"一度に4枚以上一致で「16R」：突入後も加算は1hitあたり+1倍だが、最後に加算分（hit数＋完走bonus）をまとめて2倍にする。5枚一致の32Rなら×3、6枚以上の64Rなら×4（例: 16R完走なら (hit数＋完走)×2。役の点数倍は通常配当で別途）",
-    "event.tulip.rule_note1":"山を最後までめくり切り、その最後の手に一致があれば「完走」。サイコロ2個を振り合計をチューリップ配当に加算、ゾロ目なら振り足して累積、ピンゾロ(1,1)はその回を+20として加算（外れで山が尽きたら完走なし）",
+    "event.tulip.rule_note1":"「完走」＝山が尽きた時点でめくり続行の権利が残っている状態（最後の外れを転落保証で無効化した場合や、最後の1枚がバーンの場合も完走）。完走でサイコロ2個を振り合計を加算、ゾロ目は振り足して累積、ピンゾロ(1,1)はその回+20。保証なしで最後の1枚が外れた場合のみ完走なし",
     "event.tulip.rule_note2":"牛牛以上は最初の外れを1回だけ無効化（転落保証）。保証を使わずに完走した場合、残した保証1つにつき完走ダイスを追加で1回振れる",
     "event.tulip.rule_note4":"5枚目（右下）が♠Aの人がめくり手（最強）になると転落保証+1（牛牛以上なら合計2権利）。この♠Aは金色の特別デザインで表示される",
     "event.jackpot.rule_title":"ジャックポットのルール",
@@ -1757,7 +1759,7 @@ var I18N={
     "event.tulip.rule_step3":"A miss (no match) ends it. The Tulip payout = the accumulated flip bonus (hits) ONLY, applied against the weakest opponent (the hand-points multiplier is already paid by the normal payout, so it is not re-added; stake = the loser's bet — or the winning child's bet when the dealer is the loser)",
     "event.tulip.rule_step4":"Matching 3+ at once triggers Kakuhen: draw 2 at a time, continue if either hits (stop if both miss). Hands of 5-small-bull or higher start in Kakuhen",
     "event.tulip.rule_step5":"Matching 4+ at once triggers 16R: hits still count +1 each, but at the END the whole bonus (hits + completion) is multiplied: ×2 for 16R, ×3 for 32R (5 matches), ×4 for 64R (6+); the hand-points multiplier is separate, via the normal payout",
-    "event.tulip.rule_note1":"Clearing the whole deck with a hit on the final flip = complete: roll 2 dice and add the total to the Tulip bonus — doubles roll again (stacking), snake eyes 1·1 counts that roll as +20 (no complete if a miss empties the deck)",
+    "event.tulip.rule_note1":"Complete = the deck runs out while you still hold the right to keep flipping (a final miss negated by a fall guarantee, or a final burned card, still completes): roll 2 dice and add the total — doubles roll again (stacking), snake eyes 1·1 counts +20. Only an unguarded miss on the last card fails to complete",
     "event.tulip.rule_note2":"Niu-Niu or higher negates the first miss once (fall guarantee). If you complete WITHOUT using it, each unused guarantee grants one extra completion-dice roll",
     "event.tulip.rule_note4":"If the flipper's 5th card (bottom-right) is the Ace of Spades, +1 fall guarantee (2 total with Niu-Niu or higher). That ♠A shows a special golden design",
     "event.jackpot.rule_title":"Jackpot Rules",
@@ -2216,7 +2218,7 @@ var I18N={
     "event.tulip.rule_step3":"出现未命中（0张）即结束。郁金香配当＝翻牌累积的加成（命中数）仅此,应用于最弱的对手（牌型点数倍已由正常配当计入,故不重复；下注以败者＝最弱为准,若庄家为败者则以获胜闲家为准）",
     "event.tulip.rule_step4":"一次命中3张以上进入「确变」：之后每次翻2张,2张任一命中则继续（2张全未命中结束）。五小牛以上的牌型从一开始即确变开始",
     "event.tulip.rule_step5":"一次命中4张以上进入「16R」：进入后每命中仍+1倍,但最后将加成（命中数＋完走bonus）整体倍化:16R×2,32R(5张)×3,64R(6张以上)×4;牌型点数倍另计,经正常配当",
-    "event.tulip.rule_note1":"翻完整堆且最后一手有命中＝完走:掷2颗骰子,总和加入郁金香加成;掷出对子可再掷累积,1·1该次按+20计（若因未命中翻完则不算完走）",
+    "event.tulip.rule_note1":"完走＝牌堆耗尽时仍保有继续翻牌的权利（最后一张未命中但被转落保证抵消、或最后一张为烧牌时也算完走）:掷2颗骰子,总和计入加成;对子可再掷累积,1·1该次按+20。仅当无保证且最后一张未命中时不算完走",
     "event.tulip.rule_note2":"牛牛以上首次未命中可抵消1次（转落保证）。若未使用保证即完走,每个未用保证可额外多掷1次完走骰子",
     "event.tulip.rule_note4":"翻牌者的第5张（右下）为黑桃A时,转落保证+1（牛牛以上共2次）。该♠A以金色特别设计显示",
     "event.jackpot.rule_title":"头奖规则",
@@ -3215,6 +3217,9 @@ function NiuNiu(){
   var uix14=useState(function(){try{return localStorage.getItem("niuniu_tulip_rainbow")==="1";}catch(e){}return false;}),tulipRainbowOn=uix14[0],setTulipRainbowRaw=uix14[1];
   function setTulipZero(v){setTulipZeroRaw(v);try{localStorage.setItem("niuniu_tulip_zero",v?"1":"0");}catch(e){}}
   function setTulipRainbow(v){setTulipRainbowRaw(v);try{localStorage.setItem("niuniu_tulip_rainbow",v?"1":"0");}catch(e){}}
+  var uix15=useState(function(){try{return localStorage.getItem("niuniu_tulip_rainbow3")==="1";}catch(e){}return false;}),tulipRainbow3On=uix15[0],setTulipRainbow3Raw=uix15[1];
+  function setTulipRainbow3(v){setTulipRainbow3Raw(v);try{localStorage.setItem("niuniu_tulip_rainbow3",v?"1":"0");}catch(e){}}
+  TULIP_RAINBOW3=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbow3On); // ♠3 rainbow mark only when the rule is ON (must run AFTER the state above)
   TULIP_RAINBOW7=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbowOn); // ♠7 rainbow mark only when the rule is ON (must run AFTER the state above is initialized)
   function setTulipSpeed(v){setTulipSpeedRaw(v);try{localStorage.setItem("niuniu_tulip_speed",v);}catch(e){}}
   function setMaxShortcuts(arr){
@@ -4147,11 +4152,13 @@ function NiuNiu(){
     }
     return {rolls:rolls,total:total};
   }
-  function resolveTulip(handCards, deckCards, guarantees, startKak, isNoBull, rainbowOn){
+  function resolveTulip(handCards, deckCards, guarantees, startKak, isNoBull, rainbowOn, rainbow3On){
     var idx=function(r){return RANKS.indexOf(r);};
     var handV=handCards.map(function(c){return idx(c.rank);});
     var hasS7=handCards.some(function(c){return c.rank==="7"&&c.suit==="♠";});
     var other7=handCards.filter(function(c){return c.rank==="7"&&c.suit!=="♠";}).length;
+    var hasS3=handCards.some(function(c){return c.rank==="3"&&c.suit==="♠";});
+    var other3=handCards.filter(function(c){return c.rank==="3"&&c.suit!=="♠";}).length;
     var match=function(r){var f=idx(r);var c=0;for(var k=0;k<handV.length;k++){if(Math.abs(handV[k]-f)<=1)c++;}return c;};
     var matchIdx=function(r){var f=idx(r);var a=[];for(var k=0;k<handV.length;k++){if(Math.abs(handV[k]-f)<=1)a.push(k);}return a;};
     var bonus=0,i=0,mode=startKak?"kakuhen":"normal",guarantee=(guarantees|0),completed=false,tier=startKak?"kakuhen":null,steps=[],N=deckCards.length,batch=0;
@@ -4163,6 +4170,10 @@ function NiuNiu(){
       if(rainbowOn&&r==="7"){
         if(c.suit==="♠"){ if(other7>0&&!hasS7){hasS7=true;handV.push(6);st.absorb=true;} }
         else if(hasS7){ other7++;handV.push(6);st.absorb=true; }
+      }
+      if(rainbow3On&&r==="3"){ // 虹色3: same mechanic as 虹色7, on rank 3 (idx 2)
+        if(c.suit==="♠"){ if(other3>0&&!hasS3){hasS3=true;handV.push(2);st.absorb=true;} }
+        else if(hasS3){ other3++;handV.push(2);st.absorb=true; }
       }
       // Tier ladder (upgrades only): 3 hits→確変, 4→16R(×2 at end), 5→32R(×3), 6+→64R(×4)
       var lv=function(t){return t==="r64"?4:t==="r32"?3:t==="r16"?2:t==="kakuhen"?1:0;};
@@ -4181,8 +4192,8 @@ function NiuNiu(){
         var alive=false;
         if(st.m>=1){ alive=true; /* continue; mode may have escalated to kakuhen/16R */ }
         else{
-          if(i>=N){st.stop=true; break;}
-          else if(isNoBull&&steps.length===1){ // 「0は0」: a NO-BULL flipper's FIRST card missing does not stop — the run converts to kakuhen from the NEXT card (first card only, once). Checked BEFORE the guarantee so an ♠A-granted guarantee is preserved for later.
+          // 完走定義: 山が尽きた時点で「続行権利が残っている」なら完走。最後の1枚の外れでも、0は0/転落保証で生存すればループ先頭の山切れ判定で completed になる（保証なしの外れのみ stop）。
+          if(isNoBull&&steps.length===1){ // 「0は0」: a NO-BULL flipper's FIRST card missing does not stop — the run converts to kakuhen from the NEXT card (first card only, once). Checked BEFORE the guarantee so an ♠A-granted guarantee is preserved for later.
             mode="kakuhen"; tier=tier||"kakuhen"; st.zero=true; st.enterKak=true; alive=true;
           }
           else if(guarantee>0){guarantee--; st.guard=true; alive=true;}
@@ -4198,8 +4209,7 @@ function NiuNiu(){
         for(var k=0;k<2 && i<N;k++){ var st2=proc(); if(st2.m>=1)batchHits++; }
         if(batchHits>=1){ if(i>=N){completed=true; steps[steps.length-1].comp=true; break;} }
         else{
-          if(i>=N){steps[steps.length-1].stop=true; break;}
-          else if(guarantee>0){guarantee--; steps[steps.length-1].guard=true;}
+          if(guarantee>0){guarantee--; steps[steps.length-1].guard=true;} // 山切れでも保証があれば生存 → ループ先頭で completed
           else{steps[steps.length-1].stop=true; break;}
         }
       }
@@ -4243,7 +4253,7 @@ function NiuNiu(){
     var guarantees=(isB10?1:0)+(aceS5?1:0); // 牛牛以上 + ♠A5枚目 = 2 rights
     var startKak=ev[maxIdx].bullRank>=14;   // 五小牛+ starts in kakuhen
     var isZero=tulipZeroOn&&ev[maxIdx].bullRank===0; // 「0は0」rule (opt-in at setup): a no-bull hand can only be maxIdx when EVERYONE is no-bull
-    var r=resolveTulip(handCards, sharedCards, guarantees, startKak, isZero, tulipRainbowOn);
+    var r=resolveTulip(handCards, sharedCards, guarantees, startKak, isZero, tulipRainbowOn, tulipRainbow3On);
     var dice=r.completed?rollTulipDice(r.guaranteeLeft||0):null; // completion dice; unused fall guarantees → +1 roll each
     var comp=dice?dice.total:0;             // completion bonus = 2-dice total (doubles chain, pinzoro=+20); rolled ONCE here so the reveal replays the same result
     var isR16=r.tier==="r16"||r.tier==="r32"||r.tier==="r64";
@@ -4989,7 +4999,7 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.86 · © 2026 KTR (",
+            "v1.4.88 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
             ")"))),
@@ -5832,6 +5842,8 @@ function NiuNiu(){
           "全員が役なし（目無し）のとき、めくり手の1枚目が外れでも終了せず、次のカードから確変として続行できる（1枚目のみ・一度きり）。"),
         togRow("rb",tulipRainbowOn,setTulipRainbow,"「虹色7」",
           "めくり手の手札に♠7があると、めくりで出た♥/♦/♣の7が手札に加わり判定対象がどんどん増える。♠7がめくりで出た場合も、手札に他の7があれば加わる（バーンされた7は無効）。♠7は中央だけ虹色のマークで表示。"),
+        togRow("rb3",tulipRainbow3On,setTulipRainbow3,"「虹色3」",
+          "虹色7の3バージョン。♠3と他の3が揃うと出た3が手札に加わっていく（バーンは無効）。♠3は中央だけ虹色マーク＝絞りの途中では2♠か3♠か分からないドキドキ仕様。"),
         e("div",{style:{fontSize:9,color:"#f0c040",textAlign:"center",marginTop:6,lineHeight:1.5}},"⚠ つければつけるほど倍率が伸びやすくなり、高レートの上級者向けルールになります")));
     }
 
@@ -6960,7 +6972,7 @@ function NiuNiu(){
     var tierCol=isRTier?"#ffd76a":"#ffb0d0";
     var multCol=showX2?"#ffe08a":(compShown?"#f0c040":(isRTier?"#ffd76a":aAcc));
     var tierPill=isRTier?e("span",{style:{fontSize:10,fontWeight:900,padding:"2px 8px",borderRadius:7,background:tierNow==="r64"?"linear-gradient(90deg,#ff5060,#f0c040)":(tierNow==="r32"?"linear-gradient(90deg,#f0c040,#ff9040)":"#f0c040"),color:"#3a2800",letterSpacing:0.5}},tierNow==="r64"?"64R":(tierNow==="r32"?"32R":"16R")):(tierNow==="kakuhen"?e("span",{style:{fontSize:10,fontWeight:900,padding:"2px 8px",borderRadius:7,background:aAcc,color:"#fff",letterSpacing:0.5}},"確変"):null);
-    var absorbedCards=revealedS.filter(function(s){return s.absorb;}).map(function(s){return {rank:"7",suit:s.suit};});
+    var absorbedCards=revealedS.filter(function(s){return s.absorb;}).map(function(s){return {rank:s.r,suit:s.suit};});
     var dispHand=(wD.hand||[]).concat(absorbedCards);
     var hcw=dispHand.length>6?44:52, hch=Math.round(hcw*1.42);
     var curHits=(function(){var lr=revealedS.length?revealedS[revealedS.length-1]:null;return (lr&&!lr.burn&&lr.hits)?lr.hits:[];})();
