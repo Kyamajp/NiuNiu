@@ -3191,6 +3191,8 @@ function NiuNiu(){
   var al7=useState(false),aliceActive=al7[0],setAliceActive=al7[1]; // Alice overlay shown on the result board
   var al8=useState([]),aliceShared=al8[0],setAliceShared=al8[1]; // ONE shared flip sequence (ranks) shown to all winners
   var tulipDeltasRef=useRef(null); // chip deltas applied AFTER the reveal (deferred chip animation)
+  var debugNoShuffleRef=useRef(false); // TEMP TEST: when true, finalizeTulipRound uses the remaining deck in order (no shuffle)
+  var debugDiceRef=useRef(null);       // TEMP TEST: when set ([[a,b],...]), forces the completion dice rolls
   var tulipScrollRef=useRef(null); // reveal scroll container — auto-scrolls so newest cards stay visible
   var b7=useState(null),roundDeltas=b7[0],setRoundDeltas=b7[1];
   var b8=useState("rule"),rbTab=b8[0],setRbTab=b8[1];
@@ -3220,6 +3222,7 @@ function NiuNiu(){
   var uix15=useState(function(){try{return localStorage.getItem("niuniu_tulip_rainbow3")==="1";}catch(e){}return false;}),tulipRainbow3On=uix15[0],setTulipRainbow3Raw=uix15[1];
   function setTulipRainbow3(v){setTulipRainbow3Raw(v);try{localStorage.setItem("niuniu_tulip_rainbow3",v?"1":"0");}catch(e){}}
   TULIP_RAINBOW3=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbow3On); // ♠3 rainbow mark only when the rule is ON (must run AFTER the state above)
+  var uix16=useState(false),showDebug=uix16[0],setShowDebug=uix16[1]; // TEMP TEST: Tulip scenario test panel
   TULIP_RAINBOW7=(appMode==="event"&&selectedEvent==="tulip"&&tulipRainbowOn); // ♠7 rainbow mark only when the rule is ON (must run AFTER the state above is initialized)
   function setTulipSpeed(v){setTulipSpeedRaw(v);try{localStorage.setItem("niuniu_tulip_speed",v);}catch(e){}}
   function setMaxShortcuts(arr){
@@ -3763,7 +3766,7 @@ function NiuNiu(){
       if(_cb<1){_cb=rollBetValue();setJpCoolBet(_cb);} // safety fallback (normally decided via slot)
       setBets(function(){var nb={};for(var bi=0;bi<pc;bi++)nb[bi]=_cb;return nb;});
     }
-    var deck=createDeck();var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
+    var deck=createDeck();debugNoShuffleRef.current=false;debugDiceRef.current=null;var h=[];for(var i=0;i<pc;i++)h.push(deck.slice(i*5,i*5+5));
     setRemainingDeck(deck.slice(pc*5)); // undealt cards → Alice flips from here
     setHands(h);var rc=[];for(var i2=0;i2<pc;i2++)rc.push(new Set());setRevealedCards(rc);
     setResults([]);setWinner(null);setPhase("dealing");if(sc)setScores(sc);
@@ -4239,7 +4242,7 @@ function NiuNiu(){
     // (2) INDEPENDENT Tulip duel — the single STRONGEST hand flips against the single WEAKEST hand; only its FLIP BONUS (hits, +completion, ×2 in 16R) moves chips between those two, ADDED on top of (1). The hand-points multiplier is NOT re-added here (it is already paid by (1)). Strength = bullRank, then highCard (unique).
     var remain=(remainingDeck&&remainingDeck.length)?remainingDeck.slice():[];
     function shuf(a){var d=a.slice();for(var x=d.length-1;x>0;x--){var y=Math.floor(Math.random()*(x+1));var t=d[x];d[x]=d[y];d[y]=t;}return d;}
-    var sharedCards=shuf(remain);
+    var sharedCards=(debugNoShuffleRef.current?remain:shuf(remain));debugNoShuffleRef.current=false;
     var sharedSeq=sharedCards.map(function(c){return c.rank;});
     var maxIdx=0,minIdx=0;
     for(var p=1;p<pc;p++){
@@ -4254,7 +4257,12 @@ function NiuNiu(){
     var startKak=ev[maxIdx].bullRank>=14;   // 五小牛+ starts in kakuhen
     var isZero=tulipZeroOn&&ev[maxIdx].bullRank===0; // 「0は0」rule (opt-in at setup): a no-bull hand can only be maxIdx when EVERYONE is no-bull
     var r=resolveTulip(handCards, sharedCards, guarantees, startKak, isZero, tulipRainbowOn, tulipRainbow3On);
-    var dice=r.completed?rollTulipDice(r.guaranteeLeft||0):null; // completion dice; unused fall guarantees → +1 roll each
+    var dice=null;
+    if(r.completed){
+      if(debugDiceRef.current){var fr=debugDiceRef.current,ft=0;fr.forEach(function(rr){ft+=(rr[0]===1&&rr[1]===1)?20:(rr[0]+rr[1]);});dice={rolls:fr,total:ft};} // TEMP TEST: forced rolls
+      else dice=rollTulipDice(r.guaranteeLeft||0); // unused fall guarantees → +1 roll each
+    }
+    debugDiceRef.current=null;
     var comp=dice?dice.total:0;             // completion bonus = 2-dice total (doubles chain, pinzoro=+20); rolled ONCE here so the reveal replays the same result
     var isR16=r.tier==="r16"||r.tier==="r32"||r.tier==="r64";
     var endX=r.tier==="r64"?4:(r.tier==="r32"?3:(r.tier==="r16"?2:1)); // end multiplier: 16R=×2, 32R=×3, 64R=×4
@@ -4278,6 +4286,54 @@ function NiuNiu(){
     setAliceData([flip]);
     setAliceSi(0); setAliceBurst(false); setAliceDone(false); setX2Flash(false); setX2On(false); setCompOn(false); setDiceIdx(-1); setDiceOpen(false); setDiceRolling(false); setAliceStarted(false); setAliceActive(true);
     setPhase("result"); // stay on the game board; the flip plays as an overlay
+  }
+
+  // TEMP TEST HARNESS: deal a RIGGED 3-player round so the real squeeze → finalizeTulipRound produces the chosen scenario. Applies required rule toggles via RAW setters (session-only, localStorage untouched).
+  function runTulipDebug(kind){
+    var S={
+      rainbow3a:{h:[["Q","J","2","3","9"],["A","2","4","8","9"],["A","2","4","6","8"]], f:["3","K","3","10","4","2"], dice:[[4,3]], r7:false,r3:true,z:false},
+      rainbow3b:{h:[["Q","J","2","3♦","9"],["A","2","4","8","9"],["A","2","4","6","8"]], f:["3♥","K","3♠","4","2"], dice:[[5,5],[2,3]], r7:false,r3:true,z:false},
+      rb73:     {h:[["7","3","J","2","9"],["A","2","4","8","9"],["A","2","4","6","8"]], f:["7","K","3","10","4"], dice:[[3,3],[4,2]], r7:true,r3:true,z:false},
+      compguard:{h:[["4","5","5","6","10"],["2","4","7","9","Q"],["A","3","4","6","8"]], f:["3","8","Q"], dice:[[6,2]], r7:false,r3:false,z:false},
+      zero:     {h:[["A","3","5","8","K"],["2","3","6","9","J"],["2","3","4","6","9"]], f:["10","5","9","4","2"], dice:null, r7:false,r3:false,z:true},
+      demo2p:   {pc:2, h:[["3♠","5♠","5♥","7♠","10♥"],["A","4","5","9","J"]], fullDeck:true, dice:null, r7:true,r3:true,z:false}
+    }[kind];
+    if(!S)return;
+    setTulipZeroRaw(!!S.z); setTulipRainbowRaw(!!S.r7); setTulipRainbow3Raw(!!S.r3); // session-only toggles for this scenario
+    var SU=["♠","♥","♦","♣"],used={};
+    function take(rank){
+      var last=rank.slice(-1);
+      if(SU.indexOf(last)>=0){var rk=rank.slice(0,-1);used[rk+last]=1;return {rank:rk,suit:last,flipped:false};}
+      for(var s=0;s<4;s++){var key=rank+SU[s];if(!used[key]){used[key]=1;return {rank:rank,suit:SU[s],flipped:false};}}
+      return {rank:rank,suit:SU[0],flipped:false};
+    }
+    var hands3=S.h.map(function(hr){return hr.map(take);});
+    var flipCards;
+    if(S.fullDeck){ // real random tulip: remaining deck = ALL cards not dealt (finalize shuffles as usual)
+      flipCards=[];
+      RANKS.forEach(function(rk){SU.forEach(function(su){var key=rk+su;if(!used[key]){used[key]=1;flipCards.push({rank:rk,suit:su,flipped:false});}});});
+      debugNoShuffleRef.current=false;
+    }else{
+      flipCards=S.f.map(take);
+      debugNoShuffleRef.current=true;
+    }
+    debugDiceRef.current=S.dice?S.dice.slice():null;
+    setShowDebug(false);
+    var pcN=S.pc||3;
+    var ch={},bt={};for(var pi=0;pi<pcN;pi++){ch[pi]=0;bt[pi]=10;}
+    setPc(pcN); setNames(pcN===2?["A（最強）","親B"]:["A（最強）","親B","C（最弱）"]); setChips(ch); setBets(bt); setDealer(1);
+    setInactivePlayers([]); setGameMode("spoiler"); setRoundNum(1);
+    setSpoilerLevel(typeof spoilerLevel==="number"?spoilerLevel:1);
+    setAppMode("event"); setSelectedEvent("tulip");
+    setHands(hands3); setRemainingDeck(flipCards);
+    setRevealedCards(S.h.map(function(){return new Set();}));
+    setResults([]); setWinner(null); setRoundDeltas(null); setTulipReveal(null); setAlerts({});
+    setAliceActive(false); setAliceData(null); setAliceSi(0); setAliceBurst(false); setAliceDone(false); setAliceStarted(false);
+    setX2Flash(false); setX2On(false); setCompOn(false); setDiceIdx(-1); setDiceOpen(false); setDiceRolling(false);
+    setHurricaneTurn(null); setHurricaneDiscards({}); setHurricaneRefilledRevealed(new Set());
+    setRouletteDelta(null); setJackpotContrib(null); setPeekActive(null);
+    setPhase("reveal");
+    if(soundOn)try{SFX.deal();}catch(e){}
   }
 
   function finalizeJackpotRound(){
@@ -4999,10 +5055,26 @@ function NiuNiu(){
         e("div",{style:{marginTop:24,textAlign:"center"}},
           e("div",{style:{fontSize:9,color:"var(--text-dim)",lineHeight:1.8,maxWidth:320,margin:"0 auto",opacity:0.6}},t("footer.disclaimer")),
           e("div",{style:{marginTop:10,fontSize:9,color:"var(--text-muted)",letterSpacing:2,opacity:0.5}},
-            "v1.4.88 · © 2026 KTR (",
+            "v1.4.93 · © 2026 KTR (",
             e("a",{href:"https://x.com/clepantion",target:"_blank",rel:"noopener noreferrer",
               style:{color:"var(--accent)",textDecoration:"none",opacity:0.8}},"@clepantion"),
-            ")"))),
+            ")"),
+          e("button",{onClick:function(){setShowDebug(true);},style:{marginTop:12,padding:"5px 14px",fontSize:9,borderRadius:6,border:"1px dashed rgba(224,64,122,0.4)",background:"rgba(224,64,122,0.06)",color:"#e0407a",cursor:"pointer",fontFamily:"inherit",letterSpacing:1}},"🐞 チューリップ演出テスト")),
+        showDebug?e("div",{key:"dbg",style:{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"rgba(6,4,10,0.75)"},onClick:function(){setShowDebug(false);}},
+          e("div",{onClick:function(ev){ev.stopPropagation();},style:{width:"100%",maxWidth:340,maxHeight:"86vh",overflowY:"auto",background:"linear-gradient(160deg,#1a3020,#0d1a10)",border:"1px solid rgba(224,64,122,0.4)",borderRadius:16,padding:"18px 16px",boxShadow:"0 10px 40px rgba(0,0,0,0.6)"}},
+            e("div",{style:{fontSize:14,fontWeight:900,color:"#e0407a",letterSpacing:2,textAlign:"center",marginBottom:4}},"🌷 演出テスト"),
+            e("div",{style:{fontSize:10,color:"var(--text-muted)",textAlign:"center",marginBottom:14,lineHeight:1.5}},"3人(A最強/親B/C最弱)に仕込み札を配ります。必要な追加ルール(虹7/虹3/0は0)はシナリオごとに自動ON（このセッション限り・設定は保存されません）。"),
+            [["rainbow3a","🌈 虹色3（吸収連鎖→16R）","(3♥🌈→3♦🌈→2がm4/hits14/🎲+7/×42)"],
+             ["rainbow3b","🌈 虹色3（♠3を引いて吸収）","(手札3♦/絞りは2♠?3♠?/hits7/×22)"],
+             ["rb73","🌈🌈 虹7＆虹3同時","(7♥🌈と3♥🌈が独立吸収/hits5/×17)"],
+             ["compguard","🛡 最終札外れ→保証で完走","(牛牛/Q外れ🛡→完走🎲/×9・報告事象の確認)"],
+             ["zero","🅾️ 0は0（完走→ダイス）","(全員役なし/1枚目外れ→確変/hits6)"],
+             ["demo2p","👥 2人対戦: 3♠5♠5♥7♠10♥","(牛牛+虹7&虹3ON/残り42枚をシャッフル=毎回ランダム展開)"]].map(function(row){
+              return e("button",{key:row[0],onClick:function(){runTulipDebug(row[0]);},style:{width:"100%",padding:"11px 13px",marginBottom:8,borderRadius:10,border:"1px solid rgba(224,64,122,0.35)",background:"rgba(224,64,122,0.08)",color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"left",display:"flex",flexDirection:"column",gap:2}},
+                e("span",{style:{fontSize:13,fontWeight:700}},row[1]),
+                e("span",{style:{fontSize:9,color:"var(--text-muted)"}},row[2]));
+            }),
+            e("button",{onClick:function(){setShowDebug(false);},style:{width:"100%",padding:"9px",marginTop:4,borderRadius:9,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"var(--text-muted)",cursor:"pointer",fontFamily:"inherit",fontSize:11}},"閉じる"))):null),
       resumeOverlay,tutorialOverlay);
   }
 
@@ -6988,6 +7060,13 @@ function NiuNiu(){
                   :e("div",{key:"h"+ci},body);
     });
     var deckLeft=Math.max(0,(aliceShared||[]).length-shownCount);
+    // Remaining-deck composition: rank counts only (order never shown = no spoilers). Live-updates as cards flip.
+    var remainCounts={};RANKS.forEach(function(rk){remainCounts[rk]=0;});
+    (aliceShared||[]).slice(shownCount).forEach(function(rk){remainCounts[rk]=(remainCounts[rk]||0)+1;});
+    var handIdxSet=dispHand.map(function(c){return RANKS.indexOf(c.rank);});
+    var hitRankFn=function(rk){var f=RANKS.indexOf(rk);for(var hh=0;hh<handIdxSet.length;hh++){if(Math.abs(handIdxSet[hh]-f)<=1)return true;}return false;};
+    var seenSpade=function(rk){var inH=(hands||[]).some(function(h){return (h||[]).some(function(c){return c&&c.rank===rk&&c.suit==="♠";});});var inS=revealedS.some(function(st){return st.r===rk&&st.suit==="♠";});return inH||inS;};
+    var sp7Left=TULIP_RAINBOW7&&!seenSpade("7"), sp3Left=TULIP_RAINBOW3&&!seenSpade("3");
     var curSt=lastR, curFlash=null;
     if(curSt){
       if(curSt.burn)curFlash={txt:"バーン",col:"rgba(255,255,255,0.45)"};
@@ -7014,7 +7093,20 @@ function NiuNiu(){
             e(CardFace,{card:{rank:curSt.r,suit:curSt.suit||"♠"},w:62,h:88,faceTheme:curFace}))
             :e("div",{style:{width:62,height:88,borderRadius:8,border:"1.5px dashed rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.3)",fontSize:11}},"···"))),
         curFlash?e("div",{key:"cf"+shownCount,style:{fontSize:15,fontWeight:900,color:curFlash.col,letterSpacing:1,textShadow:"0 1px 6px rgba(0,0,0,0.6)",animation:"aliceMultPulse 0.5s ease both",minHeight:20}},curFlash.txt):e("div",{style:{minHeight:20}})),
-      e("div",{ref:tulipScrollRef,style:{flexShrink:0,overflowX:"auto",display:"flex",alignItems:"center",gap:gap,padding:"6px 2px 3px",minHeight:56}},buildWinnerCells(wD)),
+      e("div",{style:{flexShrink:0,padding:"2px 0 3px"}},
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(13,1fr)",gap:2}},
+          RANKS.map(function(rk){
+            var cnt=remainCounts[rk]||0, hitR=hitRankFn(rk);
+            var spMark=(rk==="7"&&sp7Left)||(rk==="3"&&sp3Left);
+            return e("div",{key:rk,style:{position:"relative",borderRadius:4,padding:"2px 0 2px",textAlign:"center",
+              background:cnt===0?"rgba(255,255,255,0.03)":(hitR?"rgba(80,200,120,0.16)":"rgba(255,255,255,0.06)"),
+              border:"1px solid "+(cnt===0?"rgba(255,255,255,0.05)":(hitR?"rgba(90,220,130,0.45)":"rgba(255,255,255,0.12)")),
+              opacity:cnt===0?0.35:1}},
+              e("div",{style:{fontSize:9.5,fontWeight:900,color:(hitR&&cnt>0)?"#8ff0b0":"#fff",lineHeight:1}},rk),
+              e("div",{style:{fontSize:8,color:cnt===0?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.72)",lineHeight:1,marginTop:1}},cnt),
+              (spMark&&cnt>0)?e("div",{style:{position:"absolute",top:-4,right:-2,fontSize:7}},"🌈"):null);
+          }))),
+      e("div",{ref:tulipScrollRef,style:{flexShrink:0,overflowX:"auto",display:"flex",alignItems:"center",gap:gap,padding:"4px 2px 3px",minHeight:56}},buildWinnerCells(wD)),
       e("div",{style:{flexShrink:0,textAlign:"center",position:"relative",paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.08)"}},
         compShown?e("div",{key:"p5",style:{position:"absolute",left:0,right:0,top:-16,textAlign:"center",fontSize:14,fontWeight:900,color:"#ffe08a",textShadow:"0 0 12px rgba(240,175,45,0.95),0 1px 2px rgba(0,0,0,0.5)",letterSpacing:1,pointerEvents:"none",animation:"plus5Pop 1.25s ease-out both",zIndex:5}},"🎲+"+(wD.compBonus||5)+" 完走"):null,
         e("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8}},
